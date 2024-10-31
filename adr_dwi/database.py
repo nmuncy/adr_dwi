@@ -194,10 +194,10 @@ class DbConnect:
 
 
 def update_ref_subj(df: pd.DataFrame, col_list: list, db_con: Type[DbConnect]):
-    """Update MySQL table ref_subj with subject IDs.
+    """Title.
 
     Args:
-        subj_list: BIDS subject IDs.
+
         db_con: Instance of database.DbConnect.
 
     """
@@ -205,6 +205,42 @@ def update_ref_subj(df: pd.DataFrame, col_list: list, db_con: Type[DbConnect]):
     value_list = ["%s" for x in col_list]
     sql_cmd = (
         f"insert ignore into ref_subj ({', '.join(col_list)}) "
+        + f"values ({', '.join(value_list)})"
+    )
+    tbl_input = list(df[col_list].itertuples(index=False, name=None))
+    db_con.exec_many(sql_cmd, tbl_input)
+
+
+def update_tbl_demo(df: pd.DataFrame, col_list: list, db_con: Type[DbConnect]):
+    """Title.
+
+    Args:
+
+
+    """
+    log.write.info("Updating db_adr.tbl_demo")
+    value_list = ["%s" for x in col_list]
+    sql_cmd = (
+        f"insert ignore into tbl_demo ({', '.join(col_list)}) "
+        + f"values ({', '.join(value_list)})"
+    )
+    tbl_input = list(df[col_list].itertuples(index=False, name=None))
+    db_con.exec_many(sql_cmd, tbl_input)
+
+
+def update_scan_dates(
+    df: pd.DataFrame, col_list: list, db_con: Type[DbConnect]
+):
+    """Title.
+
+    Args:
+
+
+    """
+    log.write.info("Updating db_adr.tbl_scan_dates")
+    value_list = ["%s" for x in col_list]
+    sql_cmd = (
+        f"insert ignore into tbl_scan_dates ({', '.join(col_list)}) "
         + f"values ({', '.join(value_list)})"
     )
     tbl_input = list(df[col_list].itertuples(index=False, name=None))

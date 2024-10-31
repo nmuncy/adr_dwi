@@ -23,6 +23,6 @@ create table tbl_scan_dates(
     subj_id int not null,
     scan_name enum("base", "fu1", "fu2"),
     scan_date date,
-    primary key(subj_id),
+    primary key(subj_id, scan_name),
     foreign key(subj_id) references ref_subj(subj_id) on delete cascade
 );

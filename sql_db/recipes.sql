@@ -1,11 +1,11 @@
 -- Subject reference
 create table ref_subj (
     subj_id int not null,
-    subj_name varchar(4) not null,
+    subj_name char(4) not null,
     subj_sky_base int not null,
-    subj_sky_fu1 int,
-    subj_sky_fu2 int,
-    subj_sky_twin int,
+    subj_sky_fu1 char(4),
+    subj_sky_fu2 char(4),
+    subj_sky_twin char(4),
     primary key(subj_id)
 );
 

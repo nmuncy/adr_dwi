@@ -5,68 +5,100 @@ TODO
 """
 
 import os
+import platform
 import pandas as pd
 from contextlib import contextmanager
-import pymysql
-import paramiko
-from sshtunnel import SSHTunnelForwarder
-from iterate_rsfmri import helper
+from typing import Type
+from adr_dwi import helper
+
+if "gimli" in platform.uname().node:
+    import mysql.connector
+elif "swan" in platform.uname().node:
+    import pymysql
+    import paramiko
+    from sshtunnel import SSHTunnelForwarder
 
 type PT = str | os.PathLike
 log = helper.MakeLogger(os.path.basename(__file__))
 
 
+# %%
 class DbConnect:
-    """Supply db_iterate_rsfmri database connection and interaction methods.
+    """Supply db_emorep database connection and interaction methods.
 
+    Attributes
+    ----------
+    con : mysql.connector.connection_cext.CMySQLConnection
+        Connection object to database
+
+    Methods
+    -------
+    close_con()
+        Close database connection
+    exec_many()
+        Update mysql db_emorep.tbl_* with multiple values
+    fetch_df()
+        Return pd.DataFrame from query statement
+    fetch_rows()
+        Return rows from query statement
+
+    Notes
+    -----
     Requires environment variable 'SQL_PASS' to contain user password
-    for mysql db_iterate_rsfmri.
+    for mysql db_emorep.
 
-    Requires:
-        OS gLobal variable SQL_PASS: User password to db_iterate_rsfmri.
-        OS global variable RSA_GIMLI: Path to RSA key for SSH access to Gimli.
-
-    Attributes:
-        con : mysql.connector.connection_cext.CMySQLConnection
-            Connection object to database
-
-    Example:
-        db_con = DbConnect()
-        row = db_con.fetch_rows("select * from ref_subj limit 1")
-        db_con.close_con()
+    Example
+    -------
+    db_con = DbConnect()
+    row = db_con.fetch_rows("select * from ref_subj limit 1")
+    db_con.close_con()
 
     """
 
     def __init__(self):
-        """Initialize DbConnect and start connection."""
-        log.write.info("Initializing database.DbConnect")
-        self._check_keys()
-        self._connect_ssh()
-
-        log.write.info("Setting attribute 'con' as mysql connection")
-        self.con = pymysql.connect(
-            host="127.0.0.1",
-            user=os.environ["USER"],
-            passwd=os.environ["SQL_PASS"],
-            db="db_iterate_rsfmri",
-            port=self._ssh_tunnel.local_bind_port,
-        )
-
-    def _check_keys(self):
-        """Title."""
-        log.write.info("Checking access keys")
+        """Initialize DbConnect."""
+        log.write.info("Initializing DbConnect")
         try:
             os.environ["SQL_PASS"]
         except KeyError as e:
             raise Exception(
                 "No global variable 'SQL_PASS' defined in user env"
             ) from e
+
+        self._db_name = "db_adr"
+        if "gimli" in platform.uname().node:
+            self._connect_gimli()
+        elif "swan" in platform.uname().node:
+            self._connect_hcc()
+
+    def _connect_gimli(self):
+        """Connect to MySQL server from Gimli."""
+        log.write.info("Connecting from Gimli")
+        self.con = mysql.connector.connect(
+            host="localhost",
+            user=os.environ["USER"],
+            password=os.environ["SQL_PASS"],
+            database=self._db_name,
+        )
+
+    def _connect_hcc(self):
+        """Connect to MySQL server from HCC."""
+        log.write.info("Connecting from HCC")
         try:
             os.environ["RSA_GIMLI"]
         except KeyError as e:
             raise Exception(
                 "No global variable 'RSA_GIMLI' defined in user env"
             ) from e
+
+        self._connect_ssh()
+        self.con = pymysql.connect(
+            host="127.0.0.1",
+            user=os.environ["USER"],
+            passwd=os.environ["SQL_PASS"],
+            db=self._db_name,
+            port=self._ssh_tunnel.local_bind_port,
+        )
 
     def _connect_ssh(self):
         """Start ssh tunnel."""
@@ -159,3 +191,21 @@ class DbConnect:
         """Close database connection."""
         log.write.info("Closing db connection")
         self.con.close()
+
+
+def update_ref_subj(df: pd.DataFrame, col_list: list, db_con: Type[DbConnect]):
+    """Update MySQL table ref_subj with subject IDs.
+
+    Args:
+        subj_list: BIDS subject IDs.
+        db_con: Instance of database.DbConnect.
+
+    """
+    log.write.info("Updating db_adr.ref_subj")
+    value_list = ["%s" for x in col_list]
+    sql_cmd = (
+        f"insert ignore into ref_subj ({', '.join(col_list)}) "
+        + f"values ({', '.join(value_list)})"
+    )
+    tbl_input = list(df[col_list].itertuples(index=False, name=None))
+    db_con.exec_many(sql_cmd, tbl_input)

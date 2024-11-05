@@ -7,13 +7,14 @@ TODO
 import os
 import platform
 import pandas as pd
+import numpy as np
 from contextlib import contextmanager
 from typing import Type
 from adr_dwi import helper
 
 if "gimli" in platform.uname().node:
     import mysql.connector
-elif "swan" in platform.uname().node:
+elif "swan" in platform.uname().node or "Darwin" in platform.uname().system:
     import pymysql
     import paramiko
     from sshtunnel import SSHTunnelForwarder
@@ -24,7 +25,7 @@ log = helper.MakeLogger(os.path.basename(__file__))
 
 # %%
 class DbConnect:
-    """Supply db_emorep database connection and interaction methods.
+    """Supply db_adr_dwi database connection and interaction methods.
 
     Attributes
     ----------
@@ -67,11 +68,14 @@ class DbConnect:
 
         self._db_name = "db_adr"
         if "gimli" in platform.uname().node:
-            self._connect_gimli()
-        elif "swan" in platform.uname().node:
-            self._connect_hcc()
+            self._connect_local()
+        elif (
+            "swan" in platform.uname().node
+            or "Darwin" in platform.uname().system
+        ):
+            self._connect_remote()
 
-    def _connect_gimli(self):
+    def _connect_local(self):
         """Connect to MySQL server from Gimli."""
         log.write.info("Connecting from Gimli")
         self.con = mysql.connector.connect(
@@ -81,8 +85,8 @@ class DbConnect:
             database=self._db_name,
         )
 
-    def _connect_hcc(self):
-        """Connect to MySQL server from HCC."""
+    def _connect_remote(self):
+        """Connect to MySQL server from remote."""
         log.write.info("Connecting from HCC")
         try:
             os.environ["RSA_GIMLI"]
@@ -131,7 +135,7 @@ class DbConnect:
             self.con.commit()
 
     def exec_many(self, sql_cmd: str, value_list: list):
-        """Update db_iterate_rsfmri via executemany.
+        """Add data to db_adr via executemany.
 
         Args:
             sql_cmd: SQL syntax to be executed.
@@ -193,55 +197,165 @@ class DbConnect:
         self.con.close()
 
 
-def update_ref_subj(df: pd.DataFrame, col_list: list, db_con: Type[DbConnect]):
-    """Title.
+class RefMaps:
+    """Supply mappings to SQL reference table values.
+
+    Query MySQL database to get task, session, subject, and step name
+    mappings. Also supplies methods for converting pd.DataFrame cells
+    from field name to field ID.
 
     Args:
-
         db_con: Instance of database.DbConnect.
 
-    """
-    log.write.info("Updating db_adr.ref_subj")
-    value_list = ["%s" for x in col_list]
-    sql_cmd = (
-        f"insert ignore into ref_subj ({', '.join(col_list)}) "
-        + f"values ({', '.join(value_list)})"
-    )
-    tbl_input = list(df[col_list].itertuples(index=False, name=None))
-    db_con.exec_many(sql_cmd, tbl_input)
-
-
-def update_tbl_demo(df: pd.DataFrame, col_list: list, db_con: Type[DbConnect]):
-    """Title.
-
-    Args:
-
+    Attribtues:
+        col_pipe_prog (list): Column names of tbl_pipe_prog.
+        ref_task (dict): Map task name to ID.
+        ref_sess (dict): Map sess name to ID.
+        ref_subj (dict): Map subj name to ID.
+        ref_step (dict): Map step name to ID.
 
     """
-    log.write.info("Updating db_adr.tbl_demo")
-    value_list = ["%s" for x in col_list]
-    sql_cmd = (
-        f"insert ignore into tbl_demo ({', '.join(col_list)}) "
-        + f"values ({', '.join(value_list)})"
-    )
-    tbl_input = list(df[col_list].itertuples(index=False, name=None))
-    db_con.exec_many(sql_cmd, tbl_input)
+
+    def __init__(self, db_con: Type[DbConnect]):
+        """Initialize _RefMaps."""
+        log.write.info("Initializing database.RefMaps")
+        self._db_con = db_con
+        self._load_cols()
+        self._load_ref_subj()
+        self._load_refs()
+        # self._load_enums()
+
+    def _load_ref_subj(self):
+        """Title."""
+        self._df_subj = self._db_con.fetch_df(
+            " select * from ref_subj",
+            self.col_ref_subj,
+        )
+
+    def _load_refs(self):
+        """Supply reference name-to-ID mappings in format {name: id}."""
+        log.write.info("Loading references")
+
+        # Set attributes ref_task, ref_sess, ref_subj, and ref_step.
+        for attr_name in ["test"]:
+            df = self._db_con.fetch_df(
+                f"select * from ref_{attr_name}",
+                [f"{attr_name}_id", f"{attr_name}_name"],
+            )
+            ref_map = {
+                y: x
+                for x, y in zip(df[f"{attr_name}_id"], df[f"{attr_name}_name"])
+            }
+            setattr(self, f"ref_{attr_name}", ref_map)
+
+    def _load_cols(self):
+        """Supply column names of select tables in list format."""
+        log.write.info("Loading columns")
+
+        #
+        self.col_ref_subj = [
+            x[0]
+            for x in self._db_con.fetch_rows(
+                " select column_name from information_schema.columns where "
+                + "table_schema = 'db_adr' and table_name = 'ref_subj' "
+                + "order by ordinal_position"
+            )
+        ]
+
+        self.col_impact_user = [
+            x[0]
+            for x in self._db_con.fetch_rows(
+                " select column_name from information_schema.columns where "
+                + "table_schema = 'db_adr' and table_name = 'tbl_impact_user' "
+                + "order by ordinal_position"
+            )
+        ]
+
+    def get_id(self, name: str, row: pd.Series, col_name: str) -> int | str:
+        """Return attribute ID given name from ref attributes.
+
+        Returns the integer reference IDs given a reference name,
+        used to access the class ref attributes and update a column
+        of reference names with IDs.
+
+        Args:
+            name: Attribute name TODO
+            row: Lambda output for axis=1.
+            col_name: Key, name of column.
+
+        Returns:
+            Reference ID.
+
+        Raises:
+            ValueError: Unexpected name value
+
+        """
+        if name not in ["test"]:
+            log.write.error(f"Unexpected name: {name}")
+            raise ValueError
+        ref_attr = getattr(self, f"ref_{name}")
+        for ref_name, ref_id in ref_attr.items():
+            if row[col_name] == ref_name:
+                return ref_id
+
+    def get_subj_id(
+        self,
+        row: pd.Series,
+        col_name: str,
+        col_id: str,
+    ) -> int:
+        """Title."""
+        sky_name = str(row[col_name])
+        sky_type = int(row[col_id])
+        subj_id = self._df_subj.loc[
+            (self._df_subj["sky_name"] == sky_name)
+            & (self._df_subj["sky_type"] == sky_type)
+        ]["subj_id"]
+        return int(subj_id)
+
+        # log.write.debug(id_out)
+        # return int(id_out)
 
 
-def update_scan_dates(
-    df: pd.DataFrame, col_list: list, db_con: Type[DbConnect]
+def build_participant_tables(
+    tbl_name: str, df: pd.DataFrame, col_list: list, db_con: Type[DbConnect]
 ):
-    """Title.
-
-    Args:
-
-
-    """
-    log.write.info("Updating db_adr.tbl_scan_dates")
+    """Title."""
+    log.write.info(f"Updating db_adr.{tbl_name}")
     value_list = ["%s" for x in col_list]
     sql_cmd = (
-        f"insert ignore into tbl_scan_dates ({', '.join(col_list)}) "
+        f"insert ignore into {tbl_name} ({', '.join(col_list)}) "
         + f"values ({', '.join(value_list)})"
     )
     tbl_input = list(df[col_list].itertuples(index=False, name=None))
     db_con.exec_many(sql_cmd, tbl_input)
+
+
+def build_insert_user(df_user: pd.DataFrame, ref_maps: Type[RefMaps]):
+    """Title."""
+    log.write.info("Updating db_adr.tbl_impact_user")
+
+    # Get subj_id for sky_name and test_id
+    df_user["test_id"] = df_user.apply(
+        lambda x: ref_maps.get_id("test", x, "testType"), axis=1
+    )
+    df_user["subj_id"] = df_user.apply(
+        lambda x: ref_maps.get_subj_id(x, "sky_name", "test_id"), axis=1
+    )
+    df_user = df_user.replace(np.nan, None)
+    log.write.debug(df_user.head())
+
+    #
+    value_list = ["%s" for x in ref_maps.col_impact_user]
+    sql_cmd = (
+        "insert ignore into tbl_impact_user "
+        + f"({', '.join(ref_maps.col_impact_user)}) "
+        + f"values ({', '.join(value_list)})"
+    )
+    tbl_input = list(
+        df_user[ref_maps.col_impact_user].itertuples(index=False, name=None)
+    )
+    ref_maps._db_con.exec_many(sql_cmd, tbl_input)
+
+
+# %%

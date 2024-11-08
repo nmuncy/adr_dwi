@@ -15,6 +15,20 @@ insert into ref_test
     (9, "twin");
 
 
+-- Scan reference
+create table ref_scan (
+    scan_id int not null,
+    scan_name varchar(4),
+    primary key(scan_id)
+);
+insert into ref_scan
+    (scan_id, scan_name)
+    values
+    (0, "base"),
+    (1, "post"),
+    (2, "rtp");
+
+
 -- Subject reference
 create table ref_subj (
     subj_id int not null,
@@ -42,13 +56,25 @@ create table tbl_scan_dates(
     scan_date date,
     primary key(subj_id, scan_id),
     foreign key(subj_id) references ref_subj(subj_id) on delete cascade,
-    foreign key(scan_id) references ref_test(test_id)
+    foreign key(scan_id) references ref_scan(scan_id)
+);
+
+-- Impact dates
+create table tbl_impact_dates(
+    subj_id int not null,
+    test_id int not null,
+    num_tbi int not null,
+    impact_date date,
+    primary key(subj_id, test_id, num_tbi),
+    foreign key(subj_id) references ref_subj(subj_id) on delete cascade,
+    foreign key(test_id) references ref_test(test_id)
 );
 
 -- Impact user
 create table tbl_impact_user(
     subj_id int not null,
     test_id int not null,
+    num_tbi int not null,
     comp_verbal_memory int,
     comp_visual_memory int,
     comp_visual_motor numeric(4,2),
@@ -100,12 +126,91 @@ create table tbl_impact_user(
     symp_delayed_20 int,
     symp_delayed_21 int,
     symp_delayed_22 int,
-    primary key(subj_id, test_id),
+    primary key(subj_id, test_id, num_tbi),
     foreign key(subj_id) references ref_subj(subj_id) on delete cascade,
     foreign key(test_id) references ref_test(test_id)
 );
 
---
+-- Impact word
+create table tbl_impact_word(
+    subj_id int not null,
+    test_id int not null,
+    num_tbi int not null,
+    hits_memory int,
+    hits_delay_memory int,
+    cd_memory int,
+    cd_delay_memory int,
+    lp_memory numeric(3,2),
+    dm_corr_memory numeric(3,2),
+    total_perc_corr_memory numeric(3,2),
+    primary key(subj_id, test_id, num_tbi),
+    foreign key(subj_id) references ref_subj(subj_id) on delete cascade,
+    foreign key(test_id) references ref_test(test_id)
+);
+
+-- Impact design
+create table tbl_impact_design(
+    subj_id int not null,
+    test_id int not null,
+    num_tbi int not null,
+    hits_memory int,
+    hits_delay_memory int,
+    cd_memory int,
+    cd_delay_memory int,
+    lp_memory numeric(3,2),
+    dm_corr_memory numeric(3,2),
+    total_perc_corr_memory numeric(3,2),
+    primary key(subj_id, test_id, num_tbi),
+    foreign key(subj_id) references ref_subj(subj_id) on delete cascade,
+    foreign key(test_id) references ref_test(test_id)
+);
+
+-- Impact XO
+create table tbl_impact_xo(
+    subj_id int not null,
+    test_id int not null,
+    num_tbi int not null,
+    total_corr_memory int,
+    total_corr_interf int,
+    total_incorr int,
+    avg_corr numeric(3,2),
+    avg_incorr numeric(3,2),
+    primary key(subj_id, test_id, num_tbi),
+    foreign key(subj_id) references ref_subj(subj_id) on delete cascade,
+    foreign key(test_id) references ref_test(test_id)
+);
+
+-- Impact color
+create table tbl_impact_color(
+    subj_id int not null,
+    test_id int not null,
+    num_tbi int not null,
+    total_corr_match int,
+    total_comm_match int,
+    avg_corr_match numeric(3,2),
+    avg_comm_match numeric(3,2),
+    primary key(subj_id, test_id, num_tbi),
+    foreign key(subj_id) references ref_subj(subj_id) on delete cascade,
+    foreign key(test_id) references ref_test(test_id)
+);
+
+-- Impact three
+create table tbl_impact_three(
+    subj_id int not null,
+    test_id int not null,
+    num_tbi int not null,
+    total_corr_seq int,
+    total_corr_let int,
+    total_perc_corr_let numeric(3,2),
+    avg_time_click1 numeric(3,2),
+    avg_count numeric(3,1),
+    avg_corr_count numeric(3,1),
+    primary key(subj_id, test_id, num_tbi),
+    foreign key(subj_id) references ref_subj(subj_id) on delete cascade,
+    foreign key(test_id) references ref_test(test_id)
+);
+
+-- Impact test dates
 create table tbl_test_dates(
     subj_id int not null,
     test_id int not null,

@@ -294,27 +294,11 @@ class RefMaps:
             log.write.error(f"Unexpected name: {name}")
             raise ValueError
         ref_attr = getattr(self, f"ref_{name}")
+
+        # TODO refactor
         for ref_name, ref_id in ref_attr.items():
             if row[col_name] == ref_name:
                 return ref_id
-
-    def get_subj_id(
-        self,
-        row: pd.Series,
-        col_name: str,
-        col_id: str,
-    ) -> int:
-        """Title."""
-        sky_name = str(row[col_name])
-        sky_type = int(row[col_id])
-        subj_id = self._df_subj.loc[
-            (self._df_subj["sky_name"] == sky_name)
-            & (self._df_subj["sky_type"] == sky_type)
-        ]["subj_id"]
-        return int(subj_id)
-
-        # log.write.debug(id_out)
-        # return int(id_out)
 
 
 def build_participant_tables(
@@ -331,21 +315,12 @@ def build_participant_tables(
     db_con.exec_many(sql_cmd, tbl_input)
 
 
-def build_insert_user(df_user: pd.DataFrame, ref_maps: Type[RefMaps]):
+def build_impact_user(df_user: pd.DataFrame, ref_maps: Type[RefMaps]):
     """Title."""
     log.write.info("Updating db_adr.tbl_impact_user")
 
-    # Get subj_id for sky_name and test_id
-    df_user["test_id"] = df_user.apply(
-        lambda x: ref_maps.get_id("test", x, "testType"), axis=1
-    )
-    df_user["subj_id"] = df_user.apply(
-        lambda x: ref_maps.get_subj_id(x, "sky_name", "test_id"), axis=1
-    )
-    df_user = df_user.replace(np.nan, None)
-    log.write.debug(df_user.head())
-
     #
+    df_user = df_user.replace(np.nan, None)
     value_list = ["%s" for x in ref_maps.col_impact_user]
     sql_cmd = (
         "insert ignore into tbl_impact_user "

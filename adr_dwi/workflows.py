@@ -22,7 +22,7 @@ class SetupDb:
     Example:
         setup_db = workflows.SetupDb()
         setup_db.load_data()
-        setup_db.make_tables()
+        setup_db.make_part_tables()
 
     """
 
@@ -39,14 +39,13 @@ class SetupDb:
         raw_demo = os.path.join(
             self._data_dir, "participant_list_for_nate.xlsx"
         )
-        raw_impact = os.path.join(self._data_dir, "impact_for_nate.xlsx")
+        raw_impact = os.path.join(self._data_dir, "impact_for_nate_clean.xlsx")
         for chk_path in [raw_demo, raw_impact]:
             if not os.path.exists(chk_path):
                 raise FileNotFoundError(chk_path)
 
         self._df_part = pd.read_excel(raw_demo)
         self._df_clean = pd.read_excel(raw_impact, "v1_clean")
-        self._clean_part()
 
     def _clean_part(self):
         """Title."""
@@ -58,14 +57,9 @@ class SetupDb:
         self._df_part.columns = self._df_part.columns.str.replace("-", "_")
         self._df_part.columns = self._df_part.columns.str.replace(" ", "_")
 
-    def _clean_impact(self):
-        """Title."""
-        self._df_clean["testType"] = self._df_clean["testType"].replace(
-            "Baseline ++", "Baseline"
-        )
-
     def make_part_tables(self):
         """Title."""
+        self._clean_part()
         self._ref_subj()
         self._tbl_demo()
         self._scan_date()
@@ -178,19 +172,72 @@ class SetupDb:
 
     def make_impact_tables(self):
         """Title."""
-        new_vals = {
+        self._clean_impact()
+        for self._test_type in self._test_type_list:
+            self._user_data()
+            self._word_data()
+
+    def _clean_impact(self):
+        """Title."""
+        log.write.info("Cleaning impact data")
+        #
+        switch_test = {
             "Baseline": "base",
             "Post-Injury 1": "fu1",
             "Post-Injury 2": "fu2",
             "Post-Injury 3": "fu3",
             "Post-Injury 4": "fu4",
         }
-        self._test_map = {"base": "base_id", "fu1": "post_id", "fu2": "rtp_id"}
-        self._df_clean["testType"] = self._df_clean["testType"].map(new_vals)
+        self._df_clean["testType"] = self._df_clean["testType"].map(
+            switch_test
+        )
+        self._test_type_list = [x for _, x in switch_test.items()]
 
-        # for _, self._test_type in new_vals.items():
-        self._test_type = "base"
-        self._user_data()
+        #
+        self._df_clean["test_id"] = self._df_clean.apply(
+            lambda x: self._ref_maps.get_id("test", x, "testType"), axis=1
+        )
+
+        # Ugly inner func because the lambdas were breaking
+        # TODO refactor
+        def get_subj_id(sky_name: str, sky_type: int) -> int:
+            """Return subj_id given SKY ID and type."""
+            sky_name = str(sky_name)
+            sky_type = int(sky_type)
+            subj_id = self._ref_maps._df_subj.loc[
+                (self._ref_maps._df_subj["sky_name"] == sky_name)
+                & (self._ref_maps._df_subj["sky_type"] == sky_type)
+            ]["subj_id"]
+            return int(subj_id)
+
+        # Get subj_id from baseline IDs
+        idx_base_id = self._df_clean.index[
+            (self._df_clean["base_id"] != "not_collected")
+            & (self._df_clean["test_id"] == 0)
+        ].to_list()
+        for idx in idx_base_id:
+            sky_name = self._df_clean.loc[idx, "base_id"]
+            sky_type = self._df_clean.loc[idx, "test_id"]
+            self._df_clean.loc[idx, "subj_id"] = get_subj_id(
+                sky_name, sky_type
+            )
+
+        # Get subj_id from post IDs when no baseline available
+        idx_post_id = self._df_clean.index[
+            (self._df_clean["base_id"] == "not_collected")
+            & (self._df_clean["post_id"] != "not_collected")
+            & (self._df_clean["test_id"] == 1)
+        ].to_list()
+        for idx in idx_post_id:
+            sky_name = self._df_clean.loc[idx, "post_id"]
+            sky_type = self._df_clean.loc[idx, "test_id"]
+            self._df_clean.loc[idx, "subj_id"] = get_subj_id(
+                sky_name, sky_type
+            )
+
+        # Forward fill subj_ids, manage type
+        self._df_clean["subj_id"] = self._df_clean["subj_id"].ffill(axis=0)
+        self._df_clean["subj_id"] = self._df_clean["subj_id"].astype("Int64")
 
     def _user_data(self):
         """Title."""
@@ -198,19 +245,33 @@ class SetupDb:
         log.write.info(
             f"Building tbl_impact_user for visit: {self._test_type}"
         )
+
+        # Extract identifier and userItem columns
         col_user = [x for x in self._df_clean.columns if "user" in x]
-        col_user = ["base_id", "post_id", "rtp_id", "testType"] + col_user
+        col_user = [
+            "subj_id",
+            "base_id",
+            "post_id",
+            "rtp_id",
+            "tbi_num",
+            "testType",
+            "test_id",
+            "testDate",
+        ] + col_user
         idx_type = self._df_clean.index[
             self._df_clean["testType"] == self._test_type
         ].tolist()
         df_user = self._df_clean.loc[idx_type, col_user].copy()
 
         #
-        df_user = df_user[
-            df_user[self._test_map[self._test_type]] != "not_collected"
-        ]
         df_user = df_user.rename(
-            columns={self._test_map[self._test_type]: "sky_name"}
+            columns={"testDate": "impact_date", "tbi_num": "num_tbi"}
+        )
+        database.build_participant_tables(
+            "tbl_impact_dates",
+            df_user,
+            ["subj_id", "test_id", "num_tbi", "impact_date"],
+            self._db_con,
         )
 
         # Make symptom delayed int
@@ -243,5 +304,42 @@ class SetupDb:
             "Skipped", np.nan
         )
 
+        # Write to database
+        database.build_impact_user(df_user, self._ref_maps)
+        log.write.info(
+            f"Finished building tbl_impact_user for visit: {self._test_type}"
+        )
+
+    def _word_data(self):
+        """Title."""
         #
-        database.build_insert_user(df_user, self._ref_maps)
+        log.write.info(
+            f"Building tbl_impact_word for visit: {self._test_type}"
+        )
+
+        # Extract identifier and wordItem columns
+        col_word = [x for x in self._df_clean.columns if "word" in x]
+        col_word = [
+            "subj_id",
+            "base_id",
+            "post_id",
+            "rtp_id",
+            "tbi_num",
+            "testType",
+            "test_id",
+        ] + col_word
+        idx_type = self._df_clean.index[
+            self._df_clean["testType"] == self._test_type
+        ].tolist()
+        df_word = self._df_clean.loc[idx_type, col_word].copy()
+
+        #
+        rename_cols = {
+            "wordMemoryHits",
+            "wordMemoryCD",
+            "wordMemoryLP",
+            "wordMemoryHitsDelay",
+            "wordMemoryCDDelay",
+            "wordMemoryDMCorrect",
+            "wordMemoryTotalPercentCorr",
+        }

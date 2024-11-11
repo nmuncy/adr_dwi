@@ -174,8 +174,13 @@ class SetupDb:
         """Title."""
         self._clean_impact()
         for self._test_type in self._test_type_list:
+            self._impact_date()
             self._user_data()
             self._word_data()
+            self._design_data()
+            self._xo_data()
+            self._color_data()
+            self._three_data()
 
     def _clean_impact(self):
         """Title."""
@@ -238,6 +243,10 @@ class SetupDb:
         # Forward fill subj_ids, manage type
         self._df_clean["subj_id"] = self._df_clean["subj_id"].ffill(axis=0)
         self._df_clean["subj_id"] = self._df_clean["subj_id"].astype("Int64")
+
+    def _impact_date(self):
+        """Title."""
+        pass
 
     def _user_data(self):
         """Title."""
@@ -343,3 +352,19 @@ class SetupDb:
             "wordMemoryDMCorrect",
             "wordMemoryTotalPercentCorr",
         }
+
+    def _design_data(self):
+        """Title."""
+        pass
+
+    def _xo_data(self):
+        """Title."""
+        pass
+
+    def _color_data(self):
+        """Title."""
+        pass
+
+    def _three_data(self):
+        """Title."""
+        pass

@@ -5,7 +5,6 @@ TODO
 """
 
 import os
-import re
 import pandas as pd
 import openpyxl  # noqa: F401
 import numpy as np
@@ -114,7 +113,7 @@ class SetupDb:
         )
 
         #
-        database.build_participant_tables(
+        database.build_table(
             "ref_subj",
             df_long,
             ["subj_id", "subj_name", "sky_type", "sky_name"],
@@ -133,9 +132,7 @@ class SetupDb:
         col_list = ["subj_id", "sex", "age_base"]
         df_demo = self._df_part[col_list].copy()
         df_demo = df_demo.replace(np.nan, None)
-        database.build_participant_tables(
-            "tbl_demo", df_demo, col_list, self._db_con
-        )
+        database.build_table("tbl_demo", df_demo, col_list, self._db_con)
 
     def _scan_date(self):
         """Title."""
@@ -163,7 +160,7 @@ class SetupDb:
         df_long["scan_date"] = df_long["scan_date"].astype(str)
         df_long["scan_date"] = df_long["scan_date"].str[:10]
 
-        database.build_participant_tables(
+        database.build_table(
             "tbl_scan_dates",
             df_long,
             ["subj_id", "scan_id", "scan_date"],
@@ -244,9 +241,30 @@ class SetupDb:
         self._df_clean["subj_id"] = self._df_clean["subj_id"].ffill(axis=0)
         self._df_clean["subj_id"] = self._df_clean["subj_id"].astype("Int64")
 
+        #
+        self._df_clean = self._df_clean.rename(columns={"tbi_num": "num_tbi"})
+
     def _impact_date(self):
         """Title."""
-        pass
+        col_date = [
+            "subj_id",
+            "test_id",
+            "testType",
+            "testDate",
+            "num_tbi",
+        ]
+        idx_type = self._df_clean.index[
+            self._df_clean["testType"] == self._test_type
+        ].tolist()
+        df_dates = self._df_clean.loc[idx_type, col_date].copy()
+        df_dates["testDate"] = df_dates["testDate"].dt.strftime("%Y-%m-%d")
+        df_dates = df_dates.rename(columns={"testDate": "impact_date"})
+        database.build_table(
+            "tbl_impact_dates",
+            df_dates,
+            ["subj_id", "test_id", "num_tbi", "impact_date"],
+            self._db_con,
+        )
 
     def _user_data(self):
         """Title."""
@@ -262,7 +280,7 @@ class SetupDb:
             "base_id",
             "post_id",
             "rtp_id",
-            "tbi_num",
+            "num_tbi",
             "testType",
             "test_id",
             "testDate",
@@ -272,46 +290,14 @@ class SetupDb:
         ].tolist()
         df_user = self._df_clean.loc[idx_type, col_user].copy()
 
-        #
-        df_user = df_user.rename(
-            columns={"testDate": "impact_date", "tbi_num": "num_tbi"}
-        )
-        database.build_participant_tables(
-            "tbl_impact_dates",
-            df_user,
-            ["subj_id", "test_id", "num_tbi", "impact_date"],
-            self._db_con,
-        )
-
         # Make symptom delayed int
         delay_col = [x for x in df_user.columns if "Delayed" in x]
         df_user[delay_col] = df_user[delay_col].astype("Int64")
-        new_col = {
-            x: f"symp_delayed_{re.findall(r'\d+', x)[0]}" for x in delay_col
-        }
-        df_user = df_user.rename(columns=new_col)
-
-        # Update Symptom cols
-        symp_col = [x for x in df_user.columns if "userSymptom" in x]
-        new_col = {x: f"symp_{re.findall(r'\d+', x)[0]}" for x in symp_col}
-        df_user = df_user.rename(columns=new_col)
-
-        #
-        new_col = {
-            "userMemoryCompositeScoreVerbal": "comp_verbal_memory",
-            "userMemoryCompositeScoreVisual": "comp_visual_memory",
-            "userVisualMotorCompositeScore": "comp_visual_motor",
-            "userReactionTimeCompositeScore": "comp_react_time",
-            "userImpulseControlCompositeScore": "comp_impulse_ctrl",
-            "userTotalSymptomScore": "symp_total_score",
-            "userHoursOfSleepLastNight": "num_hours_slept",
-        }
-        df_user = df_user.rename(columns=new_col)
 
         # Manage Skipped on hoursofsleep
-        df_user["num_hours_slept"] = df_user["num_hours_slept"].replace(
-            "Skipped", np.nan
-        )
+        df_user["userHoursOfSleepLastNight"] = df_user[
+            "userHoursOfSleepLastNight"
+        ].replace("Skipped", np.nan)
 
         # Write to database
         database.build_impact_user(df_user, self._ref_maps)
@@ -327,44 +313,181 @@ class SetupDb:
         )
 
         # Extract identifier and wordItem columns
-        col_word = [x for x in self._df_clean.columns if "word" in x]
-        col_word = [
+        col_sub = [x for x in self._df_clean.columns if "word" in x]
+        col_sub = [
             "subj_id",
             "base_id",
             "post_id",
             "rtp_id",
-            "tbi_num",
+            "num_tbi",
             "testType",
             "test_id",
-        ] + col_word
+        ] + col_sub
         idx_type = self._df_clean.index[
             self._df_clean["testType"] == self._test_type
         ].tolist()
-        df_word = self._df_clean.loc[idx_type, col_word].copy()
+        df = self._df_clean.loc[idx_type, col_sub].copy()
 
         #
-        rename_cols = {
+        col_list = [
+            "subj_id",
+            "test_id",
+            "num_tbi",
             "wordMemoryHits",
-            "wordMemoryCD",
-            "wordMemoryLP",
             "wordMemoryHitsDelay",
+            "wordMemoryCD",
             "wordMemoryCDDelay",
+            "wordMemoryLP",
             "wordMemoryDMCorrect",
-            "wordMemoryTotalPercentCorr",
-        }
+            "wordMemoryTotalPercentCorrect",
+        ]
+        database.build_table("tbl_impact_word", df, col_list, self._db_con)
 
     def _design_data(self):
         """Title."""
-        pass
+        #
+        log.write.info(
+            f"Building tbl_impact_design for visit: {self._test_type}"
+        )
+
+        # Extract identifier and wordItem columns
+        col_sub = [x for x in self._df_clean.columns if "design" in x]
+        col_sub = [
+            "subj_id",
+            "base_id",
+            "post_id",
+            "rtp_id",
+            "num_tbi",
+            "testType",
+            "test_id",
+        ] + col_sub
+        idx_type = self._df_clean.index[
+            self._df_clean["testType"] == self._test_type
+        ].tolist()
+        df = self._df_clean.loc[idx_type, col_sub].copy()
+
+        #
+        col_list = [
+            "subj_id",
+            "test_id",
+            "num_tbi",
+            "designMemoryHits",
+            "designMemoryHitsDelay",
+            "designMemoryCD",
+            "designMemoryCDDelay",
+            "designMemoryLP",
+            "designMemoryDMCorrect",
+            "designMemoryTotalPercentCorrect",
+        ]
+        database.build_table("tbl_impact_design", df, col_list, self._db_con)
 
     def _xo_data(self):
         """Title."""
-        pass
+        #
+        log.write.info(f"Building tbl_impact_xo for visit: {self._test_type}")
+
+        # Extract identifier and wordItem columns
+        col_sub = [x for x in self._df_clean.columns if "XO" in x]
+        col_sub = [
+            "subj_id",
+            "base_id",
+            "post_id",
+            "rtp_id",
+            "num_tbi",
+            "testType",
+            "test_id",
+        ] + col_sub
+        idx_type = self._df_clean.index[
+            self._df_clean["testType"] == self._test_type
+        ].tolist()
+        df = self._df_clean.loc[idx_type, col_sub].copy()
+
+        #
+        col_list = [
+            "subj_id",
+            "test_id",
+            "num_tbi",
+            "XOtotalCorrectMemory",
+            "XOtotalCorrectInterference",
+            "XOaverageCorrect",
+            "XOtotalIncorrect",
+            "XOaverageIncorrect",
+        ]
+        database.build_table("tbl_impact_xo", df, col_list, self._db_con)
 
     def _color_data(self):
         """Title."""
-        pass
+        #
+        log.write.info(
+            f"Building tbl_impact_color for visit: {self._test_type}"
+        )
+
+        # Extract identifier and wordItem columns
+        col_sub = [x for x in self._df_clean.columns if "color" in x]
+        col_sub = [
+            "subj_id",
+            "base_id",
+            "post_id",
+            "rtp_id",
+            "num_tbi",
+            "testType",
+            "test_id",
+        ] + col_sub
+        idx_type = self._df_clean.index[
+            self._df_clean["testType"] == self._test_type
+        ].tolist()
+        df = self._df_clean.loc[idx_type, col_sub].copy()
+
+        #
+        col_list = [
+            "subj_id",
+            "test_id",
+            "num_tbi",
+            "colorMatchTotalCorrect",
+            "colorMatchAverageCorrect",
+            "colorMatchTotalCommissions",
+            "colorMatchAverageCommissions",
+        ]
+        database.build_table("tbl_impact_color", df, col_list, self._db_con)
 
     def _three_data(self):
         """Title."""
-        pass
+        #
+        log.write.info(
+            f"Building tbl_impact_three for visit: {self._test_type}"
+        )
+
+        # Extract identifier and wordItem columns
+        col_sub = [x for x in self._df_clean.columns if "three" in x]
+        col_sub = [
+            "subj_id",
+            "base_id",
+            "post_id",
+            "rtp_id",
+            "num_tbi",
+            "testType",
+            "test_id",
+        ] + col_sub
+        idx_type = self._df_clean.index[
+            self._df_clean["testType"] == self._test_type
+        ].tolist()
+        df = self._df_clean.loc[idx_type, col_sub].copy()
+
+        #
+        df["threeLettersPercentageLettersCorrect"] = df[
+            "threeLettersPercentageLettersCorrect"
+        ].round(2)
+
+        #
+        col_list = [
+            "subj_id",
+            "test_id",
+            "num_tbi",
+            "threeLettersTotalSequenceCorrect",
+            "threeLettersTotalLettersCorrect",
+            "threeLettersPercentageLettersCorrect",
+            "threeLettersAverageTimeFirstClick",
+            "threeLettersAverageCounted",
+            "threeLettersAverageCountedCorrectly",
+        ]
+        database.build_table("tbl_impact_three", df, col_list, self._db_con)

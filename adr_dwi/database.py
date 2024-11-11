@@ -271,6 +271,15 @@ class RefMaps:
             )
         ]
 
+        # self.col_impact_word = [
+        #     x[0]
+        #     for x in self._db_con.fetch_rows(
+        #         " select column_name from information_schema.columns where "
+        #         + "table_schema = 'db_adr' and table_name = 'tbl_impact_word' "
+        #         + "order by ordinal_position"
+        #     )
+        # ]
+
     def get_id(self, name: str, row: pd.Series, col_name: str) -> int | str:
         """Return attribute ID given name from ref attributes.
 
@@ -301,7 +310,7 @@ class RefMaps:
                 return ref_id
 
 
-def build_participant_tables(
+def build_table(
     tbl_name: str, df: pd.DataFrame, col_list: list, db_con: Type[DbConnect]
 ):
     """Title."""

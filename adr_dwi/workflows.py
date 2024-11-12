@@ -491,3 +491,24 @@ class SetupDb:
             "threeLettersAverageCountedCorrectly",
         ]
         database.build_table("tbl_impact_three", df, col_list, self._db_con)
+
+
+def build_rawdata(data_dir: PT):
+    """Title."""
+    log.write.info("Started building rawdata")
+    raw_dir = os.path.join(data_dir, "rawdata")
+    if not os.path.exists(raw_dir):
+        os.makedirs(raw_dir)
+
+    # TODO get subject list
+    db_con = database.DbConnect()
+    sql_cmd = (
+        "select distinct b.subj_name from tbl_scan_dates a "
+        + "join ref_subj b on a.subj_id=b.subj_id where a.scan_id=1;"
+    )
+    subj_list = [f"sub-{x[0]}" for x in db_con.fetch_rows(sql_cmd)]
+    log.write.debug(f"subj_list: {subj_list}")
+    db_con.close_con()
+
+    # TODO pull subject data from attic
+    # TODO bidsify rawdata

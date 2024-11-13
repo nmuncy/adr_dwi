@@ -1,6 +1,15 @@
-"""Title.
+"""Methods for connecting to, and interacting with, the MySQL database.
 
-TODO
+A MySQL server runs on a separate linux machine (Gimli), hosting
+a database called db_adr. These methods allow the user to
+connect to, pull data from, and send data to the database.
+
+DbConnect: Connect to MySQL server over SSH connection (or locally)
+    and provide methods for interacting with db_adr.
+RefMaps: Supply mapping attributes of reference name to ID, and
+    other methods, attributes for such mappings.
+
+TODO switch RSA_GIMLI for RSA_WS
 
 """
 
@@ -25,34 +34,20 @@ log = helper.MakeLogger(os.path.basename(__file__))
 
 # %%
 class DbConnect:
-    """Supply db_adr_dwi database connection and interaction methods.
+    """Supply db_adr database connection and interaction methods.
 
-    Attributes
-    ----------
-    con : mysql.connector.connection_cext.CMySQLConnection
-        Connection object to database
+    Requires:
+        OS gLobal variable SQL_PASS: User password to db_adr.
+        OS global variable RSA_GIMLI: Path to RSA key for SSH access to Gimli.
 
-    Methods
-    -------
-    close_con()
-        Close database connection
-    exec_many()
-        Update mysql db_emorep.tbl_* with multiple values
-    fetch_df()
-        Return pd.DataFrame from query statement
-    fetch_rows()
-        Return rows from query statement
+    Attributes:
+        con : mysql.connector.connection_cext.CMySQLConnection
+            Connection object to database
 
-    Notes
-    -----
-    Requires environment variable 'SQL_PASS' to contain user password
-    for mysql db_emorep.
-
-    Example
-    -------
-    db_con = DbConnect()
-    row = db_con.fetch_rows("select * from ref_subj limit 1")
-    db_con.close_con()
+    Example:
+        db_con = DbConnect()
+        row = db_con.fetch_rows("select * from ref_subj limit 1")
+        db_con.close_con()
 
     """
 
@@ -271,15 +266,6 @@ class RefMaps:
             )
         ]
 
-        # self.col_impact_word = [
-        #     x[0]
-        #     for x in self._db_con.fetch_rows(
-        #         " select column_name from information_schema.columns where "
-        #         + "table_schema = 'db_adr' and table_name = 'tbl_impact_word' "
-        #         + "order by ordinal_position"
-        #     )
-        # ]
-
     def get_id(self, name: str, row: pd.Series, col_name: str) -> int | str:
         """Return attribute ID given name from ref attributes.
 
@@ -313,7 +299,17 @@ class RefMaps:
 def build_table(
     tbl_name: str, df: pd.DataFrame, col_list: list, db_con: Type[DbConnect]
 ):
-    """Title."""
+    """Insert data from pd.DataFrame into table.
+
+    Assumes data in pd.DataFrame is organized for insertion into table.
+
+    Args:
+        tbl_name: Destination db_adr table.
+        df: Dataframe with appropriate column names, types.
+        col_list: Columns of df to insert.
+        db_con: Instance of database.DbConnect().
+
+    """
     log.write.info(f"Updating db_adr.{tbl_name}")
     value_list = ["%s" for x in col_list]
     sql_cmd = (
@@ -325,10 +321,16 @@ def build_table(
 
 
 def build_impact_user(df_user: pd.DataFrame, ref_maps: Type[RefMaps]):
-    """Title."""
-    log.write.info("Updating db_adr.tbl_impact_user")
+    """Insert data into db_adr.tbl_ipact_user.
 
-    #
+    Assumes data in pd.DataFrame is organized for insertion into table.
+
+    Args:
+        df_user: Dataframe with appropriate column names, types.
+        ref_maps: Instance of database.RefMaps().
+
+    """
+    log.write.info("Updating db_adr.tbl_impact_user")
     df_user = df_user.replace(np.nan, None)
     value_list = ["%s" for x in ref_maps.col_impact_user]
     sql_cmd = (

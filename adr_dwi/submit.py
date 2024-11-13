@@ -1,0 +1,81 @@
+"""Methods for interacting with SLURM scheduler and subprocesses.
+
+simp_subproc: Submit bash command as subprocess.
+sched_subproc: Schedule bash command with SLURM.
+
+TODO
+
+"""
+
+import os
+import subprocess
+from adr_dwi import helper
+
+type PT = str | os.PathLike
+log = helper.MakeLogger(os.path.basename(__file__))
+
+
+def simp_subproc(bash_cmd: str, wait: bool = True) -> tuple:
+    """Spawn simple subprocess and return stdout/err.
+
+    Args:
+        bash_cmd: Bash syntax to be submitted to subprocess.
+        wait: Hang until subprocess completes.
+
+    Returns:
+        tuple: stdout/err of subprocess.
+
+    """
+    log.write.info(f"Submitting subprocess: {bash_cmd}")
+    h_sp = subprocess.Popen(
+        bash_cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    h_out, h_err = h_sp.communicate()
+    if wait:
+        h_sp.wait()
+    return (h_out, h_err)
+
+
+def sched_subproc(
+    bash_cmd: str,
+    job_name: str,
+    log_dir: PT,
+    wait: bool = True,
+    num_hours: int = 1,
+    num_cpus: int = 1,
+    mem_gig: int = 4,
+) -> tuple:
+    """Schedule subprocess with SLURM manager.
+
+    Args:
+        bash_cmd: Bash sytnax to be submitted to subprocess.
+        job_name: Name of job for scheduler.
+        log_dir: Location for writing stdout/err.
+        wait: Hang until subprocess completes.
+        num_hours: Requested walltime.
+        num_cpus: Requested number of processors.
+        mem_gig: Requested GB memory.
+
+    Returns:
+        tuple: stdout/err of subprocess.
+
+    """
+    # Build sbatch head
+    sbatch_head = [
+        "sbatch",
+        f"-J {job_name}",
+        f"-t {num_hours}:00:00",
+        f"--cpus-per-task={num_cpus}",
+        f"--mem={mem_gig}G",
+        f"-o {log_dir}/out_{job_name}.log",
+        f"-e {log_dir}/err_{job_name}.log",
+    ]
+    if wait:
+        sbatch_head.append("--wait")
+
+    # Submit command
+    sbatch_cmd = " ".join(sbatch_head + [f""" --wrap="{bash_cmd}" """])
+    return simp_subproc(sbatch_cmd, wait=wait)

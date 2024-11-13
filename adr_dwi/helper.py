@@ -49,3 +49,42 @@ class MakeLogger:
         self._format = logging.Formatter(
             "- %(levelname)s: %(name)s (%(asctime)s) MSG: %(message)s"
         )
+
+
+log = MakeLogger(os.path.basename(__file__))
+
+
+def afni_sing(
+    subj_work: PT,
+) -> list:
+    """Supply singularity call for AFNI.
+
+    Args:
+        subj_work: Location of working directory, contains all required data.
+
+    Returns:
+        list: Singularity call for AFNI with subj_work bound to /opt/home.
+
+    Raises:
+        KeyError: Missing global variable 'SING_AFNI'.
+
+    """
+    try:
+        sing_afni = os.environ["SING_AFNI"]
+    except KeyError as e:
+        log.write.error("Missing required variable SING_AFNI")
+        raise e
+
+    return [
+        "singularity run",
+        "--cleanenv",
+        f"--bind {subj_work}:{subj_work}",
+        f"--bind {subj_work}:/opt/home",
+        sing_afni,
+    ]
+
+
+def get_ext(suff: str) -> str:
+    """Title."""
+    ext = os.path.splitext(suff)
+    return ".nii.gz" if ext[1] == ".gz" else ext[1]

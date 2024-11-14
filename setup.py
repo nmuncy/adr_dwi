@@ -6,15 +6,12 @@ setup(
     name="adr_dwi",
     version=__version__,  # noqa: F821
     packages=find_packages(),
-    # entry_points={
-    #     "console_scripts": [
-    #         "iterate_rsfmri=iterate_rsfmri.entrypoint:main",
-    #         "get_nki=iterate_rsfmri.clis.run_pull_nki:main",
-    #         "chk_data=iterate_rsfmri.clis.run_check_data:main",
-    #         "model_subj=iterate_rsfmri.clis.run_model_subj:main",
-    #         "model_group=iterate_rsfmri.clis.run_model_group:main",
-    #     ]
-    # },
+    entry_points={
+        "console_scripts": [
+            "adr_dwi=adr_dwi.entrypoint:main",
+            "clean_raw=adr_dwi.clis.run_clean_rawdata:main",
+        ]
+    },
     # install_requires=[
     #     "setuptools>=65.6.3",
     #     "pandas>=1.5.2",

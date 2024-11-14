@@ -1,6 +1,9 @@
-"""Title.
+"""Methods for coordinating various workflows.
 
-TODO
+setup_db: Insert data into db_adr from local XLSX files.
+clean_rawdata: BIDSify ADR rawdata data.
+
+TODO check data workflow
 
 """
 
@@ -43,12 +46,24 @@ def setup_db():
     db_con.close_con()
 
 
-def build_rawdata(data_dir: PT):
-    """Title."""
-    log.write.info("Started building rawdata")
+def clean_rawdata(data_dir: PT):
+    """Coordinate cleaning of rawdata files.
+
+    Finalize BIDSification process on data exported
+    from attic/barbey/shared/ADR. Assumes extra DWI
+    and SWI files have been removed.
+
+    Args:
+        data_dir: Location of BIDS organized directory.
+
+    Raises:
+        FileNotFoundError: Failed to identify subject or session dirs.
+
+    """
+    log.write.info("Started cleaning rawdata")
     raw_dir = os.path.join(data_dir, "rawdata")
 
-    #
+    # Identify subjects and sessions
     subj_list = sorted(glob.glob(f"{raw_dir}/sub-*"))
     if not subj_list:
         raise FileNotFoundError()
@@ -59,15 +74,14 @@ def build_rawdata(data_dir: PT):
         if not sess_list:
             raise FileNotFoundError()
         subj_sess[subj] = [os.path.basename(x) for x in sess_list]
-    log.write.debug(subj_sess)
 
-    #
+    # Clean rawdata
     bids_org = process.BidsOrg()
     bids_org.data_dir = data_dir
-    log.write.debug(f"bids_org.debug: {bids_org._data_dir}")
     for subj, sess_list in subj_sess.items():
         bids_org.subj = subj
         for sess in sess_list:
+            log.write.info(f"BIDSifying {subj}, {sess}")
             bids_org.sess = sess
             bids_org.fix_anat_names()
             bids_org.fix_dwi_names()

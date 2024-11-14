@@ -20,6 +20,6 @@ The package adr_dwi consists of workflows that can be accessed
 from their respective CLI triggers:
 
     build_db    : TODO
-    get_raw     : TODO
+    clean_raw     : TODO
 
 EOF

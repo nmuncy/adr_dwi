@@ -8,7 +8,9 @@ TODO
 """
 
 import os
+import sys
 import subprocess
+import textwrap
 from adr_dwi import helper
 
 type PT = str | os.PathLike
@@ -79,3 +81,43 @@ def sched_subproc(
     # Submit command
     sbatch_cmd = " ".join(sbatch_head + [f""" --wrap="{bash_cmd}" """])
     return simp_subproc(sbatch_cmd, wait=wait)
+
+
+def sched_clean_rawdata(
+    data_dir: PT,
+    log_dir: PT,
+) -> tuple:
+    """Schedule workflows.clean_rawdata().
+
+    Args:
+        data_dir: BIDS data location.
+        log_dir: Location for writing stdout/err.
+
+    Returns:
+        tuple: stdout/err of subprocess.
+
+    """
+    # Write parent python script
+    sbatch_cmd = f"""\
+        #!/bin/env {sys.executable}
+
+        #SBATCH --job-name=cl_raw
+        #SBATCH --output={log_dir}/cl_raw.log
+        #SBATCH --time=10:00:00
+        #SBATCH --mem=6G
+
+        from adr_dwi import workflows
+
+        workflows.clean_rawdata("{data_dir}")
+
+    """
+    sbatch_cmd = textwrap.dedent(sbatch_cmd)
+    py_script = f"{log_dir}/run_clean_rawdata.py"
+    with open(py_script, "w") as ps:
+        ps.write(sbatch_cmd)
+    log.write.info(f"Wrote script: {py_script}")
+
+    # Execute script
+    h_out, h_err = simp_subproc(f"sbatch {py_script}", wait=False)
+    log.write.info(h_out.decode("utf-8"))
+    return (h_out, h_err)

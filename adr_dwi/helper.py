@@ -1,6 +1,8 @@
-"""Title.
+"""Miscellaneous helper methods.
 
-TODO
+MakeLogger: Supply logging object.
+afni_sing: Supply AFNI singularity call.
+get_ext: Return extension or .nii.gz.
 
 """
 
@@ -85,6 +87,6 @@ def afni_sing(
 
 
 def get_ext(suff: str) -> str:
-    """Title."""
+    """Return extension or .nii.gz."""
     ext = os.path.splitext(suff)
     return ".nii.gz" if ext[1] == ".gz" else ext[1]

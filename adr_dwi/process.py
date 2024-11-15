@@ -11,6 +11,7 @@ BidsOrg: Organize BidsAnat, BidsDwi, and BidsFmap into one class.
 import os
 import glob
 import json
+import shutil
 from adr_dwi import submit
 from adr_dwi import helper
 
@@ -317,3 +318,222 @@ class BidsOrg(BidsAnat, BidsDwi, BidsFmap):
         BidsAnat.__init__(self)
         BidsDwi.__init__(self)
         BidsFmap.__init__(self)
+
+
+class FslTopup:
+    """Title."""
+
+    def __init__(self, subj: str, sess: str, log_dir: PT):
+        """Initialize FslTopup."""
+        log.write.info("Initializing FslTopup")
+        self._subj = subj
+        self._sess = sess
+        self._log_dir = log_dir
+
+    def extract_b0(self, in_path: PT, out_name: str) -> PT:
+        """Extract b0 volume as new file via fslroi.
+
+        Args:
+            in_path: Location of input file.
+            out_name: Desired output prefix.
+
+        Returns:
+            Location of output file (same dir as in_path).
+
+        Raises:
+            FileNotFoundError: Missing output file.
+
+        """
+        log.write.info(f"Extracting b0: {os.path.basename(in_path)}")
+        out_dir = os.path.dirname(in_path)
+        out_path = os.path.join(out_dir, f"{out_name}.nii.gz")
+        if os.path.exists(out_path):
+            return out_path
+
+        fsl_cmd = ["fslroi", in_path, os.path.join(out_dir, out_name), "0 1"]
+        out, err = submit.simp_subproc(" ".join(fsl_cmd))
+        if not os.path.exists(out_path):
+            log.write.debug(f"STDOUT: {out}")
+            log.write.debug(f"STDERR: {err}")
+            raise FileNotFoundError(out_path)
+        return out_path
+
+    def combine_b0(
+        self, ap_path: PT, pa_path: PT, out_name: str = "tmp_AP_PA_b0"
+    ) -> PT:
+        """Combine AP and PA b0 files via fslmerge.
+
+        Args:
+            ap_path: Location of AP b0 file.
+            pa_path: Location of PA b0 file.
+            out_name: Optional, desired output prefix.
+
+        Returns:
+            Location of output file (same dir as ap_path).
+
+        Raises:
+            FileNotFoundError: Missing output file.
+
+        """
+        log.write.info("Combining b0 files")
+        out_dir = os.path.dirname(ap_path)
+        out_path = os.path.join(out_dir, f"{out_name}.nii.gz")
+        if os.path.exists(out_path):
+            return out_path
+
+        #
+        fsl_cmd = [
+            "fslmerge",
+            f"-t {os.path.join(out_dir, out_name)}",
+            ap_path,
+            pa_path,
+        ]
+        out, err = submit.simp_subproc(" ".join(fsl_cmd))
+        if not os.path.exists(out_path):
+            log.write.debug(f"STDOUT: {out}")
+            log.write.debug(f"STDERR: {err}")
+            raise FileNotFoundError(out_path)
+        return out_path
+
+    def _is_empty(self, file_path: PT) -> bool:
+        """Title."""
+        return os.stat(file_path).st_size == 0
+
+    def acq_param(
+        self, json_path: PT, out_name: str = "tmp_acq_param.txt"
+    ) -> PT:
+        """Title."""
+        log.write.info("Writing acq_param.txt")
+        out_dir = os.path.dirname(json_path)
+        out_path = os.path.join(out_dir, out_name)
+        if os.path.exists(out_path) and not self._is_empty(out_path):
+            return out_path
+
+        #
+        with open(json_path) as jf:
+            json_dict = json.load(jf)
+
+        line_a = f"0 1 0 {json_dict['TotalReadoutTime']}\n"
+        line_b = f"0 -1 0 {json_dict['TotalReadoutTime']}\n"
+        with open(out_path, "w") as f:
+            f.write(line_a)
+            f.write(line_b)
+
+        if self._is_empty(out_path):
+            raise ValueError(f"Empty file: {out_path}")
+        return out_path
+
+    def run_topup(
+        self, ap_pa_b0: PT, acq_param: PT, out_name: str = "tmp_topup"
+    ) -> PT:
+        """Title."""
+        log.write.info("Running topup")
+        out_dir = os.path.dirname(ap_pa_b0)
+        out_path = os.path.join(out_dir, f"{out_name}_fieldcoef.nii.gz")
+        if os.path.exists(out_path):
+            return out_path
+
+        fsl_cmd = [
+            "topup",
+            f"--imain={ap_pa_b0}",
+            f"--datain={acq_param}",
+            "--config=b02b0.cnf",
+            f"--out={os.path.join(out_dir, out_name)}",
+        ]
+        job_name = f"topup_{self._subj[4:]}_{self._sess[4:]}"
+        out, err = submit.sched_subproc(
+            " ".join(fsl_cmd), job_name, self._log_dir
+        )
+        if not os.path.exists(out_path):
+            raise FileNotFoundError(out_path)
+        return out_path
+
+
+class DwiPreproc(FslTopup):
+    """Title."""
+
+    def __init__(
+        self, subj: str, sess: str, work_dir: PT, data_dir: PT, log_dir: PT
+    ):
+        """Initialize FslPreproc."""
+        log.write.info("Initializing FslPreproc")
+        if not shutil.which("fslroi"):
+            raise EnvironmentError("Missing FSL in environment")
+
+        self._subj = subj
+        self._sess = sess
+        self._work_dir = work_dir
+        self._data_dir = data_dir
+        self._work_dir = work_dir
+
+        super().__init__(subj, sess, log_dir)
+
+    def setup(self) -> list:
+        """Title."""
+        log.write.info("Running setup")
+        self._subj_data = os.path.join(
+            self._data_dir, "rawdata", self._subj, self._sess
+        )
+        self._subj_work = os.path.join(
+            self._work_dir, "dwi_preproc", self._subj, self._sess, "dwi"
+        )
+        self._subj_deriv = os.path.join(
+            self._data_dir,
+            "derivatives",
+            "dwi_preproc",
+            self._subj,
+            self._sess,
+            "dwi",
+        )
+        for chk_path in [self._subj_work, self._subj_deriv]:
+            if not os.path.exists(chk_path):
+                os.makedirs(chk_path)
+
+        dwi_dict = self._get_dwi()
+        fmap_dict = self._get_fmap()
+        return (dwi_dict, fmap_dict)
+
+    def _get_dwi(self) -> dict:
+        """Title."""
+
+        # Get DWI files
+        subj_dwi = os.path.join(self._subj_data, "dwi")
+        if not glob.glob(f"{subj_dwi}/sub*"):
+            raise FileNotFoundError(f"Expected dwi data at {subj_dwi}")
+        _, _ = submit.simp_subproc(f"cp {subj_dwi}/sub* {self._subj_work}")
+        dwi_list = sorted(glob.glob(f"{self._subj_work}/sub-*_dwi.*"))
+        if len(dwi_list) != 4:
+            raise FileNotFoundError(f"Expected dwi data at {self._subj_work}")
+
+        dwi_dict = {}
+        for dwi_path in dwi_list:
+            dwi_ext = os.path.splitext(dwi_path)[1]
+            key = "dwi" if dwi_ext == ".gz" else dwi_ext[1:]
+            dwi_dict[key] = dwi_path
+        return dwi_dict
+
+    def _get_fmap(self) -> dict:
+        """Title."""
+        # Get fmap files
+        subj_fmap = os.path.join(self._subj_data, "fmap")
+        if not glob.glob(f"{subj_fmap}/sub*"):
+            raise FileNotFoundError(f"Expected fmap data at {subj_fmap}")
+        _, _ = submit.simp_subproc(f"cp {subj_fmap}/sub* {self._subj_work}")
+        fmap_list = sorted(glob.glob(f"{self._subj_work}/sub-*_epi.*"))
+        if len(fmap_list) != 4:
+            raise FileNotFoundError(f"Expected fmap data at {self._subj_work}")
+
+        fmap_dict = {}
+        for fmap_path in fmap_list:
+            fmap_ext = os.path.splitext(fmap_path)[1]
+            _subj, _sess, dir_val, suff = os.path.basename(fmap_path).split(
+                "_"
+            )
+            _dir = dir_val.split("-")[1]
+            key = (
+                f"fmap_{_dir}"
+                if fmap_ext == ".gz"
+                else f"{fmap_ext[1:]}_{_dir}"
+            )
+            fmap_dict[key] = fmap_path
+        return fmap_dict

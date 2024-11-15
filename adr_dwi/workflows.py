@@ -88,3 +88,42 @@ def clean_rawdata(data_dir: PT):
             bids_org.fix_fmap_names()
             bids_org.fix_fmap_intended()
             bids_org.fix_fmap_vols()
+
+
+def preproc_dwi(subj: str, sess: str, work_dir: PT, data_dir: PT, log_dir: PT):
+    """Title."""
+    log.write.info(f"Starting preproc_dwi: {subj}, {sess}")
+
+    # subj_data = os.path.join(data_dir, "rawdata", subj, sess)
+    # subj_work = os.path.join(work_dir, "dwi_preproc", subj, sess, "dwi")
+    # if not os.path.exists(subj_work):
+    #     os.makedirs(subj_work)
+
+    #
+
+    #
+    #
+    dwi_pp = process.DwiPreproc(subj, sess, work_dir, data_dir, log_dir)
+    dwi_dict, fmap_dict = dwi_pp.setup()
+
+    # Get AP, PA files
+    b0_dict = {}
+    for fmap_type, fmap_path in fmap_dict.items():
+        if "fmap" not in fmap_type:
+            continue
+        dir_val = fmap_type.split("_")[1]
+        b0_dict[f"b0_{dir_val}"] = dwi_pp.extract_b0(
+            fmap_path, f"tmp_{dir_val}_b0"
+        )
+
+    #
+    ap_pa_b0 = dwi_pp.combine_b0(
+        b0_dict["b0_AP"], b0_dict["b0_PA"], "tmp_AP_PA_b0"
+    )
+    acq_param = dwi_pp.acq_param(fmap_dict["json_AP"])
+    dwi_topup = dwi_pp.run_topup(ap_pa_b0, acq_param)
+
+    # TODO eddy wf
+    #   TODO make brain mask
+    #   TODO make index
+    #   TODO eddy correct

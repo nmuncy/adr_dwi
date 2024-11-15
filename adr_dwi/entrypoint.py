@@ -9,7 +9,7 @@ def main():
 
     Version : {ver.__version__}
 
-    TThe package adr_dwi consists of workflows that can be accessed
+    The package adr_dwi consists of workflows that can be accessed
     from their respective CLI triggers:
 
         build_db    : TODO

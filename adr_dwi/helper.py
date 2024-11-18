@@ -90,3 +90,8 @@ def get_ext(suff: str) -> str:
     """Return extension or .nii.gz."""
     ext = os.path.splitext(suff)
     return ".nii.gz" if ext[1] == ".gz" else ext[1]
+
+
+def is_empty(file_path: PT) -> bool:
+    """Title."""
+    return os.stat(file_path).st_size == 0

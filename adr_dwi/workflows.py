@@ -100,6 +100,16 @@ def preproc_dwi(subj: str, sess: str, work_dir: PT, data_dir: PT, log_dir: PT):
     #     os.makedirs(subj_work)
 
     #
+    out_name = f"{subj}_{sess}_dir-AP_desc-eddy_dwi.nii.gz"
+    out_dir = os.path.join(
+        data_dir, "derivatives", "dwi_preproc", subj, sess, "dwi"
+    )
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    out_path = os.path.join(out_dir, out_name)
+    if os.path.exists(out_path):
+        return out_path
 
     #
     #
@@ -121,9 +131,18 @@ def preproc_dwi(subj: str, sess: str, work_dir: PT, data_dir: PT, log_dir: PT):
         b0_dict["b0_AP"], b0_dict["b0_PA"], "tmp_AP_PA_b0"
     )
     acq_param = dwi_pp.acq_param(fmap_dict["json_AP"])
-    dwi_topup = dwi_pp.run_topup(ap_pa_b0, acq_param)
+    dwi_topup, dwi_unwarp = dwi_pp.run_topup(ap_pa_b0, acq_param)
 
-    # TODO eddy wf
-    #   TODO make brain mask
-    #   TODO make index
-    #   TODO eddy correct
+    #
+    dwi_mask = dwi_pp.brain_mask(dwi_unwarp)
+    dwi_idx = dwi_pp.write_index(dwi_dict["dwi"])
+    dwi_eddy = dwi_pp.run_eddy(
+        dwi_dict["dwi"],
+        dwi_dict["bvec"],
+        dwi_dict["bval"],
+        dwi_topup,
+        dwi_mask,
+        dwi_idx,
+        acq_param,
+        out_name,
+    )

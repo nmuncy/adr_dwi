@@ -395,10 +395,6 @@ class FslTopup:
             raise FileNotFoundError(out_path)
         return out_path
 
-    def _is_empty(self, file_path: PT) -> bool:
-        """Title."""
-        return os.stat(file_path).st_size == 0
-
     def acq_param(
         self, json_path: PT, out_name: str = "tmp_acq_param.txt"
     ) -> PT:
@@ -406,7 +402,7 @@ class FslTopup:
         log.write.info("Writing acq_param.txt")
         out_dir = os.path.dirname(json_path)
         out_path = os.path.join(out_dir, out_name)
-        if os.path.exists(out_path) and not self._is_empty(out_path):
+        if os.path.exists(out_path) and not helper.is_empty(out_path):
             return out_path
 
         #
@@ -419,19 +415,20 @@ class FslTopup:
             f.write(line_a)
             f.write(line_b)
 
-        if self._is_empty(out_path):
+        if helper.is_empty(out_path):
             raise ValueError(f"Empty file: {out_path}")
         return out_path
 
     def run_topup(
         self, ap_pa_b0: PT, acq_param: PT, out_name: str = "tmp_topup"
-    ) -> PT:
+    ) -> tuple:
         """Title."""
         log.write.info("Running topup")
         out_dir = os.path.dirname(ap_pa_b0)
-        out_path = os.path.join(out_dir, f"{out_name}_fieldcoef.nii.gz")
-        if os.path.exists(out_path):
-            return out_path
+        out_coef = os.path.join(out_dir, f"{out_name}_fieldcoef.nii.gz")
+        out_unwarp = os.path.join(out_dir, "tmp_b0_unwarped.nii.gz")
+        if os.path.exists(out_coef) and os.path.exists(out_unwarp):
+            return (out_coef, out_unwarp)
 
         fsl_cmd = [
             "topup",
@@ -439,17 +436,160 @@ class FslTopup:
             f"--datain={acq_param}",
             "--config=b02b0.cnf",
             f"--out={os.path.join(out_dir, out_name)}",
+            f"--iout={os.path.join(out_dir, 'tmp_b0_unwarped')}",
         ]
         job_name = f"topup_{self._subj[4:]}_{self._sess[4:]}"
         out, err = submit.sched_subproc(
             " ".join(fsl_cmd), job_name, self._log_dir
+        )
+        for chk_out in [out_coef, out_unwarp]:
+            if not os.path.exists(chk_out):
+                raise FileNotFoundError(chk_out)
+        return (out_coef, out_unwarp)
+
+
+class FslEddy:
+    """Title."""
+
+    def __init__(self, subj: str, sess: str, log_dir: PT):
+        """Initialize FslEddy."""
+        log.write.info("Initializing FslEddy")
+        self._subj = subj
+        self._sess = sess
+        self._log_dir = log_dir
+
+    def get_mean(self, file_path: PT) -> PT:
+        """Title."""
+        log.write.info("Running fslmaths")
+        out_path = file_path.replace(".nii.gz", "_mean.nii.gz")
+        if os.path.exists(out_path):
+            return out_path
+
+        fsl_cmd = ["fslmaths", file_path, f"-Tmean {out_path}"]
+        _, _ = submit.simp_subproc(" ".join(fsl_cmd))
+        if not os.path.exists(out_path):
+            raise FileNotFoundError(out_path)
+        return out_path
+
+    def brain_mask(
+        self, file_path: PT, out_name: str = "tmp_brain.nii.gz"
+    ) -> PT:
+        """Title."""
+        log.write.info("Running bet")
+        out_dir = os.path.dirname(file_path)
+        out_path = os.path.join(out_dir, out_name)
+        if os.path.exists(out_path):
+            return out_path
+
+        fsl_mean = self.get_mean(file_path)
+        fsl_cmd = [
+            "bet",
+            fsl_mean,
+            out_path,
+            "-m",
+            "-f 0.2",
+        ]
+        _, _ = submit.simp_subproc(" ".join(fsl_cmd))
+        if not os.path.exists(out_path):
+            raise FileNotFoundError(out_path)
+        return out_path
+
+    def _num_vol(self, file_path: PT) -> int:
+        """Title."""
+        log.write.info("Finding number of vols")
+        fsl_cmd = [
+            "fslinfo",
+            file_path,
+            "| grep -w dim4",
+            "| awk '{print $2}'",
+        ]
+        out, _err = submit.simp_subproc(" ".join(fsl_cmd))
+        log.write.debug(out)
+        return int(out.decode("utf-8"))
+
+    def write_index(
+        self, file_path: PT, out_name: str = "tmp_index.txt"
+    ) -> PT:
+        """Title."""
+        log.write.info("Writing index")
+        out_path = os.path.join(os.path.dirname(file_path), out_name)
+        if os.path.exists(out_path) and not helper.is_empty(out_path):
+            return out_path
+
+        num_vol = self._num_vol(file_path)
+        cnt = 0
+        with open(out_path, "w") as f:
+            while cnt < num_vol:
+                f.write("1\n")
+                cnt += 1
+
+        if helper.is_empty(out_path):
+            raise ValueError(f"Empty file: {out_path}")
+        return out_path
+
+    def _split_ext(self, in_str: str) -> str:
+        """Title."""
+        return in_str.split(".")[0]
+
+    def run_eddy(
+        self,
+        dwi_data: PT,
+        dwi_bvec: PT,
+        dwi_bval: PT,
+        dwi_topup: PT,
+        brain_mask: PT,
+        index: PT,
+        acq_param: PT,
+        out_name: str,
+    ) -> PT:
+        """Title."""
+        log.write.info("Running eddy_openmp")
+        out_dir = os.path.dirname(dwi_data)
+        out_path = os.path.join(out_dir, out_name)
+        if os.path.exists(out_path):
+            return out_path
+
+        # Manage extension/suffix reqs
+        in_main = os.path.basename(self._split_ext(dwi_data))
+        mask = os.path.basename(self._split_ext(brain_mask))
+        bvecs = os.path.basename(dwi_bvec)
+        bvals = os.path.basename(dwi_bval)
+        out = os.path.basename(self._split_ext(out_path))
+        idx = os.path.basename(index)
+        acqp = os.path.basename(acq_param)
+        topup = os.path.basename(dwi_topup).split("_field")[0]
+
+        #
+        fsl_cmd = [
+            f"cd {out_dir};",
+            "eddy",
+            "-v",
+            f"--imain={in_main}",
+            f"--mask={mask}",
+            f"--index={idx}",
+            f"--acqp={acqp}",
+            f"--bvecs={bvecs}",
+            f"--bvals={bvals}",
+            f"--topup={topup}",
+            f"--out={out}",
+            "--repol",
+            "--estimate_move_by_susceptibility",
+        ]
+        job_name = f"eddy_{self._subj[4:]}_{self._sess[4:]}"
+        out, err = submit.sched_subproc(
+            " ".join(fsl_cmd),
+            job_name,
+            self._log_dir,
+            num_hours=4,
+            num_cpus=4,
+            mem_gig=8,
         )
         if not os.path.exists(out_path):
             raise FileNotFoundError(out_path)
         return out_path
 
 
-class DwiPreproc(FslTopup):
+class DwiPreproc(FslTopup, FslEddy):
     """Title."""
 
     def __init__(
@@ -466,10 +606,25 @@ class DwiPreproc(FslTopup):
         self._data_dir = data_dir
         self._work_dir = work_dir
 
-        super().__init__(subj, sess, log_dir)
+        FslTopup.__init__(self, subj, sess, log_dir)
+        FslEddy.__init__(self, subj, sess, log_dir)
 
     def setup(self) -> list:
-        """Title."""
+        """Title.
+
+        Returns:
+            list:
+                [0] = dict of format {
+                    "dwi": PT, "bval": PT, "bvec": PT, "json": PT
+                }
+                [1] = dict of format {
+                    "fmap_AP": PT,
+                    "fmap_PA": PT,
+                    "json_AP": PT,
+                    "json_PA": PT,
+                }
+
+        """
         log.write.info("Running setup")
         self._subj_data = os.path.join(
             self._data_dir, "rawdata", self._subj, self._sess

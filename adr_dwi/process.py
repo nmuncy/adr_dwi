@@ -580,9 +580,9 @@ class FslEddy:
             " ".join(fsl_cmd),
             job_name,
             self._log_dir,
-            num_hours=4,
-            num_cpus=4,
-            mem_gig=8,
+            num_hours=6,
+            num_cpus=6,
+            mem_gig=12,
         )
         if not os.path.exists(out_path):
             raise FileNotFoundError(out_path)

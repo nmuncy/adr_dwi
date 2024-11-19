@@ -121,3 +121,54 @@ def sched_clean_rawdata(
     h_out, h_err = simp_subproc(f"sbatch {py_script}", wait=False)
     log.write.info(h_out.decode("utf-8"))
     return (h_out, h_err)
+
+
+def sched_preproc_dwi(
+    subj: str,
+    sess: str,
+    data_dir: PT,
+    work_dir: PT,
+    log_dir: PT,
+):
+    """Schedule workflows.preproc_dwi.
+
+    Args:
+        subj: BIDS subject ID.
+        sess: BIDS session ID.
+        data_dir: BIDS data location.
+        log_dir: Location for writing stdout/err.
+
+    Returns:
+        tuple: stdout/err of subprocess.
+
+    """
+    sbatch_cmd = f"""\
+        #!/bin/env {sys.executable}
+
+        #SBATCH --output={log_dir}/dwi_{subj[4:]}_{sess[4:]}.log
+        #SBATCH --time=12:00:00
+        #SBATCH --mem=4G
+
+        from adr_dwi import workflows
+
+        workflows.preproc_dwi(
+            "{subj}",
+            "{sess}",
+            "{data_dir}",
+            "{work_dir}",
+            "{log_dir}",
+        )
+
+    """
+    sbatch_cmd = textwrap.dedent(sbatch_cmd)
+
+    # Write as script
+    py_script = f"{log_dir}/dwi_{subj[4:]}_{sess[4:]}.py"
+    with open(py_script, "w") as ps:
+        ps.write(sbatch_cmd)
+    log.write.info(f"Wrote script: {py_script}")
+
+    # Execute script
+    h_out, h_err = simp_subproc(f"sbatch {py_script}", wait=False)
+    log.write.info(h_out.decode("utf-8"))
+    return (h_out, h_err)

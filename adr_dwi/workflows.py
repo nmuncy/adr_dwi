@@ -90,7 +90,7 @@ def clean_rawdata(data_dir: PT):
             bids_org.fix_fmap_vols()
 
 
-def preproc_dwi(subj: str, sess: str, work_dir: PT, data_dir: PT, log_dir: PT):
+def preproc_dwi(subj: str, sess: str, data_dir: PT, work_dir: PT, log_dir: PT):
     """Title."""
     log.write.info(f"Starting preproc_dwi: {subj}, {sess}")
 

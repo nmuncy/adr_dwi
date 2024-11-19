@@ -10,6 +10,7 @@ setup(
         "console_scripts": [
             "adr_dwi=adr_dwi.entrypoint:main",
             "clean_raw=adr_dwi.clis.run_clean_rawdata:main",
+            "preproc_dwi=adr_dwi.clis.run_preproc_dwi:main",
         ]
     },
     # install_requires=[

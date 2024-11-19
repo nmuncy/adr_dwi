@@ -2,6 +2,7 @@
 
 setup_db: Insert data into db_adr from local XLSX files.
 clean_rawdata: BIDSify ADR rawdata data.
+preproc_dwi: Preprocess DWI data with FSL.
 
 TODO check data workflow
 
@@ -90,16 +91,39 @@ def clean_rawdata(data_dir: PT):
             bids_org.fix_fmap_vols()
 
 
-def preproc_dwi(subj: str, sess: str, data_dir: PT, work_dir: PT, log_dir: PT):
-    """Title."""
+def preproc_dwi(
+    subj: str, sess: str, data_dir: PT, work_dir: PT, log_dir: PT
+) -> PT:
+    """Conduct preprocessing of DWI via FSL.
+
+    The preprocessing steps are:
+        1. Copy required files from data to work dir.
+        2. Extract b0 volumes from AP and PA fmaps.
+        3. Combine AP+PA b0 files.
+        4. Write acquisition parameters for AP+PA file.
+        5. Run topup for distortion correction calculations.
+        6. Make a brain mask.
+        7. Build an index file.
+        8. Preprocess DWI data via eddy.
+        9. Send eddy output to data dir, clean work.
+
+    Args:
+        subj: BIDS subject ID.
+        sess: BIDS session ID.
+        work_dir: Location for intermediates.
+        data_dir: Location of BIDS organized directory.
+        log_dir: Location for capturing STDOUT/ERR.
+
+    Returns:
+        Location of eddy output file in data dir.
+
+    Raises:
+        FileNotFoundError: Missing final eddy file.
+
+    """
     log.write.info(f"Starting preproc_dwi: {subj}, {sess}")
 
-    # subj_data = os.path.join(data_dir, "rawdata", subj, sess)
-    # subj_work = os.path.join(work_dir, "dwi_preproc", subj, sess, "dwi")
-    # if not os.path.exists(subj_work):
-    #     os.makedirs(subj_work)
-
-    #
+    # Set output name and dir
     out_name = f"{subj}_{sess}_dir-AP_desc-eddy_dwi.nii.gz"
     out_dir = os.path.join(
         data_dir, "derivatives", "dwi_preproc", subj, sess, "dwi"
@@ -107,13 +131,13 @@ def preproc_dwi(subj: str, sess: str, data_dir: PT, work_dir: PT, log_dir: PT):
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
+    # Avoid repeating work
     out_path = os.path.join(out_dir, out_name)
     if os.path.exists(out_path):
         return out_path
 
-    #
-    #
-    dwi_pp = process.DwiPreproc(subj, sess, work_dir, data_dir, log_dir)
+    # Setup for preprocessing
+    dwi_pp = process.DwiPreproc(subj, sess, work_dir, data_dir)
     dwi_dict, fmap_dict = dwi_pp.setup()
 
     # Get AP, PA files
@@ -126,14 +150,16 @@ def preproc_dwi(subj: str, sess: str, data_dir: PT, work_dir: PT, log_dir: PT):
             fmap_path, f"tmp_{dir_val}_b0"
         )
 
-    #
+    # Preprocess for topup
     ap_pa_b0 = dwi_pp.combine_b0(
         b0_dict["b0_AP"], b0_dict["b0_PA"], "tmp_AP_PA_b0"
     )
     acq_param = dwi_pp.acq_param(fmap_dict["json_AP"])
-    dwi_topup, dwi_unwarp = dwi_pp.run_topup(ap_pa_b0, acq_param)
+    dwi_topup, dwi_unwarp = dwi_pp.run_topup(
+        ap_pa_b0, acq_param, f"topup_{subj[4:]}_{sess[4:]}", log_dir
+    )
 
-    #
+    # Preprocess with eddy
     dwi_mask = dwi_pp.brain_mask(dwi_unwarp)
     dwi_idx = dwi_pp.write_index(dwi_dict["dwi"])
     dwi_eddy = dwi_pp.run_eddy(
@@ -145,4 +171,13 @@ def preproc_dwi(subj: str, sess: str, data_dir: PT, work_dir: PT, log_dir: PT):
         dwi_idx,
         acq_param,
         out_name,
+        f"eddy_{subj[4:]}_{sess[4:]}",
+        log_dir,
     )
+
+    # TODO copy output from work to data dir
+    # TODO clean work
+    if not os.path.exists(out_path):
+        raise FileNotFoundError(out_path)
+    log.write.info(f"Finished preproc_dwi: {subj}, {sess}")
+    return out_path

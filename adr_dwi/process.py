@@ -321,7 +321,14 @@ class BidsOrg(BidsAnat, BidsDwi, BidsFmap):
 
 
 class FslTopup:
-    """Title."""
+    """Methods for preparing for, executing FSL's topup.
+
+    Args:
+        subj: BIDS subject ID.
+        sess: BIDS session ID.
+        log_dir: Location for capturing STDOUT/ERR.
+
+    """
 
     def __init__(self, subj: str, sess: str, log_dir: PT):
         """Initialize FslTopup."""
@@ -350,11 +357,10 @@ class FslTopup:
         if os.path.exists(out_path):
             return out_path
 
+        # Build FSL command and submit to subprocess.
         fsl_cmd = ["fslroi", in_path, os.path.join(out_dir, out_name), "0 1"]
         out, err = submit.simp_subproc(" ".join(fsl_cmd))
         if not os.path.exists(out_path):
-            log.write.debug(f"STDOUT: {out}")
-            log.write.debug(f"STDERR: {err}")
             raise FileNotFoundError(out_path)
         return out_path
 
@@ -364,8 +370,8 @@ class FslTopup:
         """Combine AP and PA b0 files via fslmerge.
 
         Args:
-            ap_path: Location of AP b0 file.
-            pa_path: Location of PA b0 file.
+            ap_path: Location of AP b0 file, see FslTopup.extract_b0().
+            pa_path: Location of PA b0 file, same note.
             out_name: Optional, desired output prefix.
 
         Returns:
@@ -381,7 +387,7 @@ class FslTopup:
         if os.path.exists(out_path):
             return out_path
 
-        #
+        # Build FSL command and submit to subprocess.
         fsl_cmd = [
             "fslmerge",
             f"-t {os.path.join(out_dir, out_name)}",
@@ -390,25 +396,35 @@ class FslTopup:
         ]
         out, err = submit.simp_subproc(" ".join(fsl_cmd))
         if not os.path.exists(out_path):
-            log.write.debug(f"STDOUT: {out}")
-            log.write.debug(f"STDERR: {err}")
             raise FileNotFoundError(out_path)
         return out_path
 
     def acq_param(
         self, json_path: PT, out_name: str = "tmp_acq_param.txt"
     ) -> PT:
-        """Title."""
+        """Write an acq_param file for eddy.
+
+        Args:
+            json_path: Location of JSON sidecar.
+            out_name: Optional, acq param file name.
+
+        Returns:
+            Location of output file (same dir as json_path).
+
+        Raises:
+            ValueError: Failed to write info to output file.
+
+        """
         log.write.info("Writing acq_param.txt")
         out_dir = os.path.dirname(json_path)
         out_path = os.path.join(out_dir, out_name)
         if os.path.exists(out_path) and not helper.is_empty(out_path):
             return out_path
 
-        #
+        # Use TotalReadoutTime field from JSON sidecar
+        # for building param file.
         with open(json_path) as jf:
             json_dict = json.load(jf)
-
         line_a = f"0 1 0 {json_dict['TotalReadoutTime']}\n"
         line_b = f"0 -1 0 {json_dict['TotalReadoutTime']}\n"
         with open(out_path, "w") as f:
@@ -420,9 +436,33 @@ class FslTopup:
         return out_path
 
     def run_topup(
-        self, ap_pa_b0: PT, acq_param: PT, out_name: str = "tmp_topup"
+        self,
+        ap_pa_b0: PT,
+        acq_param: PT,
+        job_name: str,
+        log_dir: PT,
+        out_name: str = "tmp_topup",
     ) -> tuple:
-        """Title."""
+        """Calculate distortion correction via topup.
+
+        Args:
+            ap_pa_b0: Location of combined AP/PA b0 file, see
+                FslTopup.combine_b0().
+            acq_param: Location of acquisition parameter file,
+                see FslTopup.acq_param().
+            job_name: Name of job for scheduler.
+            log_dir: Location for capturing STDOUT/ERR.
+            out_name: Optional, output prefix.
+
+        Returns:
+            tuple:
+                [0] = Location of fieldcoef file.
+                [1] = Location of unwarped file.
+
+        Raises:
+            FileNotFoundError: Missing output files.
+
+        """
         log.write.info("Running topup")
         out_dir = os.path.dirname(ap_pa_b0)
         out_coef = os.path.join(out_dir, f"{out_name}_fieldcoef.nii.gz")
@@ -430,6 +470,7 @@ class FslTopup:
         if os.path.exists(out_coef) and os.path.exists(out_unwarp):
             return (out_coef, out_unwarp)
 
+        # Build FSL command and submit to scheduler.
         fsl_cmd = [
             "topup",
             f"--imain={ap_pa_b0}",
@@ -438,10 +479,7 @@ class FslTopup:
             f"--out={os.path.join(out_dir, out_name)}",
             f"--iout={os.path.join(out_dir, 'tmp_b0_unwarped')}",
         ]
-        job_name = f"topup_{self._subj[4:]}_{self._sess[4:]}"
-        out, err = submit.sched_subproc(
-            " ".join(fsl_cmd), job_name, self._log_dir
-        )
+        out, err = submit.sched_subproc(" ".join(fsl_cmd), job_name, log_dir)
         for chk_out in [out_coef, out_unwarp]:
             if not os.path.exists(chk_out):
                 raise FileNotFoundError(chk_out)
@@ -451,20 +489,25 @@ class FslTopup:
 class FslEddy:
     """Title."""
 
-    def __init__(self, subj: str, sess: str, log_dir: PT):
-        """Initialize FslEddy."""
-        log.write.info("Initializing FslEddy")
-        self._subj = subj
-        self._sess = sess
-        self._log_dir = log_dir
-
     def get_mean(self, file_path: PT) -> PT:
-        """Title."""
+        """Extract temporal mean via fslmaths.
+
+        Args:
+            file_path: Location of input DWI file.
+
+        Returns:
+            Location of output mean file (same dir as file_path).
+
+        Raises:
+            FileNotFoundError: Missing output file.
+
+        """
         log.write.info("Running fslmaths")
         out_path = file_path.replace(".nii.gz", "_mean.nii.gz")
         if os.path.exists(out_path):
             return out_path
 
+        # Build FSL command and submit to subprocess.
         fsl_cmd = ["fslmaths", file_path, f"-Tmean {out_path}"]
         _, _ = submit.simp_subproc(" ".join(fsl_cmd))
         if not os.path.exists(out_path):
@@ -472,22 +515,39 @@ class FslEddy:
         return out_path
 
     def brain_mask(
-        self, file_path: PT, out_name: str = "tmp_brain.nii.gz"
+        self,
+        file_path: PT,
+        out_name: str = "tmp_brain.nii.gz",
+        f_val: float = 0.2,
     ) -> PT:
-        """Title."""
+        """Make a brain mask via FSL's bet with f=0.2.
+
+        Args:
+            file_path: Location of input DWI file.
+            out_name: Optional, output file name.
+            f_val: Optional, fractional intensity threshold.
+
+        Returns:
+            Location of output brain mask (same dir as file_path).
+
+        Raises:
+            FileNotFoundError: Missing output file.
+
+        """
         log.write.info("Running bet")
         out_dir = os.path.dirname(file_path)
         out_path = os.path.join(out_dir, out_name)
         if os.path.exists(out_path):
             return out_path
 
+        # Use mean volume as input
         fsl_mean = self.get_mean(file_path)
         fsl_cmd = [
             "bet",
             fsl_mean,
             out_path,
             "-m",
-            "-f 0.2",
+            f"-f {f_val}]",
         ]
         _, _ = submit.simp_subproc(" ".join(fsl_cmd))
         if not os.path.exists(out_path):
@@ -495,7 +555,7 @@ class FslEddy:
         return out_path
 
     def _num_vol(self, file_path: PT) -> int:
-        """Title."""
+        """Return number of volumes in file."""
         log.write.info("Finding number of vols")
         fsl_cmd = [
             "fslinfo",
@@ -504,18 +564,30 @@ class FslEddy:
             "| awk '{print $2}'",
         ]
         out, _err = submit.simp_subproc(" ".join(fsl_cmd))
-        log.write.debug(out)
         return int(out.decode("utf-8"))
 
     def write_index(
         self, file_path: PT, out_name: str = "tmp_index.txt"
     ) -> PT:
-        """Title."""
+        """Build an index file from number of DWI volumes.
+
+        Args:
+            file_path: Location of input DWI file.
+            out_name: Optional, output file name.
+
+        Returns:
+            Location of index file (same dir as file_path).
+
+        Raises:
+            ValueError: Failed to write data to index file.
+
+        """
         log.write.info("Writing index")
         out_path = os.path.join(os.path.dirname(file_path), out_name)
         if os.path.exists(out_path) and not helper.is_empty(out_path):
             return out_path
 
+        # Write a line to index for each volume
         num_vol = self._num_vol(file_path)
         cnt = 0
         with open(out_path, "w") as f:
@@ -528,7 +600,7 @@ class FslEddy:
         return out_path
 
     def _split_ext(self, in_str: str) -> str:
-        """Title."""
+        """Return file name without extension."""
         return in_str.split(".")[0]
 
     def run_eddy(
@@ -541,8 +613,31 @@ class FslEddy:
         index: PT,
         acq_param: PT,
         out_name: str,
+        job_name: str,
+        log_dir: PT,
     ) -> PT:
-        """Title."""
+        """Preprocess DWI data via FSL's eddy.
+
+        Args:
+            dwi_data: Location of raw DWI data.
+            dwi_bvec: Location of bvec file.
+            dwi_bval: Location of bval file.
+            dwi_topup: Location of topup output, see FslTopup.run_topup().
+            brain_mask: Location of brain mask, see FslEddy.brain_mask().
+            index: Location of index file, see FslEddy.write_index().
+            acq_param: Location of acquisition parameter file, see
+                FslTopup.acq_param().
+            out_name: Output file name.
+            job_name: Name of job for scheduler.
+            log_dir: Location for capturing STDOUT/ERR.
+
+        Returns:
+            Location of ouput file (same dir as dwi_data).
+
+        Raises:
+            FileNotFoundError: Missing output file.
+
+        """
         log.write.info("Running eddy_openmp")
         out_dir = os.path.dirname(dwi_data)
         out_path = os.path.join(out_dir, out_name)
@@ -559,7 +654,7 @@ class FslEddy:
         acqp = os.path.basename(acq_param)
         topup = os.path.basename(dwi_topup).split("_field")[0]
 
-        #
+        # Build eddy command and submit to scheduler
         fsl_cmd = [
             f"cd {out_dir};",
             "eddy",
@@ -575,12 +670,11 @@ class FslEddy:
             "--repol",
             "--estimate_move_by_susceptibility",
         ]
-        job_name = f"eddy_{self._subj[4:]}_{self._sess[4:]}"
         out, err = submit.sched_subproc(
             " ".join(fsl_cmd),
             job_name,
-            self._log_dir,
-            num_hours=6,
+            log_dir,
+            num_hours=8,
             num_cpus=6,
             mem_gig=12,
         )
@@ -590,13 +684,24 @@ class FslEddy:
 
 
 class DwiPreproc(FslTopup, FslEddy):
-    """Title."""
+    """Methods for preprocessing DWI with FSL tools.
 
-    def __init__(
-        self, subj: str, sess: str, work_dir: PT, data_dir: PT, log_dir: PT
-    ):
+    Args:
+        subj: BIDS subject ID.
+        sess: BIDS session ID.
+        work_dir: Location for intermediates.
+        data_dir: Location of BIDS organized directory.
+
+    Raises:
+        EnvironmentError: FSL (fslroi) not executable in environment.
+
+    """
+
+    def __init__(self, subj: str, sess: str, work_dir: PT, data_dir: PT):
         """Initialize FslPreproc."""
         log.write.info("Initializing FslPreproc")
+
+        # Validate environment
         if not shutil.which("fslroi"):
             raise EnvironmentError("Missing FSL in environment")
 
@@ -606,14 +711,11 @@ class DwiPreproc(FslTopup, FslEddy):
         self._data_dir = data_dir
         self._work_dir = work_dir
 
-        FslTopup.__init__(self, subj, sess, log_dir)
-        FslEddy.__init__(self, subj, sess, log_dir)
-
-    def setup(self) -> list:
-        """Title.
+    def setup(self) -> tuple:
+        """Set attrs and copy data from data to work dirs.
 
         Returns:
-            list:
+            tuple:
                 [0] = dict of format {
                     "dwi": PT, "bval": PT, "bvec": PT, "json": PT
                 }
@@ -621,11 +723,13 @@ class DwiPreproc(FslTopup, FslEddy):
                     "fmap_AP": PT,
                     "fmap_PA": PT,
                     "json_AP": PT,
-                    "json_PA": PT,
+                    "json_PA": PT
                 }
 
         """
         log.write.info("Running setup")
+
+        # Set attrs
         self._subj_data = os.path.join(
             self._data_dir, "rawdata", self._subj, self._sess
         )
@@ -640,16 +744,28 @@ class DwiPreproc(FslTopup, FslEddy):
             self._sess,
             "dwi",
         )
+
+        # Make dirs
         for chk_path in [self._subj_work, self._subj_deriv]:
             if not os.path.exists(chk_path):
                 os.makedirs(chk_path)
 
+        # Coordinate data copy
         dwi_dict = self._get_dwi()
         fmap_dict = self._get_fmap()
         return (dwi_dict, fmap_dict)
 
     def _get_dwi(self) -> dict:
-        """Title."""
+        """Copy DWI files to work.
+
+        Returns:
+            dict: {"dwi": PT, "bval": PT, "bvec": PT, "json": PT}
+
+        Raises:
+            FileNotFoundError: Missing data in data or work dirs.
+            ValueError: Number of work DWI files != 4.
+
+        """
 
         # Get DWI files
         subj_dwi = os.path.join(self._subj_data, "dwi")
@@ -658,8 +774,11 @@ class DwiPreproc(FslTopup, FslEddy):
         _, _ = submit.simp_subproc(f"cp {subj_dwi}/sub* {self._subj_work}")
         dwi_list = sorted(glob.glob(f"{self._subj_work}/sub-*_dwi.*"))
         if len(dwi_list) != 4:
-            raise FileNotFoundError(f"Expected dwi data at {self._subj_work}")
+            raise ValueError(
+                f"Missing/unexpected dwi data at {self._subj_work}"
+            )
 
+        # Build output dict
         dwi_dict = {}
         for dwi_path in dwi_list:
             dwi_ext = os.path.splitext(dwi_path)[1]
@@ -668,7 +787,21 @@ class DwiPreproc(FslTopup, FslEddy):
         return dwi_dict
 
     def _get_fmap(self) -> dict:
-        """Title."""
+        """Copy fmap files to work.
+
+        Returns:
+            dict: {
+                "fmap_AP": PT,
+                "fmap_PA": PT,
+                "json_AP": PT,
+                "json_PA": PT
+            }
+
+        Raises:
+            FileNotFoundError: Missing data in data or work dirs.
+            ValueError: Number of work fmap files != 4.
+
+        """
         # Get fmap files
         subj_fmap = os.path.join(self._subj_data, "fmap")
         if not glob.glob(f"{subj_fmap}/sub*"):
@@ -676,8 +809,11 @@ class DwiPreproc(FslTopup, FslEddy):
         _, _ = submit.simp_subproc(f"cp {subj_fmap}/sub* {self._subj_work}")
         fmap_list = sorted(glob.glob(f"{self._subj_work}/sub-*_epi.*"))
         if len(fmap_list) != 4:
-            raise FileNotFoundError(f"Expected fmap data at {self._subj_work}")
+            raise ValueError(
+                f"Missing/unexpected fmap data at {self._subj_work}"
+            )
 
+        # Build output dict
         fmap_dict = {}
         for fmap_path in fmap_list:
             fmap_ext = os.path.splitext(fmap_path)[1]

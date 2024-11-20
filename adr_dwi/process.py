@@ -321,21 +321,7 @@ class BidsOrg(BidsAnat, BidsDwi, BidsFmap):
 
 
 class FslTopup:
-    """Methods for preparing for, executing FSL's topup.
-
-    Args:
-        subj: BIDS subject ID.
-        sess: BIDS session ID.
-        log_dir: Location for capturing STDOUT/ERR.
-
-    """
-
-    def __init__(self, subj: str, sess: str, log_dir: PT):
-        """Initialize FslTopup."""
-        log.write.info("Initializing FslTopup")
-        self._subj = subj
-        self._sess = sess
-        self._log_dir = log_dir
+    """Methods for preparing for, executing FSL's topup."""
 
     def extract_b0(self, in_path: PT, out_name: str) -> PT:
         """Extract b0 volume as new file via fslroi.
@@ -487,7 +473,7 @@ class FslTopup:
 
 
 class FslEddy:
-    """Title."""
+    """Methods for preparing for, executing FSL's eddy."""
 
     def get_mean(self, file_path: PT) -> PT:
         """Extract temporal mean via fslmaths.
@@ -547,7 +533,7 @@ class FslEddy:
             fsl_mean,
             out_path,
             "-m",
-            f"-f {f_val}]",
+            f"-f {f_val}",
         ]
         _, _ = submit.simp_subproc(" ".join(fsl_cmd))
         if not os.path.exists(out_path):

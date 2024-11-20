@@ -767,12 +767,12 @@ class DwiPreproc(FslTopup, FslEddy):
 
         """
 
-        # Get DWI files
+        # Get raw DWI files
         subj_dwi = os.path.join(self._subj_data, "dwi")
         if not glob.glob(f"{subj_dwi}/sub*"):
             raise FileNotFoundError(f"Expected dwi data at {subj_dwi}")
         _, _ = submit.simp_subproc(f"cp {subj_dwi}/sub* {self._subj_work}")
-        dwi_list = sorted(glob.glob(f"{self._subj_work}/sub-*_dwi.*"))
+        dwi_list = sorted(glob.glob(f"{self._subj_work}/sub-*_dir-AP_dwi.*"))
         if len(dwi_list) != 4:
             raise ValueError(
                 f"Missing/unexpected dwi data at {self._subj_work}"

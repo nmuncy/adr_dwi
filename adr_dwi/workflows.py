@@ -10,11 +10,13 @@ TODO check data workflow
 
 import os
 import glob
+import shutil
 import openpyxl  # noqa: F401
 from adr_dwi import database
 from adr_dwi import build_survey
 from adr_dwi import helper
 from adr_dwi import process
+from adr_dwi import submit
 
 type PT = str | os.PathLike
 log = helper.MakeLogger(os.path.basename(__file__))
@@ -175,9 +177,43 @@ def preproc_dwi(
         log_dir,
     )
 
-    # TODO copy output from work to data dir
-    # TODO clean work
+    # Save eddy output, also send bvec/bval
+    _, _ = submit.simp_subproc(f"cp {dwi_eddy} {out_dir}")
+    for file_name, file_path in dwi_dict.items():
+        if file_name == "dwi":
+            continue
+        _, _ = submit.simp_subproc(f"cp {file_path} {out_dir}")
+
+    # Clean session dir
     if not os.path.exists(out_path):
         raise FileNotFoundError(out_path)
+    shutil.rmtree(os.path.dirname(os.path.dirname(dwi_eddy)))
     log.write.info(f"Finished preproc_dwi: {subj}, {sess}")
     return out_path
+
+
+def wrap_preproc_dwi(
+    subj_sess: list,
+    data_dir: PT,
+    work_dir: PT,
+    log_dir: PT,
+):
+    """Title.
+
+    Raises:
+        EnvironmentError: OS global variable 'SLURM_ARRAY_TASK_ID' not found.
+
+    """
+    try:
+        arr_id = os.environ["SLURM_ARRAY_TASK_ID"]
+    except KeyError:
+        log.write.error(
+            f"{wrap_preproc_dwi.__name__} intended for "
+            + "execution by SLURM array"
+        )
+        raise EnvironmentError()
+
+    # Identify iteration subject and session list
+    subj, sess = subj_sess[int(arr_id)]
+    log.write.info(f"Starting preproc_dwi for: {subj}, {sess}")
+    _ = preproc_dwi(subj, sess, data_dir, work_dir, log_dir)

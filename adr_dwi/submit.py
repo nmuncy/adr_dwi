@@ -123,18 +123,17 @@ def sched_clean_rawdata(
     return (h_out, h_err)
 
 
-def sched_preproc_dwi(
-    subj: str,
-    sess: str,
+def sched_preproc_array(
+    subj_sess: list,
+    arr_size: int,
     data_dir: PT,
     work_dir: PT,
     log_dir: PT,
-):
-    """Schedule workflows.preproc_dwi.
+) -> tuple:
+    """Title.
 
     Args:
-        subj: BIDS subject ID.
-        sess: BIDS session ID.
+        TODO
         data_dir: BIDS data location.
         log_dir: Location for writing stdout/err.
 
@@ -142,18 +141,18 @@ def sched_preproc_dwi(
         tuple: stdout/err of subprocess.
 
     """
+    arr_num = len(subj_sess) - 1
     sbatch_cmd = f"""\
         #!/bin/env {sys.executable}
 
-        #SBATCH --output={log_dir}/dwi_{subj[4:]}_{sess[4:]}.log
-        #SBATCH --time=12:00:00
-        #SBATCH --mem=4G
+        #SBATCH --output={log_dir}/preproc_subj_%a.txt
+        #SBATCH --array=0-{arr_num}%{arr_size}
+        #SBATCH --time=01:00:00
 
         from adr_dwi import workflows
 
-        workflows.preproc_dwi(
-            "{subj}",
-            "{sess}",
+        workflows.wrap_preproc_dwi(
+            {subj_sess},
             "{data_dir}",
             "{work_dir}",
             "{log_dir}",
@@ -163,7 +162,7 @@ def sched_preproc_dwi(
     sbatch_cmd = textwrap.dedent(sbatch_cmd)
 
     # Write as script
-    py_script = f"{log_dir}/dwi_{subj[4:]}_{sess[4:]}.py"
+    py_script = f"{log_dir}/array_preproc_dwi.py"
     with open(py_script, "w") as ps:
         ps.write(sbatch_cmd)
     log.write.info(f"Wrote script: {py_script}")

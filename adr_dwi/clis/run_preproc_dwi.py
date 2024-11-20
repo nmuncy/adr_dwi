@@ -12,7 +12,7 @@ Examples:
 import os
 import sys
 import glob
-import time
+from datetime import datetime
 import textwrap
 from argparse import ArgumentParser, RawTextHelpFormatter
 from adr_dwi import submit
@@ -23,6 +23,17 @@ def get_args():
     """Get and parse arguments."""
     parser = ArgumentParser(
         description=__doc__, formatter_class=RawTextHelpFormatter
+    )
+    parser.add_argument(
+        "--array-size",
+        default=30,
+        help=textwrap.dedent(
+            """\
+            Size of sbatch array
+            (default: %(default)s)
+            """
+        ),
+        type=int,
     )
     parser.add_argument(
         "--data-dir",
@@ -78,6 +89,7 @@ def main():
 
     # Get args
     args = get_args().parse_args()
+    arr_size = args.array_size
     data_dir = args.data_dir
     work_dir = args.work_dir
     sess_list = args.sess
@@ -86,14 +98,18 @@ def main():
 
     log = helper.MakeLogger(os.path.basename(__file__))
 
-    #
+    # Setup
     work_par = os.path.join(work_dir, "dwi_preproc")
-    log_dir = os.path.join(work_dir, "logs", "dwi_preproc")
+    log_dir = os.path.join(
+        work_dir,
+        "logs",
+        f"dwi_preproc_{datetime.now().strftime('%Y%m%d_%H%M')}",
+    )
     for chk_path in [work_par, log_dir]:
         if not os.path.exists(chk_path):
             os.makedirs(chk_path)
 
-    #
+    # Find subjects or used requested subjects
     raw_dir = os.path.join(data_dir, "rawdata")
     if subj_all:
         subj_list = [
@@ -103,27 +119,51 @@ def main():
         subj_list = [f"sub-{x}" for x in subj_list]
     if not subj_list:
         raise ValueError("Empty subj_list")
-    log.write.info(f"subj_list: {subj_list}")
+    log.write.info(f"Finding sessions for following subjects: {subj_list}")
 
-    # TODO check for existing dwi_preproc files
-    subj_sess = {}
+    # Identify subjects and sessions for submission
+    data_avail = {}
     for subj in subj_list:
+
+        # Identify available sessions
         if sess_list:
-            sess_list = [f"ses-{x}" for x in sess_list]
+
+            # If use specified, use requested sessions
+            sess_out = [f"ses-{x}" for x in sess_list]
         else:
-            sess_list = [
+
+            # Find sessions without workflow output
+            sess_found = [
                 os.path.basename(x)
                 for x in sorted(glob.glob(f"{raw_dir}/{subj}/ses-*"))
             ]
-        subj_sess[subj] = sess_list
 
-    #
-    for subj, sess_list in subj_sess.items():
-        for sess in sess_list:
-            _, _ = submit.sched_preproc_dwi(
-                subj, sess, data_dir, work_dir, log_dir
-            )
-            time.sleep(1)
+            sess_out = [
+                x
+                for x in sess_found
+                if not os.path.exists(
+                    os.path.join(
+                        data_dir,
+                        "derivatives",
+                        "dwi_preproc",
+                        subj,
+                        x,
+                        "dwi",
+                        f"{subj}_{x}_dir-AP_desc-eddy_dwi.nii.gz",
+                    )
+                )
+            ]
+        data_avail[subj] = sess_out
+
+    # Remove subjects who do not have/need any sessions
+    data_avail = {x: y for x, y in data_avail.items() if y}
+
+    # Report and submit jobs
+    subj_sess = [(x, y) for x, y_list in data_avail.items() for y in y_list]
+    log.write.info(f"Submitting jobs for: {subj_sess}")
+    _, _ = submit.sched_preproc_array(
+        subj_sess, arr_size, data_dir, work_dir, log_dir
+    )
 
 
 if __name__ == "__main__":

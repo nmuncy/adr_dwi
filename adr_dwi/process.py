@@ -411,8 +411,8 @@ class FslTopup:
         # for building param file.
         with open(json_path) as jf:
             json_dict = json.load(jf)
-        line_a = f"0 1 0 {json_dict['TotalReadoutTime']}\n"
-        line_b = f"0 -1 0 {json_dict['TotalReadoutTime']}\n"
+        line_a = f"0 -1 0 {json_dict['TotalReadoutTime']}\n"
+        line_b = f"0 1 0 {json_dict['TotalReadoutTime']}\n"
         with open(out_path, "w") as f:
             f.write(line_a)
             f.write(line_b)
@@ -594,6 +594,7 @@ class FslEddy:
         dwi_data: PT,
         dwi_bvec: PT,
         dwi_bval: PT,
+        dwi_json: PT,
         dwi_topup: PT,
         brain_mask: PT,
         index: PT,
@@ -601,6 +602,7 @@ class FslEddy:
         out_name: str,
         job_name: str,
         log_dir: PT,
+        mporder: int = 15,
     ) -> PT:
         """Preprocess DWI data via FSL's eddy.
 
@@ -608,6 +610,7 @@ class FslEddy:
             dwi_data: Location of raw DWI data.
             dwi_bvec: Location of bvec file.
             dwi_bval: Location of bval file.
+            dwi_json: Location of json file.
             dwi_topup: Location of topup output, see FslTopup.run_topup().
             brain_mask: Location of brain mask, see FslEddy.brain_mask().
             index: Location of index file, see FslEddy.write_index().
@@ -616,6 +619,8 @@ class FslEddy:
             out_name: Output file name.
             job_name: Name of job for scheduler.
             log_dir: Location for capturing STDOUT/ERR.
+            mporder: Optional, number of basis functions, typically
+                number of slices / 4.
 
         Returns:
             Location of ouput file (same dir as dwi_data).
@@ -635,6 +640,7 @@ class FslEddy:
         mask = os.path.basename(self._split_ext(brain_mask))
         bvecs = os.path.basename(dwi_bvec)
         bvals = os.path.basename(dwi_bval)
+        json = os.path.basename(dwi_json)
         out = os.path.basename(self._split_ext(out_path))
         idx = os.path.basename(index)
         acqp = os.path.basename(acq_param)
@@ -651,17 +657,18 @@ class FslEddy:
             f"--acqp={acqp}",
             f"--bvecs={bvecs}",
             f"--bvals={bvals}",
+            f"--json={json}",
             f"--topup={topup}",
             f"--out={out}",
+            f"--mporder={mporder}",
             "--repol",
             "--estimate_move_by_susceptibility",
         ]
-        out, err = submit.sched_subproc(
+        out, err = submit.sched_gpu(
             " ".join(fsl_cmd),
             job_name,
             log_dir,
-            num_hours=8,
-            num_cpus=6,
+            num_hours=4,
             mem_gig=12,
         )
         if not os.path.exists(out_path):

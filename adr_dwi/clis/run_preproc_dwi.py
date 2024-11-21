@@ -5,7 +5,7 @@ TODO
 Examples:
     preproc_dwi --subj 0003 --sess 1
     preproc_dwi --subj 000{4,6,10} --sess 2
-    preproc_dwi --subj-all
+    preproc_dwi --subj-all --array-size 40
 
 """
 
@@ -52,7 +52,7 @@ def get_args():
         default=None,
         choices=[1, 2, 3],
         help="List of session IDs, or all found if not specifed.",
-        type=str,
+        type=int,
     )
     parser.add_argument(
         "--subj",

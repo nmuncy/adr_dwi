@@ -168,6 +168,7 @@ def preproc_dwi(
         dwi_dict["dwi"],
         dwi_dict["bvec"],
         dwi_dict["bval"],
+        dwi_dict["json"],
         dwi_topup,
         dwi_mask,
         dwi_idx,
@@ -177,10 +178,11 @@ def preproc_dwi(
         log_dir,
     )
 
-    # Save eddy output, also send bvec/bval
-    _, _ = submit.simp_subproc(f"cp {dwi_eddy} {out_dir}")
+    # Save eddy output, also send bval/json
+    eddy_dir = os.path.dirname(dwi_eddy)
+    _, _ = submit.simp_subproc(f"cp {eddy_dir}/*eddy* {out_dir}")
     for file_name, file_path in dwi_dict.items():
-        if file_name == "dwi":
+        if file_name not in ["bval", "json"]:
             continue
         _, _ = submit.simp_subproc(f"cp {file_path} {out_dir}")
 

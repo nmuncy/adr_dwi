@@ -83,6 +83,47 @@ def sched_subproc(
     return simp_subproc(sbatch_cmd, wait=wait)
 
 
+def sched_gpu(
+    bash_cmd: str,
+    job_name: str,
+    log_dir: PT,
+    wait: bool = True,
+    num_hours: int = 1,
+    mem_gig: int = 4,
+) -> tuple:
+    """Schedule GPU subprocess with SLURM manager.
+
+    Args:
+        bash_cmd: Bash sytnax to be submitted to subprocess.
+        job_name: Name of job for scheduler.
+        log_dir: Location for writing stdout/err.
+        wait: Hang until subprocess completes.
+        num_hours: Requested walltime.
+        mem_gig: Requested GB memory.
+
+    Returns:
+        tuple: stdout/err of subprocess.
+
+    """
+    # Build sbatch head
+    sbatch_head = [
+        "sbatch",
+        f"-J {job_name}",
+        f"-t {num_hours}:00:00",
+        "--partition=gpu",
+        "--gres=gpu",
+        f"--mem={mem_gig}G",
+        f"-o {log_dir}/out_{job_name}.log",
+        f"-e {log_dir}/err_{job_name}.log",
+    ]
+    if wait:
+        sbatch_head.append("--wait")
+
+    # Submit command
+    sbatch_cmd = " ".join(sbatch_head + [f""" --wrap="{bash_cmd}" """])
+    return simp_subproc(sbatch_cmd, wait=wait)
+
+
 def sched_clean_rawdata(
     data_dir: PT,
     log_dir: PT,
@@ -147,7 +188,7 @@ def sched_preproc_array(
 
         #SBATCH --output={log_dir}/preproc_subj_%a.txt
         #SBATCH --array=0-{arr_num}%{arr_size}
-        #SBATCH --time=01:00:00
+        #SBATCH --time=12:00:00
 
         from adr_dwi import workflows
 

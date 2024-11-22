@@ -15,6 +15,8 @@ def main():
         build_db    : TODO
         clean_raw   : TODO
         preproc_dwi : TODO
+        setup_afq   : TODO
+        run_afq     : TODO
 
     """
     )

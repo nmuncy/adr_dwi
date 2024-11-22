@@ -11,12 +11,16 @@ TODO check data workflow
 import os
 import glob
 import shutil
+import json
 import openpyxl  # noqa: F401
 from adr_dwi import database
 from adr_dwi import build_survey
 from adr_dwi import helper
 from adr_dwi import process
 from adr_dwi import submit
+
+import importlib.resources as pkg_resources
+from adr_dwi import bin as adr_bin
 
 type PT = str | os.PathLike
 log = helper.MakeLogger(os.path.basename(__file__))
@@ -219,3 +223,152 @@ def wrap_preproc_dwi(
     subj, sess = subj_sess[int(arr_id)]
     log.write.info(f"Starting preproc_dwi for: {subj}, {sess}")
     _ = preproc_dwi(subj, sess, data_dir, work_dir, log_dir)
+
+
+def setup_afq(
+    subj: str,
+    sess: str,
+    data_dir: PT,
+    work_dir: PT,
+):
+    """Title."""
+    # Setup, avoid repeating work
+    subj_work = os.path.join(work_dir, "dwi_afq", subj, sess, "dwi")
+    if not os.path.exists(subj_work):
+        os.makedirs(subj_work)
+    out_mask = os.path.join(
+        subj_work, f"{subj}_{sess}_dir-AP_desc-brain_mask.nii.gz"
+    )
+    if os.path.exists(out_mask):
+        return out_mask
+
+    # Identify files to pull
+    log.write.info(f"Running setup_afq for: {subj}, {sess}")
+    subj_data = os.path.join(
+        data_dir, "derivatives", "dwi_preproc", subj, sess, "dwi"
+    )
+    preproc_dict = {
+        "dwi": f"{subj}_{sess}_dir-AP_desc-eddy_dwi.nii.gz",
+        "bvec": f"{subj}_{sess}_dir-AP_desc-eddy_dwi.eddy_rotated_bvecs",
+        "bval": f"{subj}_{sess}_dir-AP_dwi.bval",
+        "json": f"{subj}_{sess}_dir-AP_dwi.json",
+    }
+
+    # Pull files
+    for file_type, file_name in preproc_dict.items():
+        file_path = os.path.join(subj_data, file_name)
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(file_path)
+
+        # Rename bvec file
+        if file_type == "bvec":
+            file_pref = os.path.splitext(file_name)[0]
+            out_path = os.path.join(subj_work, f"{file_pref}.bvec")
+        else:
+            out_path = os.path.join(subj_work, file_name)
+
+        _, _ = submit.simp_subproc(f"cp {file_path} {out_path}")
+
+    # Make a brain mask from preprocessed data
+    fsl_cmd = [
+        f"cd {subj_work};",
+        f"bet {preproc_dict["dwi"]}",
+        f"{out_mask.split('_mask')[0]}",
+        "-f 0.2",
+        "-g 0",
+        "-m -n",
+    ]
+    out, err = submit.simp_subproc(" ".join(fsl_cmd))
+
+    # Validate output
+    if not os.path.exists(out_mask):
+        log.write.debug(f"Bet STDOUT: {out}")
+        log.write.debug(f"Bet STDERR: {err}")
+        raise FileNotFoundError(out_mask)
+    return out_mask
+
+
+def wrap_setup_afq(
+    subj_sess: list,
+    data_dir: PT,
+    work_dir: PT,
+):
+    """Title.
+
+    Raises:
+        EnvironmentError: OS global variable 'SLURM_ARRAY_TASK_ID' not found.
+
+    """
+    try:
+        arr_id = os.environ["SLURM_ARRAY_TASK_ID"]
+    except KeyError:
+        log.write.error(
+            f"{wrap_preproc_dwi.__name__} intended for "
+            + "execution by SLURM array"
+        )
+        raise EnvironmentError()
+
+    # Make dataset_description
+    log.write.info("Writing dataset_description")
+    data_desc = {
+        "Name": "ADR",
+        "BIDSVersion": "1.10.0",
+        "GeneratedBy": [{"Name": "FSL"}],
+    }
+    work_deriv = os.path.join(work_dir, "dwi_afq")
+    with open(os.path.join(work_deriv, "dataset_description.json"), "w") as jf:
+        json.dump(data_desc, jf)
+
+    # Write config.toml
+    log.write.info("Writing config.toml")
+    with pkg_resources.open_text(adr_bin, "config.toml") as cnf_in:
+        cnf_lines = cnf_in.read()
+    with open(os.path.join(work_deriv, "config.toml"), "w") as cnf_out:
+        cnf_out.write(cnf_lines)
+
+    # Identify iteration subject and session list
+    subj, sess = subj_sess[int(arr_id)]
+    log.write.info(f"Starting setup_afq for: {subj}, {sess}")
+    _ = setup_afq(subj, sess, data_dir, work_dir)
+
+
+def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
+    """Title."""
+    try:
+        sing_afq = os.environ["SING_PYAFQ"]
+    except KeyError as e:
+        log.write.error("Missing required variable SING_PYAFQ")
+        raise e
+
+    work_afq = os.path.join(work_dir, "dwi_afq")
+    bash_list = [
+        "singularity",
+        "run",
+        "--cleanenv",
+        f"--bind {work_afq}:{work_afq}",
+        sing_afq,
+        f"{work_afq}/config.toml",
+        "--notrack",
+    ]
+    out, err = submit.sched_subproc(
+        " ".join(bash_list),
+        "pyAFQ",
+        log_dir,
+        num_hours=60,
+        num_cpus=12,
+        mem_gig=32,
+    )
+
+    afq_dir = os.path.join(work_afq, "derivatives", "afq")
+    if not os.path.exists(afq_dir):
+        log.write.error(f"AFQ STDOUT: {out}")
+        log.write.error(f"AFQ STDeRR: {err}")
+        raise FileNotFoundError(afq_dir)
+
+    data_deriv = os.path.join(data_dir, "derivatives")
+    _, _ = submit.simp_subproc(f"cp -r {afq_dir} {data_deriv}")
+    out_dir = os.path.join(data_deriv, "afq")
+    if not os.path.exists(out_dir):
+        raise FileNotFoundError(out_dir)
+    shutil.rmtree(work_afq)
+    return out_dir

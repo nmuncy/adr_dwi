@@ -221,12 +221,12 @@ create table tbl_test_dates(
 );
 
 -- pyAFQ tract metrics
-create table ref_afq(
+create table ref_tract(
     tract_id int not null,
     tract_name varchar(31),
     primary key(tract_id)
 );
-insert into ref_afq
+insert into ref_tract
     (tract_id, tract_name)
     values
     (1, "Left Anterior Thalamic"),

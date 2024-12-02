@@ -232,7 +232,7 @@ class RefMaps:
         log.write.info("Loading references")
 
         # Set attributes ref_task, ref_sess, ref_subj, and ref_step.
-        for attr_name in ["test"]:
+        for attr_name in ["test", "tract"]:
             df = self._db_con.fetch_df(
                 f"select * from ref_{attr_name}",
                 [f"{attr_name}_id", f"{attr_name}_name"],
@@ -285,7 +285,7 @@ class RefMaps:
             ValueError: Unexpected name value
 
         """
-        if name not in ["test"]:
+        if name not in ["test", "tract"]:
             log.write.error(f"Unexpected name: {name}")
             raise ValueError
         ref_attr = getattr(self, f"ref_{name}")
@@ -344,4 +344,37 @@ def build_impact_user(df_user: pd.DataFrame, ref_maps: Type[RefMaps]):
     ref_maps._db_con.exec_many(sql_cmd, tbl_input)
 
 
-# %%
+def build_afq(df: pd.DataFrame) -> pd.DataFrame:
+    """Title."""
+    log.write.info("Sending AFQ data to db_adr.tbl_afq")
+    db_con = DbConnect()
+    ref_maps = RefMaps(db_con)
+
+    # Rename cols and update session value
+    col_switch = {
+        "tractID": "tract_id",
+        "nodeID": "node_id",
+        "subjectID": "subj_id",
+        "sessionID": "sess_id",
+    }
+    df = df.rename(columns=col_switch)
+    df["sess_id"] = df["sess_id"] - 1
+
+    # Convert tract names to IDs
+    df["tract_id"] = df.apply(
+        lambda x: ref_maps.get_id("tract", x, "tract_id"), axis=1
+    )
+
+    # Build and execute insert command
+    df = df.replace(np.nan, None)
+    col_list = list(df.columns)
+    value_list = ["%s" for x in col_list]
+    sql_cmd = (
+        "insert ignore into tbl_afq"
+        + f"({', '.join(col_list)}) "
+        + f"values ({', '.join(value_list)})"
+    )
+    tbl_input = list(df[col_list].itertuples(index=False, name=None))
+    db_con.exec_many(sql_cmd, tbl_input)
+    db_con.close_con()
+    return df

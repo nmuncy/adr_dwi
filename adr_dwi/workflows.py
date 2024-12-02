@@ -5,6 +5,7 @@ clean_rawdata: BIDSify ADR rawdata data.
 preproc_dwi: Preprocess DWI data with FSL.
 
 TODO check data workflow
+TODO changes afq to pyafq
 
 """
 
@@ -12,6 +13,7 @@ import os
 import glob
 import shutil
 import json
+import pandas as pd
 import openpyxl  # noqa: F401
 from adr_dwi import database
 from adr_dwi import build_survey
@@ -334,12 +336,22 @@ def wrap_setup_afq(
 
 def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
     """Title."""
+    # Check env
     try:
         sing_afq = os.environ["SING_PYAFQ"]
     except KeyError as e:
         log.write.error("Missing required variable SING_PYAFQ")
         raise e
 
+    # Avoid repeating work
+    log.write.info("Starting pyAFQ")
+    data_deriv = os.path.join(data_dir, "derivatives")
+    out_path = os.path.join(data_deriv, "afq", "tract_profiles.csv")
+    if os.path.exists(out_path):
+        log.write.info("pyAFQ output found")
+        return out_path
+
+    # Submit pyAFQ
     work_afq = os.path.join(work_dir, "dwi_afq")
     bash_list = [
         "singularity",
@@ -359,16 +371,30 @@ def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
         mem_gig=32,
     )
 
-    afq_dir = os.path.join(work_afq, "derivatives", "afq")
-    if not os.path.exists(afq_dir):
+    # Check for output in work
+    work_dir = os.path.join(work_afq, "derivatives", "afq")
+    if not os.path.exists(work_dir):
         log.write.error(f"AFQ STDOUT: {out}")
-        log.write.error(f"AFQ STDeRR: {err}")
-        raise FileNotFoundError(afq_dir)
+        log.write.error(f"AFQ STDERR: {err}")
+        raise FileNotFoundError(work_dir)
 
-    data_deriv = os.path.join(data_dir, "derivatives")
-    _, _ = submit.simp_subproc(f"cp -r {afq_dir} {data_deriv}")
-    out_dir = os.path.join(data_deriv, "afq")
-    if not os.path.exists(out_dir):
-        raise FileNotFoundError(out_dir)
+    # Copy and clean work
+    _, _ = submit.simp_subproc(f"cp -r {work_dir} {data_deriv}")
+    if not os.path.exists(out_path):
+        raise FileNotFoundError(out_path)
     shutil.rmtree(work_afq)
-    return out_dir
+    log.write.info("Finished pyAFQ")
+    return out_path
+
+
+def insert_pyafq(data_dir: PT) -> pd.DataFrame:
+    """Title."""
+    log.write.info("Inserting pyAFQ values into db_adr")
+    csv_path = os.path.join(
+        data_dir, "derivatives", "afq", "tract_profiles.csv"
+    )
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(csv_path)
+
+    df = pd.read_csv(csv_path)
+    return database.build_afq(df)

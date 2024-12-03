@@ -28,7 +28,7 @@ df$visit_date <- as.POSIXct(df$visit_date, format="%Y-%m-%d", tz="UTC")
 
 
 # Total Symptom Score ----
-# 
+#
 # Test plotting, stats functions.
 df_tsymp <- fu1_better("userTotalSymptomScore", df, low=T)
 bet_wor <- better_worse("userTotalSymptomScore", df_tsymp, "base")
@@ -74,7 +74,7 @@ ggplot(
   stat_cor(method="pearson", label.y = 50, label.x = 30) +
   labs(title="Baseline: Verbal Memory ~ Total Symptom")
 
-  
+
 
 # FU1 lm
 model <- lm(mem_ver.fu1 ~ tot_symp.fu1, data=df_wide)
@@ -87,7 +87,7 @@ ggplot(
   stat_smooth(method=lm) +
   stat_cor(method="pearson", label.x = 50) +
   labs(title="FU1: Verbal Memory ~ Total Symptom")
-  
+
 
 # Change
 model <- lm(mem_ver_chg ~ tot_symp_chg, data=df_wide)
@@ -215,9 +215,6 @@ df_comp <- df[, -c(11:32)]
 # df_comp <- df_comp[which(! df_comp$num_tbi %in% c(2, 3)),]
 
 # Data cleaning
-# TODO resolve multiple FU1 (e.g. 3)
-# TODO resolve missing TBI nums (e.g. 3)
-# TODO resolve TBI order/num (e.g. 89)
 # TODO missing dates (e.g. 9021)
 df_comp <- df_comp[-which(df_comp$subj_id == 3),]
 
@@ -285,7 +282,7 @@ df_surv <- merge(
   by="subj_id",
   all.x = T
 )
-  
+
 #
 df_surv$ret_play[is.na(df_surv$ret_play)] <- 1
 rm_list <- c("visit_name", "num_tbi", "visit_date",  "date", "last")
@@ -295,7 +292,7 @@ df_surv <- df_surv[, -which(names(df_surv) %in% rm_list)]
 #
 # df_surv <- df_surv[which(df_surv$enum == 1), ]
 
-# 
+#
 stats.surv <- coxph(
   formula = Surv(tstart, tstop, ret_play) ~ tot_symp + base.tot_symp,
   data = df_surv
@@ -307,7 +304,7 @@ autoplot(cox_fit)
 stats.surv <- coxph(
   formula = Surv(tstart, tstop, ret_play) ~ tot_symp + mem_ver + mem_vis +
     vis_mot + rx_time + imp_ctl +
-    base.tot_symp + base.mem_ver + base.mem_vis + base.vis_mot + 
+    base.tot_symp + base.mem_ver + base.mem_vis + base.vis_mot +
     base.rx_time + base.imp_ctl,
   data = df_surv
 )
@@ -322,7 +319,7 @@ autoplot(cox_fit)
 # stats.surv
 # cox_fit <- survfit(stats.surv)
 # autoplot(cox_fit)
-# 
+#
 # stats.surv <- coxph(
 #   formula = Surv(tstart, tstop, ret_play) ~ mem_vis + mem_vis,
 #   data = df_surv
@@ -330,7 +327,7 @@ autoplot(cox_fit)
 # stats.surv
 # cox_fit <- survfit(stats.surv)
 # autoplot(cox_fit)
-# 
+#
 # stats.surv <- coxph(
 #   formula = Surv(tstart, tstop, ret_play) ~ vis_mot + base.vis_mot,
 #   data = df_surv
@@ -338,7 +335,7 @@ autoplot(cox_fit)
 # stats.surv
 # cox_fit <- survfit(stats.surv)
 # autoplot(cox_fit)
-# 
+#
 # stats.surv <- coxph(
 #   formula = Surv(tstart, tstop, ret_play) ~ rx_time + base.rx_time,
 #   data = df_surv
@@ -346,7 +343,7 @@ autoplot(cox_fit)
 # stats.surv
 # cox_fit <- survfit(stats.surv)
 # autoplot(cox_fit)
-# 
+#
 # stats.surv <- coxph(
 #   formula = Surv(tstart, tstop, ret_play) ~ imp_ctl + base.imp_ctl,
 #   data = df_surv

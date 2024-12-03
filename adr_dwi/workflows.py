@@ -13,6 +13,7 @@ import os
 import glob
 import shutil
 import json
+import platform
 import pandas as pd
 import openpyxl  # noqa: F401
 from adr_dwi import database
@@ -29,27 +30,46 @@ log = helper.MakeLogger(os.path.basename(__file__))
 
 
 def setup_db():
-    """Build db_adr from shared data."""
+    """Build db_adr from shared data.
+
+    Raises:
+        EnvironmentError: Attempt to execute function on
+            system other than HCC.
+
+    """
     log.write.info("Initializing SetupDb")
 
+    # Verify env
+    if "swan" not in platform.uname().node:
+        raise EnvironmentError(
+            "workflows.setub_db is written for execution on HCC."
+        )
+
     # Establish connection
+    # TODO resolve updates to RefMaps that invlolve pulling data,
+    #       if rebuilding db, exec setup_db twice.
     db_con = database.DbConnect()
     ref_maps = database.RefMaps(db_con)
 
     # Setup participant demographics
-    build_demo = build_survey.BuildPartDemo(db_con, ref_maps)
+    data_dir = "/mnt/nrdstor/muncylab/nmuncy2/ADR/data_impact"
+    build_demo = build_survey.BuildPartDemo(data_dir, db_con, ref_maps)
     build_demo.load_part_demo()
     build_demo.ref_subj()
     build_demo.tbl_demo()
     build_demo.scan_date()
 
     # Setup impact from primary source
-    build_imp_prim = build_survey.BuildImpactPrimary(db_con, ref_maps)
+    build_imp_prim = build_survey.BuildImpactPrimary(
+        data_dir, db_con, ref_maps
+    )
     build_imp_prim.load_data()
     build_imp_prim.make_impact_tables()
 
     # Setup impact from secondary source
-    build_imp_sec = build_survey.BuildImpactSecondary(db_con, ref_maps)
+    build_imp_sec = build_survey.BuildImpactSecondary(
+        data_dir, db_con, ref_maps
+    )
     build_imp_sec.load_data()
     build_imp_sec.make_impact_tables()
     db_con.close_con()
@@ -387,9 +407,17 @@ def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
     return out_path
 
 
-def insert_pyafq(data_dir: PT) -> pd.DataFrame:
+def insert_pyafq() -> pd.DataFrame:
     """Title."""
     log.write.info("Inserting pyAFQ values into db_adr")
+
+    # Verify env
+    if "swan" not in platform.uname().node:
+        raise EnvironmentError(
+            "workflows.setub_db is written for execution on HCC."
+        )
+
+    data_dir = "/mnt/nrdstor/muncylab/nmuncy2/ADR/data_mri"
     csv_path = os.path.join(
         data_dir, "derivatives", "afq", "tract_profiles.csv"
     )

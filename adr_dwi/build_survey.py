@@ -30,6 +30,7 @@ class BuildPartDemo:
 
     def __init__(
         self,
+        data_dir: PT,
         db_con: Type[database.DbConnect],
         ref_maps: Type[database.RefMaps],
     ):
@@ -37,14 +38,12 @@ class BuildPartDemo:
         log.write.info("Initializing BuildPartDemo")
         self._db_con = db_con
         self._ref_maps = ref_maps
-        self._data_dir = os.path.join(os.environ["HOME"], "Projects", "data")
+        self._data_dir = data_dir
 
     def load_part_demo(self):
         """Title."""
         log.write.info("Loading part demo data")
-        raw_demo = os.path.join(
-            self._data_dir, "participant_list_for_nate.xlsx"
-        )
+        raw_demo = os.path.join(self._data_dir, "raw_participant_list.xlsx")
         if not os.path.exists(raw_demo):
             raise FileNotFoundError(raw_demo)
         self._df_part = pd.read_excel(raw_demo)
@@ -177,6 +176,7 @@ class BuildImpactPrimary:
 
     def __init__(
         self,
+        data_dir: PT,
         db_con: Type[database.DbConnect],
         ref_maps: Type[database.RefMaps],
     ):
@@ -184,12 +184,12 @@ class BuildImpactPrimary:
         log.write.info("Initializing BuildImpactPrimary")
         self._db_con = db_con
         self._ref_maps = ref_maps
-        self._data_dir = os.path.join(os.environ["HOME"], "Projects", "data")
+        self._data_dir = data_dir
 
     def load_data(self):
         """Title."""
         log.write.info("Loading primary impact data")
-        raw_impact = os.path.join(self._data_dir, "impact_for_nate_clean.xlsx")
+        raw_impact = os.path.join(self._data_dir, "raw_impact_a.xlsx")
         if not os.path.exists(raw_impact):
             raise FileNotFoundError(raw_impact)
         self._df_clean = pd.read_excel(raw_impact, "v1_clean")
@@ -532,6 +532,7 @@ class BuildImpactSecondary:
 
     def __init__(
         self,
+        data_dir: PT,
         db_con: Type[database.DbConnect],
         ref_maps: Type[database.RefMaps],
     ):
@@ -539,12 +540,12 @@ class BuildImpactSecondary:
         log.write.info("Initializing BuildImpactSecondary")
         self._db_con = db_con
         self._ref_maps = ref_maps
-        self._data_dir = os.path.join(os.environ["HOME"], "Projects", "data")
+        self._data_dir = data_dir
 
     def load_data(self):
         """Title."""
         log.write.info("Loading secondary impact data")
-        raw_impact = os.path.join(self._data_dir, "impact_heather_clean.xlsx")
+        raw_impact = os.path.join(self._data_dir, "raw_impact_b.xlsx")
         if not os.path.exists(raw_impact):
             raise FileNotFoundError(raw_impact)
         self._df_clean = pd.read_excel(raw_impact)

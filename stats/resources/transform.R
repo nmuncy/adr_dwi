@@ -15,7 +15,7 @@ fu1_better <- function(col_name, df, low = FALSE){
   # Only first TBIs
   # TODO account for multiple TBIs
   df_sub <- df[
-    which(! df$num_tbi %in% c(2, 3)),
+    which(! df$num_tbi %in% c(2:3)),
     c("subj_id", "visit_name", col_name)
   ]
   df_sub <- reshape(

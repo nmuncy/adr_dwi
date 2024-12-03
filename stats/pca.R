@@ -1,43 +1,16 @@
 # Load Libraries ---- 
-library("RMySQL")
 library("ggplot2")
-# library("plotly")
 library("scatterplot3d")
 library("psych")
 library("devtools")
 library("ggbiplot")
 library("factoextra")
 
-
-# Connect ---- 
-db_con <- dbConnect(
-  RMySQL::MySQL(),
-  dbname = "db_adr",
-  host = "127.0.0.1",
-  port = 3308,
-  user = "nmuncy2",
-  password = "foobar"
-)
+source(paste0(getwd(), "/resources/pull_data.R"))
 
 
 # Get Data ---- 
-sql_cmd <- "select 
-  subj_id, test_id, num_tbi, 
-  userMemoryCompositeScoreVerbal as mem_verb,
-  userMemoryCompositeScoreVisual as mem_vis, 
-  userVisualMotorCompositeScore as vis_mot,
-  userReactionTimeCompositeScore as rx_time, 
-  userImpulseControlCompositeScore as imp_ctrl
-  from tbl_impact_user
-  where num_tbi=1 and test_id=1
-"
-db_query = dbSendQuery(db_con, sql_cmd)
-df_comp_fu1 = dbFetch(db_query)
-dbClearResult(db_query)
-
-
-# Disconnect ---- 
-dbDisconnect(db_con)
+df <- get_user_comp()
 
 
 # Visualize ---- 

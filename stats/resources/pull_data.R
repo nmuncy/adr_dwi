@@ -18,6 +18,50 @@ db_connect <- function(){
   return(db_con)
 }
 
+#' Pull scan dates.
+#' 
+get_scan_dates <- function(){
+  db_con <- db_connect()
+  sql_cmd <- "select 
+    tsd.subj_id, rfs.scan_name, tsd.scan_date
+    from tbl_scan_dates tsd
+    join ref_scan rfs on tsd.scan_id=rfs.scan_id
+  "
+  db_query = dbSendQuery(db_con, sql_cmd)
+  df = dbFetch(db_query, n = -1)
+  dbClearResult(db_query)
+  dbDisconnect(db_con)
+  return(df)
+}
+
+#' Pull Impact user composites.
+#' 
+get_user_comp <- function(){
+  db_con <- db_connect()
+  sql_cmd <- "select 
+    tiu.subj_id, rft.test_name as visit_name, 
+      tiu.num_tbi, tid.impact_date as visit_date,
+      tiu.userMemoryCompositeScoreVerbal,
+      tiu.userMemoryCompositeScoreVisual, 
+      tiu.userVisualMotorCompositeScore,
+      tiu.userReactionTimeCompositeScore, 
+      tiu.userImpulseControlCompositeScore,
+      tiu.userTotalSymptomScore
+    from tbl_impact_user tiu
+    join ref_test rft on tiu.test_id=rft.test_id
+    join tbl_impact_dates tid on tid.subj_id=tiu.subj_id
+      and tid.test_id=tiu.test_id
+      and tid.num_tbi=tiu.num_tbi
+  "
+  db_query = dbSendQuery(db_con, sql_cmd)
+  df = dbFetch(db_query, n = -1)
+  dbClearResult(db_query)
+  dbDisconnect(db_con)
+  
+  names(df)[names(df) == 'UserTotalSymptomScore'] <- 'userTotalSymptomScore'
+  return(df)
+}
+
 
 #' Pull AFQ data from db_adr.
 #' 

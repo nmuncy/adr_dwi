@@ -12,18 +12,18 @@ library("ggfortify")
 library("tidyverse")
 library("lubridate")
 
-source(paste0(getwd(), "/visualize.R"))
-source(paste0(getwd(), "/transform.R"))
+source(paste0(getwd(), "/resources/visualize.R"))
+source(paste0(getwd(), "/resources/transform.R"))
+source(paste0(getwd(), "/resources/pull_data.R"))
 # source(paste0(getwd(), "/stats.R"))
 
 
-# Load Data ----
-data_dir <- "/Users/nmuncy2/Projects/data"
-df <- read.csv(paste0(data_dir, "/df_impact_user.csv"))
+# Pull Data ----
+df <- get_user_comp()
 
 df$subj_id <- as.factor(df$subj_id)
 df$visit_name <- as.factor(df$visit_name)
-df$num_tbi <- as.factor(df$num_tbi)
+df$num_tbi <- as.integer(df$num_tbi)
 df$visit_date <- as.POSIXct(df$visit_date, format="%Y-%m-%d", tz="UTC")
 
 
@@ -216,7 +216,7 @@ df_comp <- df[, -c(11:32)]
 
 # Data cleaning
 # TODO missing dates (e.g. 9021)
-df_comp <- df_comp[-which(df_comp$subj_id == 3),]
+# df_comp <- df_comp[-which(df_comp$subj_id == 3),]
 
 
 # Separate base

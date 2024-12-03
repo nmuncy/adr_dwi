@@ -10,7 +10,11 @@ source(paste0(getwd(), "/resources/draw_plots.R"))
 
 
 # Pull Data ----
-df <- get_afq()
+df_afq <- get_afq()
+df_comp <- get_user_comp()
+df_scan_dates <- get_scan_dates()
+
+# TODO determine impact dates nearest scan dates
 
 
 # Get Parietal data---- 
@@ -18,8 +22,8 @@ df <- get_afq()
 # TODO fit all tracts in same model
 tract <- "Callosum Superior Parietal"
 
-df_par <- df[
-  which(df$tract_name == tract & df$sess_name %in% c("base", "post")),
+df_par <- df_afq[
+  which(df_afq$tract_name == tract & df_afq$sess_name %in% c("base", "post")),
   c("subj_id", "sess_name", "node_id", "dti_fa")
 ]
 df_par$subj_id <- factor(df_par$subj_id)
@@ -45,7 +49,7 @@ fit_G <- bam(
   discrete = T
 )
 gam.check(fit_G, rep=1000)
-summary(fit_G)
+# summary(fit_G)
 plot(fit_G)
 
 

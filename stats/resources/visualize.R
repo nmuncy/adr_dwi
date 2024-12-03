@@ -4,7 +4,7 @@ library("latticeExtra")
 library("directlabels")
 library("ggpubr")
 
-source(paste0(getwd(), "/stats.R"))
+source(paste0(getwd(), "/resources/stats.R"))
 
 
 meas_names <- function(meas) {

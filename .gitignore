@@ -2,3 +2,4 @@ tests/my_tests.py
 stats/.Rhistory
 adr_dwi.egg-info
 *__pycache__*
+*.DS_Store

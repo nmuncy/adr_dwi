@@ -1,7 +1,7 @@
-# Set Env ----
-library("tidyr")
-library("tidyverse")
-library("ggpubr")
+import("tidyr")
+import("tidyverse")
+import("ggpubr")
+import("stats", "reshape")
 
 
 #' Identify subjects who get better from base to fu1.
@@ -11,6 +11,7 @@ library("ggpubr")
 #' @param low Whether lower scores are better
 #' @returns Dataframe with new column (fu1_change) indicating direction
 #' of change.
+export("fu1_better")
 fu1_better <- function(col_name, df, low = FALSE){
   # Only first TBIs
   # TODO account for multiple TBIs
@@ -58,7 +59,7 @@ fu1_better <- function(col_name, df, low = FALSE){
   return(df_long)
 }
 
-
+export("comp_group")
 comp_group <- function(df){
   df_corr <- df[, 1:10]
   imp_names <- c("mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl", "tot_symp")
@@ -113,7 +114,7 @@ comp_group <- function(df){
 }
 
 # Deprecated
-long_wide <- function(df){
+.long_wide <- function(df){
   df_wide <- df %>%
     pivot_wider(
       names_from = c("visit_name", "num_tbi"),

@@ -1,18 +1,19 @@
 # Get Resources ----
+library("modules")
 library("mgcv")
 library("fitdistrplus")
 library("itsadug")
 library("mgcViz")
 library("viridis")
 
-source(paste0(getwd(), "/resources/pull_data.R"))
-source(paste0(getwd(), "/resources/draw_plots.R"))
+pull_data <- modules::use("resources/pull_data.R")
+draw_plots <- modules::use("resources/draw_plots.R")
 
 
 # Pull Data ----
-df_afq <- get_afq()
-df_comp <- get_user_comp()
-df_scan_dates <- get_scan_dates()
+df_afq <- pull_data$get_afq()
+df_comp <- pull_data$get_user_comp()
+df_scan_dates <- pull_data$get_scan_dates()
 
 # TODO determine impact dates nearest scan dates
 
@@ -72,12 +73,13 @@ fit_S <- bam(
   method = "fREML",
   discrete = T
 )
+# gam.check(fit_S, rep=1000)
 summary(fit_S)
 plot(fit_S)
 
 plot_S <- getViz(fit_S)
-pGlobal <- draw_global_smooth(plot_S, 1, tract)
-pGroup <- draw_group_smooth(plot_S, 3, tract)
+pGlobal <- draw_plots$draw_global_smooth(plot_S, 1, tract)
+pGroup <- draw_plots$draw_group_smooth(plot_S, 3, tract)
 
 
 df_par$sessOF <- factor(df_par$sess_name, ordered = T)
@@ -94,7 +96,7 @@ summary(fit_SO)
 plot(fit_SO)
 
 plot_SO <- getViz(fit_SO)
-pDiff <- draw_group_smooth_diff(plot_SO, 3, tract)
+pDiff <- draw_plots$draw_group_smooth_diff(plot_SO, 3, tract)
 
 # draw grid
 plot_list <- list(
@@ -110,7 +112,7 @@ name_list <- list(
   "rowR3" = "Difference",
   "bot1" = "Tract Node"
 )
-draw_one_three(plot_list, name_list, tract)
+draw_plots$draw_one_three(plot_list, name_list, tract)
 
 
 # Fit as longitudinal model ----
@@ -170,7 +172,7 @@ summary(fit_D)
 plot(fit_D)
 
 plot_D <- getViz(fit_D)
-pDiff <- draw_group_smooth_diff(plot_D, 1, tract)
+pDiff <- draw_plots$draw_group_smooth_diff(plot_D, 1, tract)
 
 
 

@@ -4,22 +4,16 @@
 # TODO identify groups of subjs in data
 # TODO follow groups across different metrics
 
-library("survival")
-library("ranger")
-library("ggplot2")
-library("dplyr")
-library("ggfortify")
-library("tidyverse")
-library("lubridate")
+library("modules")
 
-source(paste0(getwd(), "/resources/visualize.R"))
-source(paste0(getwd(), "/resources/transform.R"))
-source(paste0(getwd(), "/resources/pull_data.R"))
-# source(paste0(getwd(), "/stats.R"))
+draw_plots <- modules::use("resources/draw_plots.R")
+tx_data <- modules::use("resources/transform.R")
+pull_data <- modules::use("resources/pull_data.R")
+quick_stats <- modules::use("resources/quick_stats.R")
 
 
 # Pull Data ----
-df <- get_user_comp()
+df <- pull_data$get_user_comp()
 
 df$subj_id <- as.factor(df$subj_id)
 df$visit_name <- as.factor(df$visit_name)
@@ -30,9 +24,9 @@ df$visit_date <- as.POSIXct(df$visit_date, format="%Y-%m-%d", tz="UTC")
 # Total Symptom Score ----
 #
 # Test plotting, stats functions.
-df_tsymp <- fu1_better("userTotalSymptomScore", df, low=T)
-bet_wor <- better_worse("userTotalSymptomScore", df_tsymp, "base")
-visit_track("userTotalSymptomScore", df_tsymp)
+df_tsymp <- tx_data$fu1_better("userTotalSymptomScore", df, low=T)
+bet_wor <- quick_stats$better_worse("userTotalSymptomScore", df_tsymp, "base")
+draw_plots$visit_track("userTotalSymptomScore", df_tsymp)
 # visit_box("userTotalSymptomScore", df_tsymp)
 # stats.tsymp <- wc_ranksum("userTotalSymptomScore", df_tsymp, "base")
 # stats.tsymp
@@ -50,15 +44,17 @@ col_list <- c(
 )
 for(col_name in col_list){
   low <- if (col_name == "userReactionTimeCompositeScore") T else F
-  df_sub <- fu1_better(col_name, df, low=low)
-  print(visit_track(col_name, df_sub))
+  df_sub <- tx_data$fu1_better(col_name, df, low=low)
+  print(draw_plots$visit_track(col_name, df_sub))
   # print(visit_box(col_name, df_sub))
 }
 rm(df_sub,  df_tsymp)
 
 
 # Corr: Ver Mem ~ Tot Symp ----
-df_wide <- comp_group(df)
+library("ggplot2")
+library("ggpubr")
+df_wide <- tx_data$comp_group(df)
 
 # Baseline lm
 model <- lm(mem_ver.base ~ tot_symp.base, data=df_wide)
@@ -127,7 +123,7 @@ ggplot(
 
 
 # Corr: Vis Mem ~ Tot Symp ----
-df_wide <- comp_group(df)
+df_wide <- tx_data$comp_group(df)
 
 # Baseline lm
 model <- lm(mem_vis.base ~ tot_symp.base, data=df_wide)
@@ -208,9 +204,82 @@ ggplot(
   labs(title="FU1: Visual Memory ~ Total Symptom by ")
 
 
+# PCA ----
+library("factoextra")
+library("ggbiplot")
+
+df_comp_fu1 <- df[which(df$visit_name == "fu1"),]
+new_names <- c(
+  "subj_id", "visit_name", "num_tbi", "visit_date",
+  "mem_verb", "mem_vis", "vis_mot", "rx_time", "imp_ctrl", "tot_symp"
+)
+colnames(df_comp_fu1) <- new_names
+
+# Data dist
+hist(df_comp_fu1$mem_verb, breaks = 20)
+hist(df_comp_fu1$mem_vis, breaks = 20)
+hist(df_comp_fu1$vis_mot, breaks = 20)
+hist(df_comp_fu1$rx_time, breaks = 20)
+hist(df_comp_fu1$imp_ctrl, breaks = 20)
+
+# #
+# library("scatterplot3d")
+# ggplot(df_comp_fu1, aes(x=mem_verb, y=mem_vis)) +
+#   geom_point()
+# with(
+#   df_comp_fu1,
+#   {scatterplot3d(
+#     x=mem_verb,
+#     y=mem_vis,
+#     z=vis_mot,
+#   )}
+# )
+
+# # No imp_ctrl, tot_symp
+# library("psych")
+# pairs.panels(
+#   df_comp_fu1[,5:8],
+#   gap = 0,
+#   pch=21
+# )
+
+pc <- prcomp(df_comp_fu1[,5:8], center=T, scale. = T)
+pc$center
+print(pc)
+summary(pc)
+
+#
+fviz_eig(pc, addlabels=T)
+fviz_pca_biplot(pc, label="var")
+
+# pairs.panels(
+#   pc$x,
+#   pch=21
+# )
+
+g <- ggbiplot(
+  pc,
+  obs.scale = 1,
+  var.scale = 1,
+  ellipses=T,
+  circle=T,
+  ellipse.prob=0.68
+)
+g <- g + scale_color_discrete(name="")
+g <- g + theme(legend.direction = "horizontal")
+g
+
+
 # Survival Analysis ----
 #
 # TODO
+library("survival")
+library("ranger")
+library("dplyr")
+library("ggfortify")
+library("tidyverse")
+library("lubridate")
+
 df_comp <- df[, -c(11:32)]
 # df_comp <- df_comp[which(! df_comp$num_tbi %in% c(2, 3)),]
 
@@ -311,46 +380,5 @@ stats.surv <- coxph(
 stats.surv
 cox_fit <- survfit(stats.surv)
 autoplot(cox_fit)
-
-# stats.surv <- coxph(
-#   formula = Surv(tstart, tstop, ret_play) ~ mem_ver + base.mem_ver,
-#   data = df_surv
-# )
-# stats.surv
-# cox_fit <- survfit(stats.surv)
-# autoplot(cox_fit)
-#
-# stats.surv <- coxph(
-#   formula = Surv(tstart, tstop, ret_play) ~ mem_vis + mem_vis,
-#   data = df_surv
-# )
-# stats.surv
-# cox_fit <- survfit(stats.surv)
-# autoplot(cox_fit)
-#
-# stats.surv <- coxph(
-#   formula = Surv(tstart, tstop, ret_play) ~ vis_mot + base.vis_mot,
-#   data = df_surv
-# )
-# stats.surv
-# cox_fit <- survfit(stats.surv)
-# autoplot(cox_fit)
-#
-# stats.surv <- coxph(
-#   formula = Surv(tstart, tstop, ret_play) ~ rx_time + base.rx_time,
-#   data = df_surv
-# )
-# stats.surv
-# cox_fit <- survfit(stats.surv)
-# autoplot(cox_fit)
-#
-# stats.surv <- coxph(
-#   formula = Surv(tstart, tstop, ret_play) ~ imp_ctl + base.imp_ctl,
-#   data = df_surv
-# )
-# stats.surv
-# cox_fit <- survfit(stats.surv)
-# autoplot(cox_fit)
-
 
 autoplot(stats.surv)

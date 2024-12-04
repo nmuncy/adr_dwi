@@ -1,4 +1,4 @@
-
+import("stats", "reshape")
 
 # TODO survival analysis: time to an event
 
@@ -10,6 +10,7 @@
 #' @return List with following elements:
 #' @better element1 Subjects who got better
 #' @worse element2 Subjects who got worse
+export("better_worse")
 better_worse <- function(col_name, df, visit_name){
   # Identify subjs who got better/worse
   fu1_bet <- df[
@@ -32,6 +33,7 @@ better_worse <- function(col_name, df, visit_name){
 #' Find average change
 #' 
 #' @param TODO
+export("score_change")
 score_change <- function(col_name, df, visit_name){
   df_sub <- reshape(
     df, 
@@ -101,9 +103,10 @@ score_change <- function(col_name, df, visit_name){
 #' @stats element1 Output of wilcoxong test
 #' @num_bet element2 Number of subjects who get better
 #' @num_wor element3 Number of subjects who get worse 
+export("wc_ranksum")
 wc_ranksum <- function(col_name, df, visit_name){
   bet_wor <- better_worse(col_name, df, visit_name)
-  stats.wc <- wilcox.test(bet_wor$better, bet_wor$worse)
+  stats.wc <- stats::wilcox.test(bet_wor$better, bet_wor$worse)
   return(
     list(
       stats = stats.wc, 

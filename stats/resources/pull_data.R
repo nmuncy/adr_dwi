@@ -1,4 +1,4 @@
-library("RMySQL")
+import("RMySQL")
 
 #' Establish connection with db_adr.
 #' 
@@ -6,9 +6,9 @@ library("RMySQL")
 #'  user password for db_adr.
 #'  
 #' @returns Connection object to db_adr.
-db_connect <- function(){
+.db_connect <- function(){
   db_con <- dbConnect(
-    RMySQL::MySQL(),
+    MySQL(),
     dbname = "db_adr",
     host = "localhost",
     port = 3306,
@@ -20,8 +20,9 @@ db_connect <- function(){
 
 #' Pull scan dates.
 #' 
+export("get_scan_dates")
 get_scan_dates <- function(){
-  db_con <- db_connect()
+  db_con <- .db_connect()
   sql_cmd <- "select 
     tsd.subj_id, rfs.scan_name, tsd.scan_date
     from tbl_scan_dates tsd
@@ -36,8 +37,9 @@ get_scan_dates <- function(){
 
 #' Pull Impact user composites.
 #' 
+export("get_user_comp")
 get_user_comp <- function(){
-  db_con <- db_connect()
+  db_con <- .db_connect()
   sql_cmd <- "select 
     tiu.subj_id, rft.test_name as visit_name, 
       tiu.num_tbi, tid.impact_date as visit_date,
@@ -65,6 +67,7 @@ get_user_comp <- function(){
 
 #' Pull AFQ data from db_adr.
 #' 
+export("get_afq")
 get_afq <- function(sess_id=NULL, tract_id=NULL){
   # Validate user args
   if(! is.null(sess_id)){
@@ -79,7 +82,7 @@ get_afq <- function(sess_id=NULL, tract_id=NULL){
   }
   
   # Build select statement
-  db_con <- db_connect()
+  db_con <- .db_connect()
   sql_cmd <- "select 
     afq.subj_id, scan.scan_name as sess_name, 
       trct.tract_name, afq.node_id,

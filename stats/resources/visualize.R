@@ -1,13 +1,13 @@
-# Set Env ----
-library("lattice")
-library("latticeExtra")
-library("directlabels")
-library("ggpubr")
+import("lattice")
+import("latticeExtra")
+import("directlabels")
+import("ggpubr")
 
-source(paste0(getwd(), "/resources/stats.R"))
+my_stats <- use("resources/stats.R")
+# source(paste0(getwd(), "/resources/stats.R"))
 
 
-meas_names <- function(meas) {
+.meas_names <- function(meas) {
   # Switch variable name for something more readable.
   out_name <- switch(
     meas,
@@ -32,18 +32,19 @@ meas_names <- function(meas) {
 #' @param df Dataframe of data.
 #' @param visit_name Name of visit.
 #' @return Plot object.
+export("visit_track")
 visit_track <- function(col_name, df){
-  stats_b <- wc_ranksum(col_name, df, "base")
-  stats_f <- wc_ranksum(col_name, df, "fu1")
-  d_fu1 <- score_change(col_name, df, "fu1")
-  d_fu2 <- score_change(col_name, df, "fu2")
+  stats_b <- my_stats$wc_ranksum(col_name, df, "base")
+  stats_f <- my_stats$wc_ranksum(col_name, df, "fu1")
+  d_fu1 <- my_stats$score_change(col_name, df, "fu1")
+  d_fu2 <- my_stats$score_change(col_name, df, "fu2")
   
   plot <- xyplot(
     get(col_name) ~ visit_name | fu1_change, 
     data=df,
     group=subj_id,
     type="b",
-    ylab = meas_names(col_name),
+    ylab = .meas_names(col_name),
     main = paste0(
       "BetterVsWorse: p(base)=", 
       round(stats_b$stats$p.value, 3),
@@ -63,21 +64,21 @@ visit_track <- function(col_name, df){
 }
 
 
-
+export("visit_box")
 visit_box <- function(col_name, df){
   # Identify subjects who get better from base to fu1
   #
   # Arguments:
   #
-  stats_b <- wc_ranksum(col_name, df, "base")
-  stats_f <- wc_ranksum(col_name, df, "fu1")
+  stats_b <- my_stats$wc_ranksum(col_name, df, "base")
+  stats_f <- my_stats$wc_ranksum(col_name, df, "fu1")
   
   ggplot(
     df,
     aes(x=visit_name, y=get(col_name), fill=fu1_change),
   ) + 
     geom_boxplot() +
-    ylab(meas_names(col_name)) +
+    ylab(.meas_names(col_name)) +
     ggtitle(paste0(
       "base: bVw p=", 
       round(stats_b$p.value, 3),

@@ -7,7 +7,7 @@
 library("modules")
 
 draw_plots <- modules::use("resources/draw_plots.R")
-tx_data <- modules::use("resources/transform.R")
+tx_data <- modules::use("resources/transform_data.R")
 pull_data <- modules::use("resources/pull_data.R")
 quick_stats <- modules::use("resources/quick_stats.R")
 

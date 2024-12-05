@@ -48,8 +48,8 @@ export("get_user_comp")
 get_user_comp <- function() {
   db_con <- .db_connect()
   sql_cmd <- "select
-    tiu.subj_id, rft.test_name as visit_name,
-      tiu.num_tbi, tid.impact_date as visit_date,
+    tiu.subj_id, rft.test_name as impact_name,
+      tiu.num_tbi, tid.impact_date,
       tiu.userMemoryCompositeScoreVerbal,
       tiu.userMemoryCompositeScoreVisual,
       tiu.userVisualMotorCompositeScore,
@@ -67,6 +67,7 @@ get_user_comp <- function() {
   dbClearResult(db_query)
   dbDisconnect(db_con)
 
+  # Manage random pascal case
   names(df)[names(df) == "UserTotalSymptomScore"] <- "userTotalSymptomScore"
   return(df)
 }
@@ -98,8 +99,7 @@ get_afq <- function(sess_id = NULL, tract_id = NULL) {
   # Build select statement, manage user args.
   db_con <- .db_connect()
   sql_cmd <- "select
-    tafq.subj_id, rfs.scan_name as visit_name,
-      tsd.scan_date as visit_date,
+    tafq.subj_id, rfs.scan_name, tsd.scan_date,
       rft.tract_name, tafq.node_id,
       tafq.dti_fa, tafq.dti_md, tafq.dti_ad, tafq.dti_rd
     from tbl_afq tafq

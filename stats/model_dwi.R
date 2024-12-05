@@ -3,9 +3,12 @@ library("modules")
 
 workflows <- modules::use("workflows.R")
 
-df_afq_imp <- workflows$get_afq_impact()
 
-# 
+# Get cleaned data ----
+df_afq <- workflows$clean_afq()
+df_scan_imp <- workflows$get_scan_impact()
+
+
 # TODO Get afq, impact data
 # TODO identify impact metrics for visit
 # TODO fit GAM for global, group, covariate intx

@@ -5,14 +5,14 @@ import("stats", "reshape")
 
 
 #' Change df based on subj_id and visit_name.x columns.
-#' @param df Tidy dataframe.
+#' @param df Tidy dataframe with columns subj_id, scan_name.
 #' @param id (int) Subject id.
 #' @param visit (str) Visit name.
 #' @param cols (list) Column names to update
 #' @param values (list) Values for insertion into df.
 #' @returns Updated dataframe.
 .chg_df <- function(df, id, visit, cols, values){
-  df[which(df$subj_id == id & df$visit_name.x == visit), cols] <- values
+  df[which(df$subj_id == id & df$scan_name == visit), cols] <- values
   return(df)
 }
 
@@ -27,8 +27,8 @@ import("stats", "reshape")
 #' @returns Long dataframe with mappings.
 export("fix_impact_scan")
 fix_impact_scan <- function(df) {
-  fix_cols <- c("visit_name.y", "visit_date.y", "num_tbi", "time_diff")
-  empty_vals <- c(NA, NA, NA, NA)
+  fix_cols <- c("impact_name", "impact_date", "num_tbi")
+  empty_vals <- c(NA, NA, NA)
   
   # Currently specified individually, could be looped
   # TODO refactor

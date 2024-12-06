@@ -145,12 +145,13 @@ draw_group_smooth <- function(plot_obj, attr_num, tract) {
   colnames(p_data) <- c("nodeID", "est", "ty", "Group")
 
   # make, save ggplot
+  # limits = c(-0.2, 0.2)
   pp <- ggplot(
     data = p_data,
     aes(x = .data$nodeID, y = .data$est, group = .data$Group)
   ) +
     geom_line(aes(color = .data$Group)) +
-    scale_y_continuous(limits = c(-0.2, 0.2)) +
+    scale_y_continuous() +
     scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
     scale_color_discrete(name = "") +
     theme(
@@ -305,6 +306,7 @@ draw_one_three <- function(plot_list, name_list, tract) {
   #   dpi = 600,
   #   device = "png"
   # )
+  return(pOut)
 }
 
 
@@ -377,4 +379,37 @@ draw_two_three <- function(plot_list, name_list, tract, beh_short, out_name) {
   #   dpi = 600,
   #   device = "png"
   # )
+}
+
+
+
+#' Draw smooth grid.
+#'
+#' TODO
+export("draw_grid")
+draw_grid <- function(fit_G, fit_GO, num_G, num_GS, num_GO, tract, scalar_name) {
+  # Generate plots objs from smooths
+  plot_G <- getViz(fit_G)
+  pGlobal <- draw_global_smooth(plot_G, num_G, tract)
+  pGroup <- draw_group_smooth(plot_G, num_GS, tract)
+  
+  plot_GO <- getViz(fit_GO)
+  pDiff <- draw_group_smooth_diff(plot_GO, num_GO, tract)
+  
+  # draw grid
+  plot_list <- list(
+    "global" = pGlobal,
+    "group" = pGroup,
+    "diff" = pDiff
+  )
+  name_list <- list(
+    "col1" = paste(tract, "Smooths"),
+    "rowL" = paste("Est.", scalar_name, "Fit"),
+    "rowR1" = "Global",
+    "rowR2" = "Group",
+    "rowR3" = "Difference",
+    "bot1" = "Tract Node"
+  )
+  plot_grid <- draw_one_three(plot_list, name_list, tract)
+  return(plot_grid)
 }

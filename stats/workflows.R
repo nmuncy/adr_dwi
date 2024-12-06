@@ -2,12 +2,14 @@ import(dplyr)
 import(lubridate)
 import("stats", "complete.cases")
 import(mgcv)
-import(itsadug)
+import(fitdistrplus)
+# import(itsadug)
 import(mgcViz)
 import(viridis)
 
 pull_data <- use("resources/pull_data.R")
 transform_data <- use("resources/transform_data.R")
+fit_gams <- use("resources/fit_gams.R")
 draw_plots <- use("resources/draw_plots.R")
 
 
@@ -173,98 +175,228 @@ get_scan_impact <- function() {
 
 
 #' Generate impact better-worse data plots.
-#' 
+#'
 #' TODO
 export("imp_bet_wor")
-imp_bet_wor <- function(df){
-  for(col_name in c(
-    "tot_symp", "mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl")
-  ){
+imp_bet_wor <- function(df) {
+  for (col_name in c(
+    "tot_symp", "mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl"
+  )
+  ) {
     low <- if (col_name %in% c("rx_time", "tot_symp")) T else F
-    df_sub <- transform_data$compare_base_post(col_name, df, low=low)
+    df_sub <- transform_data$compare_base_post(col_name, df, low = low)
     print(draw_plots$visit_track(col_name, df_sub))
   }
 }
 
-#' HGAM of Callosum Superior Parietal.
-#'
-#' Fit HGAMs with AFQ FA values to generate global, group,
-#' and ordered group smooths.
-#'
-#' @param df TODO
-export("gam_spar")
-gam_spar <- function(df) {
-  #
-  # fit_S <- bam(
-  #   dti_fa ~ s(node_id, bs="tp", k=40, m=2) +
-  #     s(subj_id, bs="re") +
-  #     s(node_id, scan_name, bs="fs", k=40, m=2),
-  #   data = df,
-  #   family = betar(link="logit"),
-  #   method = "fREML",
-  #   discrete = T
-  # )
-  # gam.check(fit_S, rep=1000)
-  # summary(fit_S)
-  # plot(fit_S)
 
-  #
-  fit_S <- bam(
-    dti_fa ~ s(subj_id, scan_name, bs="re") +
-      s(node_id, bs = "tp", k = 40, m=2) +
-      s(node_id, scan_name, bs="fs", k = 40, m = 2),
-    data = df,
-    family = betar(link = "logit"),
-    method = "fREML",
-    discrete = T
-  )
-  gam.check(fit_S)
-  summary(fit_S)
-  plot(fit_S)
-
-  #
-  df$scanOF <- factor(df$scan_name, ordered = T)
-  fit_SO <- bam(
-    dti_fa ~ s(node_id, bs = "tp", k = 40, m = 2) +
-      s(subj_id, bs = "re") +
-      s(node_id, by = scanOF, bs = "fs", k = 40, m = 2),
-    data = df,
-    family = betar(link = "logit"),
-    method = "fREML",
-    discrete = T
-  )
-  # summary(fit_SO)
-  # plot(fit_SO)
-  return(list(gamGS = fit_S, gamGSO = fit_SO))
-}
-
-
-#' Draw smooth grid.
-#'
+#' Fit DWI scalars with longitudinal HGAMs.
+#' 
 #' TODO
-export("draw_grid")
-draw_grid <- function(fit_G, fit_GO, tract) {
-  # Generate plots objs from smooths
-  plot_G <- getViz(fit_G)
-  pGlobal <- draw_plots$draw_global_smooth(plot_G, 1, tract)
-  pGroup <- draw_plots$draw_group_smooth(plot_G, 3, tract)
-
-  plot_GO <- getViz(fit_GO)
-  pDiff <- draw_plots$draw_group_smooth_diff(plot_GO, 3, tract)
-
-  # draw grid
-  plot_list <- list(
-    "global" = pGlobal,
-    "group" = pGroup,
-    "diff" = pDiff
-  )
-  name_list <- list(
-    "col1" = paste(tract, "Smooths"),
-    "rowL" = "Est. FA Fit",
-    "rowR1" = "Global",
-    "rowR2" = "Group",
-    "rowR3" = "Difference",
-    "bot1" = "Tract Node"
-  )
-  draw_plots$draw_one_three(plot_list, name_list, tract)
+export("scalar_gams")
+scalar_gams <- function(df_afq, tract, post_sess){
+  if(! post_sess %in% c("post", "rtp")){
+    stop("Unexpected post_sess")
+  }
+  #
+  df <- df_afq[which(
+    df_afq$tract_name == tract &
+      df_afq$scan_name %in% c("base", post_sess)
+  ), ]
+  
+  #
+  # hist(df$dti_md, breaks = 50)
+  # plot(df$dti_md)
+  # plot(df$node_id, df$dti_md)
+  # plot(df$node_id, df$dti_md, col = factor(df$scan_name))
+  
+  #
+  fit_FA <- fit_gams$gam_gs(df, "dti_fa")
+  fit_FAO <- fit_gams$gam_gso(df, "dti_fa")
+  plot_FA <- draw_plots$draw_grid(fit_FA, fit_FAO, 2, 3, 3, tract, "FA")
+  
+  fit_RD <- fit_gams$gam_gs(df, "dti_rd")
+  fit_RDO <- fit_gams$gam_gso(df, "dti_rd")
+  plot_RD <- draw_plots$draw_grid(fit_RD, fit_RDO, 2, 3, 3, tract, "RD")
+  
+  fit_AD <- fit_gams$gam_gs(df, "dti_ad")
+  fit_ADO <- fit_gams$gam_gso(df, "dti_ad")
+  plot_AD <- draw_plots$draw_grid(fit_AD, fit_ADO, 2, 3, 3, tract, "AD")
+  
+  fit_MD <- fit_gams$gam_gs(df, "dti_md")
+  fit_MDO <- fit_gams$gam_gso(df, "dti_md")
+  plot_MD <- draw_plots$draw_grid(fit_MD, fit_MDO, 2, 3, 3, tract, "MD")
+  
+  return(list(
+    gam_GS = list(
+      "FA" = fit_FA, "RD" = fit_RD, "AD" = fit_AD, "MD" = fit_MD
+    ),
+    gam_GSO = list(
+      "FA" = fit_FAO, "RD" = fit_RDO, "AD" = fit_ADO, "MD" = fit_MDO
+    ),
+    gam_plots = list(
+      "FA" = plot_FA, "RD" = plot_RD, "AD" = plot_AD, "MD" = plot_MD
+    )
+  ))
 }
+
+
+#' Fit DWI scalars X Impact with longitudinal HGAMs.
+#' 
+#' TODO
+export("scalar_intx_gams")
+scalar_intx_gams <- function(df_afq, df_scan_imp, tract, post_sess){
+  if(! post_sess %in% c("post", "rtp")){
+    stop("Unexpected post_sess")
+  }
+  
+  #
+  df <- df_afq[which(
+    df_afq$tract_name == tract &
+      df_afq$scan_name %in% c("base", post_sess)
+  ), ]
+  
+  #
+  impact_meas <- "mem_vis"
+  df <- merge(
+    x = df,
+    y = df_scan_imp[, c("subj_id", "scan_name", impact_meas)],
+    by = c("subj_id", "scan_name"),
+    all.x = T
+  )
+  
+  #
+  fit_FA <- fit_gams$gam_gs_intx(df, "dti_fa", impact_meas)
+  fit_FAO <- fit_gams$gam_gso_intx(df, "dti_fa", impact_meas)
+  
+  
+  return(list(
+    gam_GS_intx = list(
+      "FA" = fit_FA,
+    ),
+    gam_GSO_intx = list(
+      "FA" = fit_FAO,
+    ),
+    gam_plots = list(
+      "FA" = plot_FA,
+    )
+  ))
+}
+
+
+
+#' #' HGAM of Callosum Superior Parietal.
+#' #'
+#' #' Fit HGAMs with AFQ FA values to generate global, group,
+#' #' and ordered group smooths.
+#' #'
+#' #' @param df TODO
+#' export("gam_spar")
+#' gam_spar <- function(df) {
+#'   #
+#'   # fit_S <- bam(
+#'   #   dti_fa ~ s(node_id, bs="tp", k=40, m=2) +
+#'   #     s(subj_id, bs="re") +
+#'   #     s(node_id, scan_name, bs="fs", k=40, m=2),
+#'   #   data = df,
+#'   #   family = betar(link="logit"),
+#'   #   method = "fREML",
+#'   #   discrete = T
+#'   # )
+#'   # gam.check(fit_S, rep=1000)
+#'   # summary(fit_S)
+#'   # plot(fit_S)
+#' 
+#'   #
+#'   fit_S <- bam(
+#'     dti_fa ~ s(subj_id, scan_name, bs = "re") +
+#'       s(node_id, bs = "tp", k = 40) +
+#'       s(node_id, scan_name, bs = "fs", k = 40),
+#'     data = df,
+#'     family = betar(link = "logit"),
+#'     method = "fREML",
+#'     discrete = T
+#'   )
+#'   # gam.check(fit_S)
+#'   # summary(fit_S)
+#'   # plot(fit_S)
+#' 
+#'   #
+#'   df$scanOF <- factor(df$scan_name, ordered = T)
+#'   fit_SO <- bam(
+#'     dti_fa ~ s(subj_id, scan_name, bs = "re") +
+#'       s(node_id, bs = "tp", k = 40) +
+#'       s(node_id, by = scanOF, bs = "fs", k = 40),
+#'     data = df,
+#'     family = betar(link = "logit"),
+#'     method = "fREML",
+#'     discrete = T
+#'   )
+#'   # summary(fit_SO)
+#'   # plot(fit_SO)
+#'   return(list(gamGS = fit_S, gamGSO = fit_SO))
+#' }
+#' 
+#' 
+#' #' Run GAM with randomized sample
+#' #'
+#' export("gam_rand")
+#' gam_rand <- function(df, seed) {
+#'   # Identify subjs with base and post
+#'   subj_list <- unique(df[which(df$scan_name == "post"), ]$subj_id)
+#'   df <- df[which(df$subj_id %in% subj_list), ]
+#' 
+#'   # Rand subjs
+#'   set.seed(seed)
+#'   subj_list <- sample(subj_list)
+#'   grp_a <- subj_list[1:32]
+#'   grp_b <- subj_list[33:65]
+#' 
+#'   # Replace dti_fa of post for grp_a with base of grp_b
+#'   idx_a_post <- which(df$scan_name == "post" & df$subj_id %in% grp_a)
+#'   idx_b_base <- which(df$scan_name == "base" & df$subj_id %in% grp_b)
+#'   df[idx_a_post, ]$dti_fa <- df[idx_b_base, ]$dti_fa
+#' 
+#'   # Run GAM
+#'   fit_rand <- gam_spar(df)
+#'   return(fit_rand)
+#' }
+#' 
+#' 
+#' #' Gam interaction
+#' #'
+#' export("gam_intx")
+#' gam_intx <- function(df) {
+#'   fit_intx <- bam(
+#'     dti_fa ~ s(subj_id, scan_name, bs = "re") +
+#'       s(node_id, bs = "tp", k = 40) +
+#'       s(tot_symp, by = scan_name, bs = "tp", k = 5) +
+#'       ti(node_id, tot_symp, by = scan_name, bs = c("tp", "tp"), k = c(50, 5)),
+#'     data = df,
+#'     family = betar(link = "logit"),
+#'     method = "fREML",
+#'     discrete = T
+#'   )
+#'   # gam.check(fit_intx)
+#'   # summary(fit_intx)
+#'   # plot(fit_intx)
+#' 
+#'   df$scanOF <- factor(df$scan_name, ordered = T)
+#'   fit_intxOF <- bam(
+#'     dti_fa ~ s(subj_id, scan_name, bs = "re") +
+#'       s(node_id, bs = "tp", k = 40) +
+#'       s(tot_symp, by = scan_name, bs = "tp", k = 5) +
+#'       ti(node_id, tot_symp, bs = c("tp", "tp"), k = c(50, 5)) +
+#'       ti(
+#'         node_id, tot_symp, by = scanOF, bs = c("tp", "tp"), k = c(50, 5), m = 2
+#'       ),
+#'     data = df,
+#'     family = betar(link = "logit"),
+#'     method = "fREML",
+#'     discrete = T
+#'   )
+#' 
+#'   return(list(gamIntx = fit_intx, gamIntxOF = fit_intxOF))
+#' }
+
+

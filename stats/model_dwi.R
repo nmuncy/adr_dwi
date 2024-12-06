@@ -1,5 +1,6 @@
 # Get resources ----
 library("modules")
+library("gridExtra")
 
 workflows <- modules::use("workflows.R")
 
@@ -13,79 +14,68 @@ df_scan_imp <- workflows$get_scan_impact()
 workflows$imp_bet_wor(df_scan_imp)
 
 
-
-
 # Check AFQ gam ----
-#
-# scanOFpost f=15.63, dev expl=87.2%.
-tract <- "Callosum Superior Parietal"
+tract <- "Callosum Temporal"
+tract_gams <- workflows$scalar_gams(df_afq, tract, "post")
 
-# Group smooths
-df <- df_afq[which(
-  df_afq$tract_name == tract & 
-    df_afq$scan_name %in% c("base", "post")),
-]
-fit_spar <- workflows$gam_spar(df)
-workflows$draw_grid(fit_spar$gamGS, fit_spar$gamGSO, tract)
-summary(fit_spar$gamGSO)
+summary(tract_gams$gam_GSO$FA)
+grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$FA)
+  
 
 # Intx smooths
+df <- merge(
+  x = df,
+  y = df_scan_imp[, c("subj_id", "scan_name", "mem_vis")],
+  by = c("subj_id", "scan_name"),
+  all.x = T
+)
+fit_intx <- workflows$gam_intx(df)
+plot(fit_intx$gamIntx)
+plot(fit_intx$gamIntxOF)
 
 
 # Check GAM for over sensitivity ----
 #
-# Switch groups
-# - seed=1: scanOFpost f=5.604, dev expl=87.2%.
-# - seed=2: scanofPost f=4.135, dev expl=87.1%.
-#     Effects are tempered, could still be driven
-#     by unswapped group.
-#
-# Replace groups
-# - seed=1: scanOFpost f=12.4, dev expl=85.3%.
-# - seed=2: scanOFpost f=14.04, dev expl=85.8%.
-
-# Switch groups
-df <- df_afq[which(
-  df_afq$tract_name == tract & 
-    df_afq$scan_name %in% c("base", "post")),
-]
-subj_list <- unique(df$subj_id)
-set.seed(2)
-subj_list <- sample(subj_list)
-grp_swap <- subj_list[1:33]
-idx_base <- which(df$scan_name == "base" & df$subj_id %in% grp_swap)
-idx_post <- which(df$scan_name == "post" & df$subj_id %in% grp_swap)
-df[idx_base, ]$scan_name <- "post"
-df[idx_post, ]$scan_name <- "base"
-
-fit_swt <- workflows$gam_spar(df)
-workflows$draw_grid(fit_swt$gamGS, fit_swt$gamGSO, tract)
-summary(fit_swt$gamGS)
-summary(fit_swt$gamGSO)
-
 # Replace post of group A with base of group B, subsample
 # for group A.
-df <- df_afq[which(
-  df_afq$tract_name == tract & 
-    df_afq$scan_name %in% c("base", "post")),
-]
-subj_list <- unique(df[which(df$scan_name == "post"), ]$subj_id)
-df <- df[which(df$subj_id %in% subj_list), ]
-set.seed(2)
-subj_list <- sample(subj_list)
-grp_a <- subj_list[1:32]
-grp_b <- subj_list[33:65]
-
-idx_a_post <- which(df$scan_name == "post" & df$subj_id %in% grp_a)
-idx_b_base <- which(df$scan_name == "base" & df$subj_id %in% grp_b)
-df[idx_a_post,]$dti_fa <- df[idx_b_base, ]$dti_fa
-
-fit_rep <- workflows$gam_spar(df)
-workflows$draw_grid(fit_rep$gamGS, fit_rep$gamGSO, tract)
-summary(fit_rep$gamGS)
-summary(fit_rep$gamGSO)
+#
+# Replace groups
+# - seed=1: scanOFpost f=14.19, dev expl=87.9%.
+# - seed=2: scanOFpost f=6.015, dev expl=88.3%.
+fit_rand <- workflows$gam_rand(df, 2)
+workflows$draw_grid(fit_rand$gamGS, fit_rep$gamGSO, 2, 3, 3, tract)
+summary(fit_rand$gamGSO)
 
 # TODO identify impact metrics for visit
 # TODO fit GAM for global, group, covariate intx
 # TODO identify impact subgroups
 # TODO relate impact subgroups to tract changes
+
+
+# TODO support other scalars
+df <- df_afq[which(
+  df_afq$tract_name == tract &
+    df_afq$scan_name %in% c("base", "post")
+), ]
+descdist(df$dti_ad, discrete = F)
+hist(df$dti_ad)
+plot(df$dti_ad)
+plot(df$node_id, df$dti_ad)
+plot(df$node_id, df$dti_ad, col = factor(df$scan_name))
+
+
+fit_S <- bam(
+  dti_ad ~ s(subj_id, scan_name, bs = "re") +
+    s(node_id, bs = "tp", k = 40) +
+    s(node_id, scan_name, bs = "fs", k = 40),
+  data = df,
+  family = gaussian(),
+  method = "fREML",
+  discrete = T
+)
+gam.check(fit_S)
+summary(fit_S)
+
+plot_S <- getViz(fit_S)
+p <- plot(sm(plot_S, 3))
+

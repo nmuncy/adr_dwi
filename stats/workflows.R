@@ -1,9 +1,14 @@
 import(dplyr)
 import(lubridate)
 import("stats", "complete.cases")
+import(mgcv)
+import(itsadug)
+import(mgcViz)
+import(viridis)
 
 pull_data <- use("resources/pull_data.R")
 transform_data <- use("resources/transform_data.R")
+draw_plots <- use("resources/draw_plots.R")
 
 
 #' Pull and clean impact data.
@@ -131,7 +136,7 @@ get_scan_impact <- function() {
   df_base <- df_base[complete.cases(df_base$impact_date), ]
 
   # Find closest impact fu date for scan post and rtp, and fix
-  # matching issues between impact and scan. 
+  # matching issues between impact and scan.
   df_imp_fu <- df_imp[
     -idx_imp_base,
     c("subj_id", "impact_name", "impact_date", "num_tbi")
@@ -155,7 +160,7 @@ get_scan_impact <- function() {
   # Calculate days between scan date and impact date
   df_post <- df_post[, c(1, 5:6, 2, 4, 3, 7:13)] # Match col order to df_base
   df_scan_imp <- rbind(df_base, df_post)
-  
+
   df_scan_imp <- df_scan_imp %>%
     mutate(
       i_date = ymd(impact_date),
@@ -164,4 +169,102 @@ get_scan_impact <- function() {
     )
   df_scan_imp <- subset(df_scan_imp, select = -c(i_date, s_date))
   return(df_scan_imp)
+}
+
+
+#' Generate impact better-worse data plots.
+#' 
+#' TODO
+export("imp_bet_wor")
+imp_bet_wor <- function(df){
+  for(col_name in c(
+    "tot_symp", "mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl")
+  ){
+    low <- if (col_name %in% c("rx_time", "tot_symp")) T else F
+    df_sub <- transform_data$compare_base_post(col_name, df, low=low)
+    print(draw_plots$visit_track(col_name, df_sub))
+  }
+}
+
+#' HGAM of Callosum Superior Parietal.
+#'
+#' Fit HGAMs with AFQ FA values to generate global, group,
+#' and ordered group smooths.
+#'
+#' @param df TODO
+export("gam_spar")
+gam_spar <- function(df) {
+  #
+  # fit_S <- bam(
+  #   dti_fa ~ s(node_id, bs="tp", k=40, m=2) +
+  #     s(subj_id, bs="re") +
+  #     s(node_id, scan_name, bs="fs", k=40, m=2),
+  #   data = df,
+  #   family = betar(link="logit"),
+  #   method = "fREML",
+  #   discrete = T
+  # )
+  # gam.check(fit_S, rep=1000)
+  # summary(fit_S)
+  # plot(fit_S)
+
+  #
+  fit_S <- bam(
+    dti_fa ~ s(subj_id, scan_name, bs="re") +
+      s(node_id, bs = "tp", k = 40, m=2) +
+      s(node_id, scan_name, bs="fs", k = 40, m = 2),
+    data = df,
+    family = betar(link = "logit"),
+    method = "fREML",
+    discrete = T
+  )
+  gam.check(fit_S)
+  summary(fit_S)
+  plot(fit_S)
+
+  #
+  df$scanOF <- factor(df$scan_name, ordered = T)
+  fit_SO <- bam(
+    dti_fa ~ s(node_id, bs = "tp", k = 40, m = 2) +
+      s(subj_id, bs = "re") +
+      s(node_id, by = scanOF, bs = "fs", k = 40, m = 2),
+    data = df,
+    family = betar(link = "logit"),
+    method = "fREML",
+    discrete = T
+  )
+  # summary(fit_SO)
+  # plot(fit_SO)
+  return(list(gamGS = fit_S, gamGSO = fit_SO))
+}
+
+
+#' Draw smooth grid.
+#'
+#' TODO
+export("draw_grid")
+draw_grid <- function(fit_G, fit_GO, tract) {
+  # Generate plots objs from smooths
+  plot_G <- getViz(fit_G)
+  pGlobal <- draw_plots$draw_global_smooth(plot_G, 1, tract)
+  pGroup <- draw_plots$draw_group_smooth(plot_G, 3, tract)
+
+  plot_GO <- getViz(fit_GO)
+  pDiff <- draw_plots$draw_group_smooth_diff(plot_GO, 3, tract)
+
+  # draw grid
+  plot_list <- list(
+    "global" = pGlobal,
+    "group" = pGroup,
+    "diff" = pDiff
+  )
+  name_list <- list(
+    "col1" = paste(tract, "Smooths"),
+    "rowL" = "Est. FA Fit",
+    "rowR1" = "Global",
+    "rowR2" = "Group",
+    "rowR3" = "Difference",
+    "bot1" = "Tract Node"
+  )
+  draw_plots$draw_one_three(plot_list, name_list, tract)
 }

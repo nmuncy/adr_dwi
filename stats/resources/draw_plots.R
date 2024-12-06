@@ -7,14 +7,12 @@ import(gridExtra)
 import(lattice)
 import(latticeExtra)
 import(directlabels)
-import(ggpubr)
 
 quick_stats <- use("resources/quick_stats.R")
 
 .meas_names <- function(meas) {
   # Switch variable name for something more readable.
-  out_name <- switch(
-    meas,
+  out_name <- switch(meas,
     "userMemoryCompositeScoreVerbal" = "Vebal Memory Comp",
     "userMemoryCompositeScoreVisual" = "Visual Memory Comp",
     "userVisualMotorCompositeScore" = "Visual Motor Comp",
@@ -27,41 +25,41 @@ quick_stats <- use("resources/quick_stats.R")
 
 
 #' Make XYplot tracking participants by visit.
-#' 
+#'
 #' Adds Wilcoxon Rank-Sum testing to title for better and worse,
 #' and identifies number of better worse and their corresponding
 #' changes from baseline (for fu1, fu2).
-#' 
+#'
 #' @param col_name Column name for testing.
 #' @param df Dataframe of data.
 #' @param visit_name Name of visit.
 #' @return Plot object.
 export("visit_track")
-visit_track <- function(col_name, df){
-  stats_b <- quick_stats$wc_ranksum(col_name, df, "base")
-  stats_f <- quick_stats$wc_ranksum(col_name, df, "fu1")
-  d_fu1 <- quick_stats$score_change(col_name, df, "fu1")
-  d_fu2 <- quick_stats$score_change(col_name, df, "fu2")
-  
+visit_track <- function(col_name, df) {
+  stats_base <- quick_stats$wc_ranksum(col_name, df, "base")
+  stats_post <- quick_stats$wc_ranksum(col_name, df, "post")
+  d_post <- quick_stats$score_change(col_name, df, "post")
+  d_rtp <- quick_stats$score_change(col_name, df, "rtp")
+
   plot <- xyplot(
-    get(col_name) ~ visit_name | fu1_change, 
-    data=df,
-    group=subj_id,
-    type="b",
-    ylab = .meas_names(col_name),
+    get(col_name) ~ scan_name | base_v_post,
+    data = df,
+    group = subj_id,
+    type = "b",
+    ylab = col_name,
     main = paste0(
-      "BetterVsWorse: p(base)=", 
-      round(stats_b$stats$p.value, 3),
-      "; p(fu1)=", 
-      round(stats_f$stats$p.value, 3)
+      "BetterVsWorse: p(base)=",
+      round(stats_base$stats$p.value, 3),
+      "; p(post)=",
+      round(stats_post$stats$p.value, 3)
     ),
     sub = paste0(
-      "Better n=", stats_b$num_bet, 
-      ", dfu1=", d_fu1$avg_bet, 
-      ", dfu2=", d_fu2$avg_bet, 
-      "; Worse n=", stats_b$num_wor,
-      ", dfu1=", d_fu1$avg_wor,
-      ", dfu2=", d_fu2$avg_wor
+      "Better n=", stats_base$num_bet,
+      ", dpost=", d_post$avg_bet,
+      ", drtp=", d_rtp$avg_bet,
+      "; Worse n=", stats_base$num_wor,
+      ", dpost=", d_post$avg_wor,
+      ", drtp=", d_rtp$avg_wor
     )
   )
   return(plot)
@@ -69,26 +67,26 @@ visit_track <- function(col_name, df){
 
 
 export("visit_box")
-visit_box <- function(col_name, df){
+visit_box <- function(col_name, df) {
   # Identify subjects who get better from base to fu1
   #
   # Arguments:
   #
   stats_b <- quick_stats$wc_ranksum(col_name, df, "base")
   stats_f <- quick_stats$wc_ranksum(col_name, df, "fu1")
-  
+
   ggplot(
     df,
-    aes(x=visit_name, y=get(col_name), fill=fu1_change),
-  ) + 
+    aes(x = visit_name, y = get(col_name), fill = fu1_change),
+  ) +
     geom_boxplot() +
     ylab(.meas_names(col_name)) +
     ggtitle(paste0(
-      "base: bVw p=", 
+      "base: bVw p=",
       round(stats_b$p.value, 3),
-      "; fu1: bVw p=", 
-      round(stats_f$p.value, 3))
-    )
+      "; fu1: bVw p=",
+      round(stats_f$p.value, 3)
+    ))
 }
 
 
@@ -105,14 +103,14 @@ draw_global_smooth <- function(plot_obj, attr_num, tract) {
   #   attr_num (int) = List/attribute number of plot_obj that contains
   #     global smooth
   #   tract (str) = AFQ tract name
-  
+
   # use plot to extract attribute of interest
   p <- plot(sm(plot_obj, attr_num))
   p_data <- as.data.frame(p$data$fit)
   colnames(p_data) <- c("nodeID", "est", "ty", "se")
   p_data$lb <- as.numeric(p_data$est - (2 * p_data$se))
   p_data$ub <- as.numeric(p_data$est + (2 * p_data$se))
-  
+
   # make, save ggplot
   pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
     geom_line() +
@@ -123,7 +121,7 @@ draw_global_smooth <- function(plot_obj, attr_num, tract) {
       axis.title.y = element_blank(),
       axis.title.x = element_blank()
     )
-  print(pp)
+  # print(pp)
   return(list("global" = pp))
 }
 
@@ -140,12 +138,12 @@ draw_group_smooth <- function(plot_obj, attr_num, tract) {
   #   attr_num (int) = List/attribute number of plot_obj that contains
   #     group smooths
   #   tract (str) = AFQ tract name
-  
+
   # use plot to extract attribute of interest
   p <- plot(sm(plot_obj, attr_num))
   p_data <- as.data.frame(p$data$fit)
   colnames(p_data) <- c("nodeID", "est", "ty", "Group")
-  
+
   # make, save ggplot
   pp <- ggplot(
     data = p_data,
@@ -158,11 +156,11 @@ draw_group_smooth <- function(plot_obj, attr_num, tract) {
     theme(
       text = element_text(family = "Times New Roman"),
       legend.position = c(0.88, 0.85),
-      legend.text = element_text(size=8),
+      legend.text = element_text(size = 8),
       axis.title.y = element_blank(),
       axis.title.x = element_blank()
     )
-  print(pp)
+  # print(pp)
   return(list("group" = pp))
 }
 
@@ -179,13 +177,13 @@ draw_group_smooth_diff <- function(plot_obj, attr_num, tract) {
   #   attr_num (int) = List/attribute number of plot_obj that contains group
   #     difference smooth
   #   tract (str) = AFQ tract name
-  
+
   # unpack difference smooth data
   p <- plot(sm(plot_obj, attr_num)) +
     geom_hline(yintercept = 0)
   p_data <- as.data.frame(p$data$fit)
   colnames(p_data) <- c("nodeID", "est", "ty", "se")
-  
+
   # find sig nodes
   p_data$lb <- as.numeric(p_data$est - (2 * p_data$se))
   p_data$ub <- as.numeric(p_data$est + (2 * p_data$se))
@@ -194,7 +192,7 @@ draw_group_smooth_diff <- function(plot_obj, attr_num, tract) {
       (p_data$est > 0 & p_data$lb > 0)
   )
   sig_nodes <- p_data[sig_rows, ]$nodeID
-  
+
   # find start, end points of sig regions
   vec_start <- sig_nodes[1]
   vec_end <- vector()
@@ -210,7 +208,7 @@ draw_group_smooth_diff <- function(plot_obj, attr_num, tract) {
     c <- cc
   }
   vec_end <- append(vec_end, sig_nodes[num_nodes])
-  
+
   # make df for drawing rectangles
   d_rect <- data.frame(
     x_start = vec_start,
@@ -220,7 +218,7 @@ draw_group_smooth_diff <- function(plot_obj, attr_num, tract) {
   )
   d_rect$x_start <- d_rect$x_start
   d_rect$x_end <- d_rect$x_end
-  
+
   # draw
   pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
     geom_hline(yintercept = 0) +
@@ -239,17 +237,18 @@ draw_group_smooth_diff <- function(plot_obj, attr_num, tract) {
       fill = "red"
     ) +
     scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
-    theme(text = element_text(family = "Times New Roman"),
-          axis.title.y = element_blank(),
-          axis.title.x = element_blank()
+    theme(
+      text = element_text(family = "Times New Roman"),
+      axis.title.y = element_blank(),
+      axis.title.x = element_blank()
     )
-  print(pp)
+  # print(pp)
   return(list("diff" = pp))
 }
 
 
 export("draw_one_three")
-draw_one_three <- function(plot_list, name_list, tract){
+draw_one_three <- function(plot_list, name_list, tract) {
   # Assemble a 1x3 grid of plots.
   #
   # For plotting tract global, group, difference smooths.
@@ -258,42 +257,45 @@ draw_one_three <- function(plot_list, name_list, tract){
   #   plot_list (list) = contains $global, $group, and $diff
   #   name_list (list) = contains column, left, right, and bottom names
   #   tract (str) = AFQ tract name
-  
+
   # unpack, organize plots
   r1A <- plot_list$global$global
   r2A <- plot_list$group$group
   r3A <- plot_list$diff$diff
-  
+
   # make col titles, y axis, x axis, and row names
   col1_name <- text_grob(name_list$col1, size = 12, family = "Times New Roman")
   bot1_name <- text_grob(name_list$bot1, size = 10, family = "Times New Roman")
-  
-  l1_name <- l3_name <- 
+
+  l1_name <- l3_name <-
     text_grob("", size = 12, family = "Times New Roman", rot = 90)
   l2_name <-
     text_grob(name_list$rowL, size = 12, family = "Times New Roman", rot = 90)
-  
+
   r1_name <- text_grob(
-    name_list$rowR1, size = 12, family = "Times New Roman", rot = 270
+    name_list$rowR1,
+    size = 12, family = "Times New Roman", rot = 270
   )
   r2_name <- text_grob(
-    name_list$rowR2, size = 12, family = "Times New Roman", rot = 270
+    name_list$rowR2,
+    size = 12, family = "Times New Roman", rot = 270
   )
   r3_name <- text_grob(
-    name_list$rowR3, size = 12, family = "Times New Roman", rot = 270
+    name_list$rowR3,
+    size = 12, family = "Times New Roman", rot = 270
   )
-  
+
   pOut <- grid.arrange(
     arrangeGrob(r1A, top = col1_name, left = l1_name, right = r1_name),
     arrangeGrob(r2A, left = l2_name, right = r2_name),
     arrangeGrob(r3A, bottom = bot1_name, left = l3_name, right = r3_name),
     nrow = 3,
-    ncol= 1,
+    ncol = 1,
     widths = 1,
     heights = c(1, 1, 1)
   )
   print(pOut)
-  
+
   # ggsave(
   #   paste0(out_dir, "/Plot_", tract, "_smooths.png"),
   #   plot = pOut,
@@ -307,10 +309,10 @@ draw_one_three <- function(plot_list, name_list, tract){
 
 
 export("draw_two_three")
-draw_two_three <- function(plot_list, name_list, tract, beh_short, out_name){
+draw_two_three <- function(plot_list, name_list, tract, beh_short, out_name) {
   # Assemble a 2x3 grid of plots.
   #
-  # For plotting covariate and interaction smooths for control, experimental, 
+  # For plotting covariate and interaction smooths for control, experimental,
   # and difference.
   #
   # Arguments:
@@ -319,7 +321,7 @@ draw_two_three <- function(plot_list, name_list, tract, beh_short, out_name){
   #   tract (str) = AFQ tract name
   #   beh_short (str) =  identifier for specific covariate
   #   out_name (str) = type of analysis (LGI/ROI/PPI)
-  
+
   # unpack, organize plots
   r1A <- plot_list$beh$con
   r1B <- plot_list$intx$con
@@ -327,28 +329,31 @@ draw_two_three <- function(plot_list, name_list, tract, beh_short, out_name){
   r2B <- plot_list$intx$exp
   r3A <- plot_list$beh$diff
   r3B <- plot_list$intx_diff$diff
-  
+
   # make col titles, y axis, x axis, and row names
   col1_name <- text_grob(name_list$col1, size = 12, family = "Times New Roman")
   col2_name <- text_grob(name_list$col2, size = 12, family = "Times New Roman")
   bot1_name <- text_grob(name_list$bot1, size = 10, family = "Times New Roman")
   bot2_name <- text_grob(name_list$bot2, size = 10, family = "Times New Roman")
-  
-  l1_name <- l3_name <- 
+
+  l1_name <- l3_name <-
     text_grob("", size = 12, family = "Times New Roman", rot = 90)
   l2_name <-
     text_grob(name_list$rowL, size = 12, family = "Times New Roman", rot = 90)
-  
+
   r1_name <- text_grob(
-    name_list$rowR1, size = 12, family = "Times New Roman", rot = 270
+    name_list$rowR1,
+    size = 12, family = "Times New Roman", rot = 270
   )
   r2_name <- text_grob(
-    name_list$rowR2, size = 12, family = "Times New Roman", rot = 270
+    name_list$rowR2,
+    size = 12, family = "Times New Roman", rot = 270
   )
   r3_name <- text_grob(
-    name_list$rowR3, size = 12, family = "Times New Roman", rot = 270
+    name_list$rowR3,
+    size = 12, family = "Times New Roman", rot = 270
   )
-  
+
   pOut <- grid.arrange(
     arrangeGrob(r1A, top = col1_name, left = l1_name),
     arrangeGrob(r1B, top = col2_name, right = r1_name),
@@ -357,12 +362,12 @@ draw_two_three <- function(plot_list, name_list, tract, beh_short, out_name){
     arrangeGrob(r3A, bottom = bot1_name, left = l3_name),
     arrangeGrob(r3B, bottom = bot2_name, right = r3_name),
     nrow = 3,
-    ncol= 2,
-    widths = c(0.75, 1), 
+    ncol = 2,
+    widths = c(0.75, 1),
     heights = c(1, 0.8, 1)
   )
   print(pOut)
-  
+
   # ggsave(
   #   paste0(out_dir, "/Plot_", tract, "_", out_name, "_", beh_short, ".png"),
   #   plot = pOut,

@@ -52,6 +52,8 @@ fix_impact_scan <- function(df) {
 
 
 #' Identify subjects who get better from base to fu1.
+#' 
+#' Deprecated.
 #'
 #' @param col_name Column name for testing.
 #' @param df Dataframe of data.
@@ -107,6 +109,56 @@ fu1_better <- function(col_name, df, low = FALSE) {
   return(df_long)
 }
 
+#' Determine where impact scores get better in post than base.
+#'
+#' @param col_name Column name for testing.
+#' @param df Dataframe of data.
+#' @param low Whether lower scores are better
+#' @returns Dataframe with new column (fu1_change) indicating direction
+#' of change.
+export("compare_base_post")
+compare_base_post <- function(col_name, df, low = FALSE) {
+  # Widen data for easy columnar subtraction
+  df <- subset(df, select = c("subj_id", "scan_name", col_name))
+  df_wide <- reshape(
+    df,
+    idvar = "subj_id", timevar = "scan_name", direction = "wide"
+  )
+  
+  # Find subjs that get better from base-post
+  df_wide <- df_wide[!is.na(df_wide[paste0(col_name, ".post")]), ]
+  df_wide$base_v_post <- "worse"
+  if (low) {
+    df_wide$base_v_post[
+      df_wide[paste0(col_name, ".post")] < df_wide[paste0(col_name, ".base")]
+    ] <- "better"
+  } else {
+    df_wide$base_v_post[
+      df_wide[paste0(col_name, ".post")] > df_wide[paste0(col_name, ".base")]
+    ] <- "better"
+  }
+  df_wide$base_v_post <- as.factor(df_wide$base_v_post)
+  
+  # Convert back to long
+  df_long <- reshape(
+    df_wide,
+    direction = "long",
+    varying = c(
+      paste(col_name, "base", sep = "."),
+      paste(col_name, "post", sep = "."),
+      paste(col_name, "rtp", sep = ".")
+    ),
+    timevar = "scan_name",
+    times = c("base", "post", "rtp"),
+    idvar = c("subj_id")
+  )
+  df_long$scan_name <- as.factor(df_long$scan_name)
+  return(df_long)
+}
+
+
+#' TODO
+#' 
 export("comp_group")
 comp_group <- function(df) {
   df_corr <- df[, 1:10]

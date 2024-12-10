@@ -7,6 +7,9 @@ import("RMySQL")
 #'
 #' @returns Connection object to db_adr.
 .db_connect <- function() {
+  
+  # host = "127.0.0.1",
+  # port = 3308,
   db_con <- dbConnect(
     MySQL(),
     dbname = "db_adr",

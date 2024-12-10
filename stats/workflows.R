@@ -199,10 +199,11 @@ scalar_gams <- function(df_afq, tract, post_sess){
     stop("Unexpected post_sess")
   }
   #
-  df <- df_afq[which(
-    df_afq$tract_name == tract &
-      df_afq$scan_name %in% c("base", post_sess)
-  ), ]
+  # df <- df_afq[which(
+  #   df_afq$tract_name == tract &
+  #     df_afq$scan_name %in% c("base", post_sess)
+  # ), ]
+  df <- df_afq[which(df_afq$tract_name == tract), ]
   
   #
   # hist(df$dti_md, breaks = 50)
@@ -246,15 +247,16 @@ scalar_gams <- function(df_afq, tract, post_sess){
 #' TODO
 export("scalar_intx_gams")
 scalar_intx_gams <- function(df_afq, df_scan_imp, tract, post_sess){
-  if(! post_sess %in% c("post", "rtp")){
-    stop("Unexpected post_sess")
-  }
+  # if(! post_sess %in% c("post", "rtp")){
+  #   stop("Unexpected post_sess")
+  # }
   
   #
-  df <- df_afq[which(
-    df_afq$tract_name == tract &
-      df_afq$scan_name %in% c("base", post_sess)
-  ), ]
+  # df <- df_afq[which(
+  #   df_afq$tract_name == tract &
+  #     df_afq$scan_name %in% c("base", post_sess)
+  # ), ]
+  df <- df_afq[which(df_afq$tract_name == tract), ]
   
   #
   impact_meas <- "mem_vis"

@@ -9,21 +9,27 @@ workflows <- modules::use("workflows.R")
 df_afq <- workflows$clean_afq()
 df_scan_imp <- workflows$get_scan_impact()
 
-# data_dir <- "/Users/nmuncy2/Projects/data/"
-# out_afq <- write.csv(df_afq, file = paste0(data_dir, "df_afq.csv"), row.names=F)
-# out_imp <- write.csv(df_scan_imp, file = paste0(data_dir, "df_scan_imp.csv"), row.names=F)
-
 
 # Check Impact measures ----
 workflows$imp_bet_wor(df_scan_imp)
 
 
 # Check AFQ gam ----
-tract <- "Callosum Temporal"
-tract_gams <- workflows$scalar_gams(df_afq, tract, "post")
+
+# tract <- "Callosum Temporal"
+for(tract in unique(df_afq$tract_name)){
+  print(tract)
+  tract_gams <- workflows$scalar_gams(df_afq, tract)
+  grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$FA)
+}
+
 
 summary(tract_gams$gam_GSO$FA)
 grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$FA)
+# grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$RD)
+# grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$AD)
+# grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$MD)
+
 
 # Intx smooths
 df <- merge(

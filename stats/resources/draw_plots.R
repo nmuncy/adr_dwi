@@ -310,6 +310,66 @@ draw_one_three <- function(plot_list, name_list, tract) {
 }
 
 
+
+export("draw_one_four")
+draw_one_four <- function(plot_list, name_list, tract) {
+
+  # unpack, organize plots
+  r1A <- plot_list$global$global
+  r2A <- plot_list$group$group
+  r3A <- plot_list$diffa$diff
+  r4A <- plot_list$diffb$diff
+  
+  # make col titles, y axis, x axis, and row names
+  col1_name <- text_grob(name_list$col1, size = 12, family = "Times New Roman")
+  bot1_name <- text_grob(name_list$bot1, size = 10, family = "Times New Roman")
+  
+  l1_name <- l2_name <-
+    text_grob(name_list$rowL1, size = 12, family = "Times New Roman", rot = 90)
+  l3_name <- l4_name <-
+    text_grob(name_list$rowL2, size = 12, family = "Times New Roman", rot = 90)
+  
+  r1_name <- text_grob(
+    name_list$rowR1,
+    size = 12, family = "Times New Roman", rot = 270
+  )
+  r2_name <- text_grob(
+    name_list$rowR2,
+    size = 12, family = "Times New Roman", rot = 270
+  )
+  r3_name <- text_grob(
+    name_list$rowR3,
+    size = 12, family = "Times New Roman", rot = 270
+  )
+  r4_name <- text_grob(
+    name_list$rowR4,
+    size = 12, family = "Times New Roman", rot = 270
+  )
+  
+  pOut <- grid.arrange(
+    arrangeGrob(r1A, top = col1_name, left = l1_name, right = r1_name),
+    arrangeGrob(r2A, left = l2_name, right = r2_name),
+    arrangeGrob(r3A, left = l3_name, right = r3_name),
+    arrangeGrob(r4A, bottom = bot1_name, left = l4_name, right = r4_name),
+    nrow = 4,
+    ncol = 1,
+    widths = 1,
+    heights = c(1, 1, 1, 1)
+  )
+  # print(pOut)
+  
+  # ggsave(
+  #   paste0(out_dir, "/Plot_", tract, "_smooths.png"),
+  #   plot = pOut,
+  #   units = "in",
+  #   height = 6,
+  #   width = 3,
+  #   dpi = 600,
+  #   device = "png"
+  # )
+  return(pOut)
+}
+
 export("draw_two_three")
 draw_two_three <- function(plot_list, name_list, tract, beh_short, out_name) {
   # Assemble a 2x3 grid of plots.
@@ -387,29 +447,35 @@ draw_two_three <- function(plot_list, name_list, tract, beh_short, out_name) {
 #'
 #' TODO
 export("draw_grid")
-draw_grid <- function(fit_G, fit_GO, num_G, num_GS, num_GO, tract, scalar_name) {
+draw_grid <- function(
+    fit_G, fit_GO, num_G, num_GS, num_GOa, num_GOb, tract, scalar_name
+  ) {
   # Generate plots objs from smooths
   plot_G <- getViz(fit_G)
   pGlobal <- draw_global_smooth(plot_G, num_G, tract)
   pGroup <- draw_group_smooth(plot_G, num_GS, tract)
   
   plot_GO <- getViz(fit_GO)
-  pDiff <- draw_group_smooth_diff(plot_GO, num_GO, tract)
+  pDiffa <- draw_group_smooth_diff(plot_GO, num_GOa, tract)
+  pDiffb <- draw_group_smooth_diff(plot_GO, num_GOb, tract)
   
   # draw grid
   plot_list <- list(
     "global" = pGlobal,
     "group" = pGroup,
-    "diff" = pDiff
+    "diffa" = pDiffa,
+    "diffb" = pDiffb
   )
   name_list <- list(
     "col1" = paste(tract, "Smooths"),
-    "rowL" = paste("Est.", scalar_name, "Fit"),
+    "rowL1" = paste("Est.", scalar_name, "Fit"),
+    "rowL2" = paste("Est.", scalar_name, "Diff"),
     "rowR1" = "Global",
     "rowR2" = "Group",
-    "rowR3" = "Difference",
+    "rowR3" = "Post-Base",
+    "rowR4" = "RTP-Base",
     "bot1" = "Tract Node"
   )
-  plot_grid <- draw_one_three(plot_list, name_list, tract)
+  plot_grid <- draw_one_four(plot_list, name_list, tract)
   return(plot_grid)
 }

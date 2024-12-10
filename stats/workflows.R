@@ -190,53 +190,72 @@ imp_bet_wor <- function(df) {
 }
 
 
+.fit_plot <- function(df, tract, scalar_name){
+  if(! scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))){
+    stop("Unexpected scalar_name")
+  }
+  h_tract <- fit_gams$switch_tract(tract)
+  scalar <- strsplit(scalar_name, "_")[[1]][2]
+  
+  #
+  rds_gs <- paste0(
+    getwd(), "/rda_objects/fit_GS_", h_tract,"_", scalar, ".Rda"
+  )
+  if (!file.exists(rds_gs)) {
+    h_gam <- fit_gams$gam_gs(df, scalar_name)
+    saveRDS(h_gam, file = rds_gs)
+    rm(h_gam)
+  }
+  fit_GS <- readRDS(rds_gs)
+  
+  #
+  rds_gso <- paste0(
+    getwd(), "/rda_objects/fit_GSO_", h_tract,"_", scalar, ".Rda"
+  )
+  if (!file.exists(rds_gso)) {
+    h_gam <- fit_gams$gam_gso(df, scalar_name)
+    saveRDS(h_gam, file = rds_gso)
+    rm(h_gam)
+  }
+  fit_GSO <- readRDS(rds_gso)
+  
+  #
+  plots <- draw_plots$draw_grid(
+    fit_GS, fit_GSO, 2, 3, 3, 4, tract, toupper(scalar)
+  )
+  return(list(
+    "fit_GS" = fit_GS,
+    "fit_GSO" = fit_GSO,
+    "plots" = plots
+  ))
+}
+
+
 #' Fit DWI scalars with longitudinal HGAMs.
 #' 
 #' TODO
 export("scalar_gams")
-scalar_gams <- function(df_afq, tract, post_sess){
-  if(! post_sess %in% c("post", "rtp")){
-    stop("Unexpected post_sess")
-  }
-  #
-  # df <- df_afq[which(
-  #   df_afq$tract_name == tract &
-  #     df_afq$scan_name %in% c("base", post_sess)
-  # ), ]
+scalar_gams <- function(df_afq, tract){
+  
   df <- df_afq[which(df_afq$tract_name == tract), ]
   
-  #
-  # hist(df$dti_md, breaks = 50)
-  # plot(df$dti_md)
-  # plot(df$node_id, df$dti_md)
-  # plot(df$node_id, df$dti_md, col = factor(df$scan_name))
-  
-  #
-  fit_FA <- fit_gams$gam_gs(df, "dti_fa")
-  fit_FAO <- fit_gams$gam_gso(df, "dti_fa")
-  plot_FA <- draw_plots$draw_grid(fit_FA, fit_FAO, 2, 3, 3, tract, "FA")
-  
-  fit_RD <- fit_gams$gam_gs(df, "dti_rd")
-  fit_RDO <- fit_gams$gam_gso(df, "dti_rd")
-  plot_RD <- draw_plots$draw_grid(fit_RD, fit_RDO, 2, 3, 3, tract, "RD")
-  
-  fit_AD <- fit_gams$gam_gs(df, "dti_ad")
-  fit_ADO <- fit_gams$gam_gso(df, "dti_ad")
-  plot_AD <- draw_plots$draw_grid(fit_AD, fit_ADO, 2, 3, 3, tract, "AD")
-  
-  fit_MD <- fit_gams$gam_gs(df, "dti_md")
-  fit_MDO <- fit_gams$gam_gso(df, "dti_md")
-  plot_MD <- draw_plots$draw_grid(fit_MD, fit_MDO, 2, 3, 3, tract, "MD")
+  obj_FA <- .fit_plot(df, tract, "dti_fa")
+  obj_MD <- .fit_plot(df, tract, "dti_md")
+  obj_RD <- .fit_plot(df, tract, "dti_rd")
+  obj_AD <- .fit_plot(df, tract, "dti_ad")
   
   return(list(
     gam_GS = list(
-      "FA" = fit_FA, "RD" = fit_RD, "AD" = fit_AD, "MD" = fit_MD
+      "FA" = obj_FA$fit_GS, "RD" = obj_RD$fit_GS, 
+      "AD" = obj_AD$fit_GS, "MD" = obj_MD$fit_GS
     ),
     gam_GSO = list(
-      "FA" = fit_FAO, "RD" = fit_RDO, "AD" = fit_ADO, "MD" = fit_MDO
+      "FA" = obj_FA$fit_GSO, "RD" = obj_RD$fit_GSO, 
+      "AD" = obj_AD$fit_GSO, "MD" = obj_MD$fit_GSO
     ),
     gam_plots = list(
-      "FA" = plot_FA, "RD" = plot_RD, "AD" = plot_AD, "MD" = plot_MD
+      "FA" = obj_FA$plots, "RD" = obj_RD$plots, 
+      "AD" = obj_AD$plots, "MD" = obj_MD$plots
     )
   ))
 }

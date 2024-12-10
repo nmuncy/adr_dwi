@@ -12,6 +12,41 @@ import(mgcv)
   return(s_fam)
 }
 
+#' Supply short tract names
+export("switch_tract")
+switch_tract <- function(tract_name) {
+  s_name <- switch(
+    tract_name,
+    "Left Anterior Thalamic" = "laThal",
+    "Left Cingulum Cingulate" = "lCCing",
+    "Left Corticospinal" = "lCS",
+    "Left Inferior Fronto-occipital" = "lIFO",
+    "Left Inferior Longitudinal" = "lIL",
+    "Left Superior Longitudinal" = "lSL",
+    "Left Arcuate" = "lArc",
+    "Left Uncinate" = "lUnc",
+    "Left Posterior Arcuate" = "lpArc",
+    "Left Vertical Occipital" = "lvOcc",
+    "Callosum Anterior Frontal" = "CCaf",
+    "Callosum Occipital" = "CCocc",
+    "Callosum Posterior Parietal" = "CCpp",
+    "Callosum Superior Parietal" = "CCsp",
+    "Right Anterior Thalamic" = "raThal",
+    "Right Cingulum Cingulate" = "rCCing",
+    "Right Corticospinal" = "rCS",
+    "Right Inferior Fronto-occipital" = "rIFO",
+    "Right Inferior Longitudinal" = "rIL",
+    "Right Superior Longitudinal" = "rSL",
+    "Right Arcuate" = "rArc",
+    "Right Uncinate" = "rUnc",
+    "Right Posterior Arcuate" = "rpArc",
+    "Right Vertical Occipital" = "rvOcc",
+    "Callosum Motor" = "CCmot",
+    "Callosum Superior Frontal" = "CCsf",
+    "Callosum Temporal" = "CCtemp",
+  )
+  return(s_name)
+}
 
 #' HGAM of Callosum Superior Parietal.
 #' 

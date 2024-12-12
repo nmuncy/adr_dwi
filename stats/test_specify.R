@@ -1,15 +1,3 @@
-# Load Env ----
-library(mgcv)
-library(mgcViz)
-library(viridis)
-library(rgl)
-library("factoextra")
-library("ggbiplot")
-library("psych")
-library("ggplot2")
-library("ggpubr")
-
-
 # Get Data ----
 data_dir <- "/Users/nmuncy2/Projects/data/"
 data_afq <- paste0(data_dir, "df_afq.csv")
@@ -30,16 +18,20 @@ df_scan_imp$impact_name <- factor(df_scan_imp$impact_name)
 
 
 # PCA: Post Impact ----
+library("factoextra")
+library("ggbiplot")
+
 df_post <- df_scan_imp[which(df_scan_imp$scan_name == "post"), ]
-df_post <- df_post[complete.cases(df_post[, 7:10]), ]
+df_post <- df_post[complete.cases(df_post[, 7:12]), ]#7:10
 
-hist(df_post$mem_ver, breaks = 20)
-hist(df_post$mem_vis, breaks = 20)
-hist(df_post$vis_mot, breaks = 20)
-hist(df_post$rx_time, breaks = 20)
-hist(df_post$imp_ctl, breaks = 20)
+# hist(df_post$mem_ver, breaks = 20)
+# hist(df_post$mem_vis, breaks = 20)
+# hist(df_post$vis_mot, breaks = 20)
+# hist(df_post$rx_time, breaks = 20)
+# hist(df_post$imp_ctl, breaks = 20)
+# hist(df_post$tot_symp, breaks = 20)
 
-pc_post <- prcomp(df_post[,7:10], center=T, scale. = T)
+pc_post <- prcomp(df_post[,7:12], center=T, scale. = T) #7:10
 pc_post$center
 pc_post$scale
 print(pc_post)
@@ -59,26 +51,35 @@ ggbiplot(
   scale_color_discrete(name="") +
   theme(legend.direction = "horizontal")
 
-# Invert rx_time 
-df_post$rx_time_inv <- 
-  (max(df_post$rx_time) - df_post$rx_time) + min(df_post$rx_time)
-pc_post <- prcomp(df_post[,c(7:9,15)], center=T, scale. = T)
-pc_post$center
-print(pc_post)
-summary(pc_post) # no impact of inversion
-fviz_eig(pc_post, addlabels=T)
-fviz_pca_biplot(pc_post, label="var", repel=T)
+# # Invert rx_time 
+# df_post$rx_time_inv <- 
+#   (max(df_post$rx_time) - df_post$rx_time) + min(df_post$rx_time)
+# pc_post <- prcomp(df_post[,c(7:9,15)], center=T, scale. = T)
+# pc_post$center
+# print(pc_post)
+# summary(pc_post) # no impact of inversion
+# fviz_eig(pc_post, addlabels=T)
+# fviz_pca_biplot(pc_post, label="var", repel=T)
 
 
 # K-means: Post Impact ----
 #
 # 3 centers: ss = 62.8%
 # 4 centers: ss = 71.3%
-data_norm <- scale(df_post[, 7:10])
+library("psych")
+library("ggplot2")
+library("ggpubr")
+
+df_post <- df_scan_imp[which(df_scan_imp$scan_name == "post"), ]
+df_post <- df_post[complete.cases(df_post[, 7:10]), ] #7:12
+
+# Normalize and check distance
+data_norm <- scale(df_post[, 7:10]) #7:12
 data_dist <- dist(data_norm)
 fviz_nbclust(data_norm, kmeans, method = "wss")
 
-km_post <- kmeans(data_norm, centers = 3, nstart=100)
+# K-means, determine cluster membership
+km_post <- kmeans(data_norm, centers = 3, nstart=100) #5
 print(km_post)
 
 km_clust <- km_post$cluster
@@ -86,18 +87,12 @@ rownames(data_norm) <- df_post$subj_id
 fviz_cluster(list(data=data_norm, cluster = km_clust))
 table(km_clust)
 
+# Plot
 km_clust <- as.data.frame(km_clust)
 rownames(km_clust) <- df_post$subj
 km_clust <- cbind(subj_id=rownames(km_clust), km_clust)
 rownames(km_clust) <- NULL
 
-
-# Viz: Post Impact by K-group ----
-#
-# K-groups show high/med/low/performance on task.
-# 4 clusters seems to split "med" group. Strong
-# differentiation in mem_vis ~ vis_mot.
-#
 df_post_grp <- merge(
   x=df_post,
   y=km_clust,
@@ -109,27 +104,31 @@ plot(df_post_grp$mem_ver, col=factor(df_post_grp$km_clust))
 plot(df_post_grp$mem_vis, col=factor(df_post_grp$km_clust))
 plot(df_post_grp$vis_mot, col=factor(df_post_grp$km_clust))
 plot(df_post_grp$rx_time, col=factor(df_post_grp$km_clust))
+plot(df_post_grp$tot_symp, col=factor(df_post_grp$km_clust))
+plot(df_post_grp$imp_ctl, col=factor(df_post_grp$km_clust))
 
 pairs.panels(
-  df_post_grp[, 7:10],
+  df_post_grp[, 7:10],  #7:12
   bg=c("blue", "red", "green")[df_post_grp$km_clust],
+  # bg=c("blue", "red", "green", "orange", "purple")[df_post_grp$km_clust],
   gap = 0,
   pch = 21
 )
 
-# Visualize Simpson's Paradox
+# Check Simpson's Paradox
 ggplot(
   data=df_post_grp,
   aes(x=vis_mot, y=mem_vis, color=factor(km_clust))
 ) +
   geom_point() +
-  stat_smooth(method=lm) +
+  stat_smooth(method=lm, se=F) +
   scale_color_manual(
-    breaks=c("1", "2", "3"),
-    values=c("blue", "red", "green")
+    breaks=c("1", "2", "3"),#, "4", "5"
+    values=c("blue", "red", "green")#, "orange", "purple"
   ) +
   stat_cor(method="pearson")
-  
+
+# Add global line  
 ggplot(
   data=df_post_grp,
   aes(x=vis_mot, y=mem_vis)
@@ -137,15 +136,76 @@ ggplot(
   geom_point(aes(color=factor(km_clust))) +
   stat_smooth(method=lm, aes(color=factor(km_clust)), se=F) +
   scale_color_manual(
-    breaks=c("1", "2", "3"),
-    values=c("blue", "red", "green")
+    breaks=c("1", "2", "3", "4", "5"),
+    values=c("blue", "red", "green", "orange", "purple")
   ) +
   stat_cor(method="pearson", aes(color=factor(km_clust))) +
   stat_cor(method="pearson", label.x=40, label.y=38) +
   geom_smooth(method=lm, color="black", se=F)
 
 
+# RF: Base vs Post ----
+#
+# OOB err rate with 6 param = 39.25%
+# 
+library("randomForest")
+
+
+df <- df_scan_imp[
+  which(df_scan_imp$scan_name != "rtp"), 
+  c(
+    "subj_id", "scan_name", "mem_ver", "mem_vis", 
+    "vis_mot", "rx_time", "imp_ctl", "tot_symp"
+  )
+]
+df$scan_name <- as.character(df$scan_name)
+rf <- randomForest(
+  factor(scan_name) ~ mem_ver + 
+    mem_vis + vis_mot + rx_time + imp_ctl + tot_symp,
+  data = df,
+  ntree = 700,
+  mtry = 2,
+  importance = T
+)
+rf
+importance(rf)
+
+plot(rf)
+varImpPlot(rf, sort=F, main="base vs post RF importance")
+
+
+# MERF: Base vs Post vs RTP ----
+library("LongituRF")
+
+df <- df_scan_imp[, 
+  c(
+    "subj_id", "scan_name", "mem_ver", "mem_vis", 
+    "vis_mot", "rx_time", "imp_ctl", "tot_symp"
+  )
+]
+df$time <- 1
+df[which(df$scan_name == "post"),]$time <- 2
+df[which(df$scan_name == "rtp"),]$time <- 3
+df$z <- 1 # TODO specify
+
+merf <- MERF(
+  x=df[,3:8],
+  y=df$scan_name,
+  z=df$z,
+  id=df$subj_id,
+  time=df$time,
+  mtry=2,
+  ntree=500,
+  sto="BM"
+)
+
+
 # GAM: Impact mem_vis ----
+library(mgcv)
+library(mgcViz)
+library(viridis)
+library(rgl)
+
 df <- subset(
   df_scan_imp, 
   select = c(
@@ -212,6 +272,122 @@ p <- getViz(fit_GSO)
 plot(p)
 
 
+# GAM: Post tract by K-group 1 vs 2, 3 ----
+tract <- "Callosum Temporal"
+df <- df_afq[which(df_afq$tract_name == tract & df_afq$scan_name == "post"), ]
+
+subj_exp <- df_post_grp[which(df_post_grp$km_clust != 1), ]$subj_id
+df$grp <- "con"
+df[which(df$subj_id %in% subj_exp),]$grp <- "exp"
+df$grp <- factor(df$grp)
+
+plot(df$node_id, df$dti_fa)
+hist(df$dti_fa)
+
+fit_GS <- bam(
+  dti_fa ~ s(subj_id, bs = "re") +
+    s(node_id, bs = "tp", k = 40) +
+    s(node_id, grp, bs = "fs", k = 40),
+  data = df,
+  family = betar(link = "logit"),
+  method = "fREML",
+  discrete = T
+)
+gam.check(fit_GS)
+summary(fit_GS)
+plot(fit_GS)
+
+p <- getViz(fit_GS)
+plot(p)
+
+
+# Global fit, ordered group smooth
+df$grpOF <- factor(df$grp, ordered = T)
+fit_GSO <- bam(
+  dti_fa ~ s(subj_id, bs = "re") +
+    s(node_id, bs = "tp", k = 40) +
+    s(node_id, by = grpOF, bs = "fs", k = 40),
+  data = df,
+  family =  betar(link = "logit"),
+  method = "fREML",
+  discrete = T
+)
+gam.check(fit_GSO)
+summary(fit_GSO)
+plot(fit_GSO)
+
+p <- getViz(fit_GSO)
+plot(p)
+
+
+# Global fit, group smooth, memory
+impact_meas <- "mem_vis"
+df <- merge(
+  x = df,
+  y = df_scan_imp[, c("subj_id", "scan_name", impact_meas)],
+  by = c("subj_id", "scan_name"),
+  all.x = T
+)
+
+# s(node_id, scan_name, bs = "fs", k = 40) +
+# s(mem_vis, by = scan_name, bs = "tp", k = 5) +
+fit_GS_intx <- bam(
+  dti_fa ~ s(subj_id, bs = "re") +
+    s(node_id, bs = "tp", k = 40) +
+    ti(
+      node_id, mem_vis, by = grp, 
+      bs = c("tp", "tp"), k = c(50, 5)
+    ),
+  data = df,
+  family = betar(link = "logit"),
+  method = "fREML",
+  discrete = T,
+  nthreads = 4
+)
+gam.check(fit_GS_intx)
+summary(fit_GS_intx)
+plot(fit_GS_intx)
+
+p <- getViz(fit_GS_intx)
+plot(p)
+
+#
+open3d()
+mfrow3d(1,2)
+plotRGL(sm(p, 3), xlab = "mem_vis", ylab="node_id", main="base", residuals=T)
+next3d()
+plotRGL(sm(p, 4), xlab = "mem_vis", ylab="node_id", main="post", residuals=T)
+
+
+# Global fit, ordered group smooth, memory
+fit_GSO_intx <- bam(
+  dti_fa ~ s(subj_id, bs = "re") +
+    s(node_id, bs = "tp", k = 40) +
+    ti(
+      node_id, mem_vis, by = grpOF, 
+      bs = c("tp", "tp"), k = c(50, 5)
+    ),
+  data = df,
+  family = betar(link = "logit"),
+  method = "fREML",
+  discrete = T,
+  nthreads = 4
+)
+gam.check(fit_GSO_intx)
+summary(fit_GSO_intx)
+plot(fit_GSO_intx)
+
+p <- getViz(fit_GSO_intx)
+plot(p)
+
+#
+open3d()
+mfrow3d(1,1)
+plotRGL(sm(p, 3), xlab = "mem_vis", ylab="node_id", main="base", residuals=T)
+
+
+
+
 # GAM: Tract by Scan for K-Groups 2, 3 ----
 k_keep <- df_post_grp[which(df_post_grp$km_clust != 1), ]$subj_id
 df_k <- df[which(df$subj_id %in% k_keep), ]
@@ -233,6 +409,7 @@ plot(fit_GS)
 p <- getViz(fit_GS)
 plot(p)
 
+
 # Global fit + ordered group smooths (ref = base)
 df_k$scanOF <- factor(df_k$scan_name, ordered = T)
 
@@ -251,6 +428,10 @@ plot(fit_GSO)
 
 p <- getViz(fit_GSO)
 plot(p)
+
+
+
+
 
 
 # GAM: Tract by Scan with Behavior ----

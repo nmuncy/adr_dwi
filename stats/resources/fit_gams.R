@@ -169,10 +169,10 @@ gam_intx <- function(df) {
 }
 
 
-#' Fit longitudinal HGAM with global, group smooths.
+#' Fit HGAM with global, group smooths.
 #' @param df TODO
 export("gam_gs")
-gam_gs <- function(df, scalar_name, k_max=40) {
+gam_gs <- function(df, scalar_name, col_group, k_max=40) {
   # Validate scalar name
   if(! scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))){
     stop("Unexpected scalar_name")
@@ -181,10 +181,14 @@ gam_gs <- function(df, scalar_name, k_max=40) {
   #
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
+  names(df)[names(df) == col_group] <- "group"
+  df$group <- factor(df$group)
+  
+  #
   fit_GS <- bam(
-    dti_scalar ~ s(subj_id, scan_name, bs = "re") +
+    dti_scalar ~ s(subj_id, bs = "re") +
       s(node_id, bs = "tp", k = k_max) +
-      s(node_id, scan_name, bs = "fs", k = k_max),
+      s(node_id, group, bs = "fs", k = k_max),
     data = df,
     family = fam_scalar,
     method = "fREML",
@@ -192,12 +196,12 @@ gam_gs <- function(df, scalar_name, k_max=40) {
   )
   return(fit_GS)
 }
- 
- 
-#' Fit longitudinal HGAM with global, group smooths.
+
+
+#' Fit ordered HGAM with global, group smooths.
 #' @param df TODO
 export("gam_gso")
-gam_gso <- function(df, scalar_name, k_max=40) {
+gam_gso <- function(df, scalar_name, col_group, k_max=40) {
   # Validate scalar name
   if(! scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))){
     stop("Unexpected scalar_name")
@@ -206,11 +210,15 @@ gam_gso <- function(df, scalar_name, k_max=40) {
   #
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
-  df$scanOF <- factor(df$scan_name, ordered = T)
+  names(df)[names(df) == col_group] <- "group"
+  df$group <- factor(df$group)
+  df$groupOF <- factor(df$group, ordered=T)
+  
+  #
   fit_GSO <- bam(
-    dti_scalar ~ s(subj_id, scan_name, bs = "re") +
+    dti_scalar ~ s(subj_id, bs = "re") +
       s(node_id, bs = "tp", k = k_max) +
-      s(node_id, by = scanOF, bs = "fs", k = k_max),
+      s(node_id, by = groupOF, bs = "fs", k = k_max),
     data = df,
     family = fam_scalar,
     method = "fREML",
@@ -220,12 +228,170 @@ gam_gso <- function(df, scalar_name, k_max=40) {
 }
 
 
+#' Fit HGAM with global and interaction with Impact item smooths.
+#' @param df TODO
+export("gam_g_intx")
+gam_g_intx <- function(
+    df, scalar_name, impact_meas, ks_max=40, ki_max=50
+) {
+  # Validate scalar name
+  if(! scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))){
+    stop("Unexpected scalar_name")
+  }
+  
+  #
+  fam_scalar <- .switch_family(scalar_name)
+  names(df)[names(df) == scalar_name] <- "dti_scalar"
+  names(df)[names(df) == impact_meas] <- "impact_meas"
+  
+  #
+  fit_G_intx <- bam(
+    dti_scalar ~ s(subj_id, bs = "re") +
+      s(node_id, bs = "tp", k = ks_max) +
+      s(impact_meas, bs = "tp", k = 5) +
+      ti(node_id, impact_meas, bs = c("tp", "tp"), k = c(ki_max, 5)),
+    data = df,
+    family = fam_scalar,
+    method = "fREML",
+    discrete = T,
+    nthreads = 4
+  )
+  return(fit_G_intx)
+}
+
+
+#' Fit HGAM with global, group smooths, and
+#' interaction with Impact item smooths.
+#' @param df TODO
+export("gam_gs_intx")
+gam_gs_intx <- function(
+    df, scalar_name, col_group, impact_meas, ks_max=40, ki_max=50
+) {
+  # Validate scalar name
+  if(! scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))){
+    stop("Unexpected scalar_name")
+  }
+  
+  #
+  fam_scalar <- .switch_family(scalar_name)
+  names(df)[names(df) == scalar_name] <- "dti_scalar"
+  names(df)[names(df) == col_group] <- "group"
+  df$group <- factor(df$group)
+  names(df)[names(df) == impact_meas] <- "impact_meas"
+
+  #
+  fit_GS_intx <- bam(
+    dti_scalar ~ s(subj_id, bs = "re") +
+      s(node_id, bs = "tp", k = ks_max) +
+      s(impact_meas, by = group, bs = "tp", k = 5) +
+      ti(
+        node_id, impact_meas, by = group, 
+        bs = c("tp", "tp"), k = c(ki_max, 5)
+      ),
+    data = df,
+    family = fam_scalar,
+    method = "fREML",
+    discrete = T,
+    nthreads = 4
+  )
+  return(fit_GS_intx)
+}
+
+
+#' Fit ordered HGAM with global, group smooths, and
+#' interaction with Impact item smooths.
+#' @param df TODO
+export("gam_gso_intx")
+gam_gso_intx <- function(
+    df, scalar_name, col_group, impact_meas, ks_max=40, ki_max=50
+) {
+  # Validate scalar name
+  if(! scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))){
+    stop("Unexpected scalar_name")
+  }
+  
+  #
+  fam_scalar <- .switch_family(scalar_name)
+  names(df)[names(df) == scalar_name] <- "dti_scalar"
+  names(df)[names(df) == col_group] <- "group"
+  df$group <- factor(df$group)
+  df$groupOF <- factor(df$group, ordered=T)
+  names(df)[names(df) == impact_meas] <- "impact_meas"
+  
+  #
+  fit_GS_intx <- bam(
+    dti_scalar ~ s(subj_id, bs = "re") +
+      s(node_id, bs = "tp", k = ks_max) +
+      ti(
+        node_id, impact_meas, by = groupOF, 
+        bs = c("tp", "tp"), k = c(ki_max, 5)
+      ),
+    data = df,
+    family = fam_scalar,
+    method = "fREML",
+    discrete = T,
+    nthreads = 4
+  )
+  return(fit_GS_intx)
+}
+
+#' Fit longitudinal HGAM with global, group smooths.
+#' @param df TODO
+export("gam_lgs")
+gam_lgs <- function(df, scalar_name, k_max=40) {
+  # Validate scalar name
+  if(! scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))){
+    stop("Unexpected scalar_name")
+  }
+  
+  #
+  fam_scalar <- .switch_family(scalar_name)
+  names(df)[names(df) == scalar_name] <- "dti_scalar"
+  fit_LGS <- bam(
+    dti_scalar ~ s(subj_id, scan_name, bs = "re") +
+      s(node_id, bs = "tp", k = k_max) +
+      s(node_id, scan_name, bs = "fs", k = k_max),
+    data = df,
+    family = fam_scalar,
+    method = "fREML",
+    discrete = T
+  )
+  return(fit_LGS)
+}
+ 
+ 
+#' Fit longitudinal HGAM with global, group smooths.
+#' @param df TODO
+export("gam_lgso")
+gam_lgso <- function(df, scalar_name, k_max=40) {
+  # Validate scalar name
+  if(! scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))){
+    stop("Unexpected scalar_name")
+  }
+  
+  #
+  fam_scalar <- .switch_family(scalar_name)
+  names(df)[names(df) == scalar_name] <- "dti_scalar"
+  df$scanOF <- factor(df$scan_name, ordered = T)
+  fit_LGSO <- bam(
+    dti_scalar ~ s(subj_id, scan_name, bs = "re") +
+      s(node_id, bs = "tp", k = k_max) +
+      s(node_id, by = scanOF, bs = "fs", k = k_max),
+    data = df,
+    family = fam_scalar,
+    method = "fREML",
+    discrete = T
+  )
+  return(fit_LGSO)
+}
+
+
 #' Fit longitudinal HGAM with global, group, and
 #' interaction with Impact item smooths.
 #' 
 #' TODO
-export("gam_gs_intx")
-gam_gs_intx <- function(df, scalar_name, impact_meas, ks_max=40, ki_max=50) {
+export("gam_lgs_intx")
+gam_lgs_intx <- function(df, scalar_name, impact_meas, ks_max=40, ki_max=50) {
   # Validate user args
   if(! scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))){
     stop("Unexpected scalar_name")
@@ -242,7 +408,7 @@ gam_gs_intx <- function(df, scalar_name, impact_meas, ks_max=40, ki_max=50) {
   names(df)[names(df) == impact_meas] <- "imp_meas"
   
   #
-  fit_GS_intx <- bam(
+  fit_LGS_intx <- bam(
     dti_scalar ~ s(subj_id, scan_name, bs = "re") +
       s(node_id, bs = "tp", k = ks_max) +
       s(imp_meas, by = scan_name, bs = "tp", k = 5) +
@@ -255,7 +421,7 @@ gam_gs_intx <- function(df, scalar_name, impact_meas, ks_max=40, ki_max=50) {
     method = "fREML",
     discrete = T
   )
-  return(fit_GS_intx)
+  return(fit_LGS_intx)
 }
 
 
@@ -263,8 +429,8 @@ gam_gs_intx <- function(df, scalar_name, impact_meas, ks_max=40, ki_max=50) {
 #' interaction with Impact item smooths.
 #' 
 #' TODO
-export("gam_gso_intx")
-gam_gso_intx <- function(df, scalar_name, impact_meas, ks_max=40, ki_max=50) {
+export("gam_lgso_intx")
+gam_lgso_intx <- function(df, scalar_name, impact_meas, ks_max=40, ki_max=50) {
   # Validate user args
   if(! scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))){
     stop("Unexpected scalar_name")
@@ -282,7 +448,7 @@ gam_gso_intx <- function(df, scalar_name, impact_meas, ks_max=40, ki_max=50) {
   df$scanOF <- factor(df$scan_name, ordered = T)
   
   #
-  fit_GSO_intx <- bam(
+  fit_LGSO_intx <- bam(
     dti_scalar ~ s(subj_id, scan_name, bs = "re") +
       s(node_id, bs = "tp", k = ks_max) +
       s(imp_meas, by = scan_name, bs = "tp", k = 5) +
@@ -296,5 +462,5 @@ gam_gso_intx <- function(df, scalar_name, impact_meas, ks_max=40, ki_max=50) {
     method = "fREML",
     discrete = T
   )
-  return(fit_GSO_intx)
+  return(fit_LGSO_intx)
 }

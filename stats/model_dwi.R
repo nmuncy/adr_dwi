@@ -3,6 +3,7 @@ library("modules")
 library("gridExtra")
 
 workflows <- modules::use("workflows.R")
+draw_plots <- modules::use("resources/draw_plots.R")
 
 
 # Get cleaned data ----
@@ -13,13 +14,26 @@ df_scan_imp <- workflows$get_scan_impact()
 # Check Impact measures ----
 workflows$imp_bet_wor(df_scan_imp)
 
+# scan_name <- "post"
+imp_clust <- workflows$impact_cluster(df_scan_imp, "post")
+
+# PCA stats and plots
+print(imp_clust$stats_pc)
+print(imp_clust$plot_pc$plot_eig)
+print(imp_clust$plot_pc$plot_biplot)
+
+# K-means stats and plots
+print(imp_clust$stats_km)
+print(imp_clust$plot_km)
+draw_plots$draw_impact_pairs(imp_clust$df_sik, c(7:10), 3)
+
 
 # Check AFQ gam ----
 
-# tract <- "Callosum Temporal"
+tract <- "Left Inferior Fronto-occipital"
 for(tract in unique(df_afq$tract_name)){
   print(tract)
-  tract_gams <- workflows$scalar_gams(df_afq, tract)
+  tract_gams <- workflows$scalar_lgams(df_afq, tract)
   grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$FA)
 }
 

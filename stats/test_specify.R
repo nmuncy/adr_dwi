@@ -89,9 +89,19 @@ table(km_clust)
 
 # Plot
 km_clust <- as.data.frame(km_clust)
-rownames(km_clust) <- df_post$subj
+rownames(km_clust) <- df_post$subj_id
 km_clust <- cbind(subj_id=rownames(km_clust), km_clust)
 rownames(km_clust) <- NULL
+
+# Organize group labels for consistency, by know members of groups
+grp_c_lab <- km_clust[which(km_clust$subj_id == 216), ]$km_clust
+grp_b_lab <- km_clust[which(km_clust$subj_id == 110), ]$km_clust
+grp_a_lab <- km_clust[which(km_clust$subj_id == 267), ]$km_clust
+
+km_clust$km_grp <- 1
+km_clust[which(km_clust$km_clust == grp_b_lab), ]$km_grp <- 2
+km_clust[which(km_clust$km_clust == grp_c_lab), ]$km_grp <- 3
+
 
 df_post_grp <- merge(
   x=df_post,
@@ -100,17 +110,17 @@ df_post_grp <- merge(
   all = T
 )
 
-plot(df_post_grp$mem_ver, col=factor(df_post_grp$km_clust))
-plot(df_post_grp$mem_vis, col=factor(df_post_grp$km_clust))
-plot(df_post_grp$vis_mot, col=factor(df_post_grp$km_clust))
-plot(df_post_grp$rx_time, col=factor(df_post_grp$km_clust))
-plot(df_post_grp$tot_symp, col=factor(df_post_grp$km_clust))
-plot(df_post_grp$imp_ctl, col=factor(df_post_grp$km_clust))
+plot(df_post_grp$mem_ver, col=factor(df_post_grp$km_grp))
+plot(df_post_grp$mem_vis, col=factor(df_post_grp$km_grp))
+plot(df_post_grp$vis_mot, col=factor(df_post_grp$km_grp))
+plot(df_post_grp$rx_time, col=factor(df_post_grp$km_grp))
+plot(df_post_grp$tot_symp, col=factor(df_post_grp$km_grp))
+plot(df_post_grp$imp_ctl, col=factor(df_post_grp$km_grp))
 
 pairs.panels(
   df_post_grp[, 7:10],  #7:12
-  bg=c("blue", "red", "green")[df_post_grp$km_clust],
-  # bg=c("blue", "red", "green", "orange", "purple")[df_post_grp$km_clust],
+  bg=c("blue", "red", "green")[df_post_grp$km_grp],
+  # bg=c("blue", "red", "green", "orange", "purple")[df_post_grp$km_grp],
   gap = 0,
   pch = 21
 )
@@ -118,7 +128,7 @@ pairs.panels(
 # Check Simpson's Paradox
 ggplot(
   data=df_post_grp,
-  aes(x=vis_mot, y=mem_vis, color=factor(km_clust))
+  aes(x=vis_mot, y=mem_vis, color=factor(km_grp))
 ) +
   geom_point() +
   stat_smooth(method=lm, se=F) +
@@ -133,13 +143,13 @@ ggplot(
   data=df_post_grp,
   aes(x=vis_mot, y=mem_vis)
 ) +
-  geom_point(aes(color=factor(km_clust))) +
-  stat_smooth(method=lm, aes(color=factor(km_clust)), se=F) +
+  geom_point(aes(color=factor(km_grp))) +
+  stat_smooth(method=lm, aes(color=factor(km_grp)), se=F) +
   scale_color_manual(
     breaks=c("1", "2", "3", "4", "5"),
     values=c("blue", "red", "green", "orange", "purple")
   ) +
-  stat_cor(method="pearson", aes(color=factor(km_clust))) +
+  stat_cor(method="pearson", aes(color=factor(km_grp))) +
   stat_cor(method="pearson", label.x=40, label.y=38) +
   geom_smooth(method=lm, color="black", se=F)
 
@@ -276,7 +286,7 @@ plot(p)
 tract <- "Callosum Temporal"
 df <- df_afq[which(df_afq$tract_name == tract & df_afq$scan_name == "post"), ]
 
-subj_exp <- df_post_grp[which(df_post_grp$km_clust != 1), ]$subj_id
+subj_exp <- df_post_grp[which(df_post_grp$km_grp != 1), ]$subj_id
 df$grp <- "con"
 df[which(df$subj_id %in% subj_exp),]$grp <- "exp"
 df$grp <- factor(df$grp)
@@ -287,7 +297,7 @@ hist(df$dti_fa)
 fit_GS <- bam(
   dti_fa ~ s(subj_id, bs = "re") +
     s(node_id, bs = "tp", k = 40) +
-    s(node_id, grp, bs = "fs", k = 40),
+    s(node_id, grp, bs = "tp", k = 40),
   data = df,
   family = betar(link = "logit"),
   method = "fREML",
@@ -389,7 +399,7 @@ plotRGL(sm(p, 3), xlab = "mem_vis", ylab="node_id", main="base", residuals=T)
 
 
 # GAM: Tract by Scan for K-Groups 2, 3 ----
-k_keep <- df_post_grp[which(df_post_grp$km_clust != 1), ]$subj_id
+k_keep <- df_post_grp[which(df_post_grp$km_grp != 1), ]$subj_id
 df_k <- df[which(df$subj_id %in% k_keep), ]
 
 # Global fit + group smooths

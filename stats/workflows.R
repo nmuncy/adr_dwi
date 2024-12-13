@@ -11,6 +11,7 @@ pull_data <- use("resources/pull_data.R")
 transform_data <- use("resources/transform_data.R")
 fit_gams <- use("resources/fit_gams.R")
 draw_plots <- use("resources/draw_plots.R")
+quick_stats <- use("resources/quick_stats.R")
 
 
 #' Pull and clean impact data.
@@ -202,7 +203,7 @@ imp_bet_wor <- function(df) {
     getwd(), "/rda_objects/fit_GS_", h_tract,"_", scalar, ".Rda"
   )
   if (!file.exists(rds_gs)) {
-    h_gam <- fit_gams$gam_gs(df, scalar_name)
+    h_gam <- fit_gams$gam_lgs(df, scalar_name)
     saveRDS(h_gam, file = rds_gs)
     rm(h_gam)
   }
@@ -213,7 +214,7 @@ imp_bet_wor <- function(df) {
     getwd(), "/rda_objects/fit_GSO_", h_tract,"_", scalar, ".Rda"
   )
   if (!file.exists(rds_gso)) {
-    h_gam <- fit_gams$gam_gso(df, scalar_name)
+    h_gam <- fit_gams$gam_lgso(df, scalar_name)
     saveRDS(h_gam, file = rds_gso)
     rm(h_gam)
   }
@@ -230,12 +231,135 @@ imp_bet_wor <- function(df) {
   ))
 }
 
+.k_grp <- function(df_clust, col_list){
+  # Organize group labels for consistency, by know members of groups
+  if(length(col_list) == 4){
+    grp_c_lab <- df_clust[which(df_clust$subj_id == 216), ]$km_clust
+    grp_b_lab <- df_clust[which(df_clust$subj_id == 110), ]$km_clust
+    grp_a_lab <- df_clust[which(df_clust$subj_id == 267), ]$km_clust
+    
+    df_clust$km_grp <- 1
+    df_clust[which(df_clust$km_clust == grp_b_lab), ]$km_grp <- 2
+    df_clust[which(df_clust$km_clust == grp_c_lab), ]$km_grp <- 3
+  }
+  return(df_clust)
+}
+
+
+
+#' Check Impact data for clustering
+#' 
+#' TODO
+export("impact_cluster")
+impact_cluster <- function(df_scan_imp, scan_name){
+  
+  #
+  df <- df_scan_imp[which(df_scan_imp$scan_name == scan_name), ]
+  col_list <- c(7:10) # Impact meas items, exclude imp_ctl & tot_symp
+  num_k <- 3
+  
+  #
+  stats_pc <- quick_stats$run_pca(df, col_list)
+  # print(stats_pc)
+  # summary(stats_pc)
+  
+  plot_pc <- draw_plots$draw_pc(stats_pc)
+  # print(plot_pc$plot_eig)
+  # print(plot_pc$plot_biplot)
+  
+  #
+  stats_km <- quick_stats$run_kmeans(df, col_list, num_k)
+  # print(stats_km$stats_km)
+  clust_km <- stats_km$clust_km
+  data_norm <- stats_km$data_norm
+  plot_km <- draw_plots$draw_kmean(stats_km$data_norm, stats_km$clust_km)
+  # print(plot_km)
+  table(stats_km$clust_km)
+  
+  #
+  df_clust <- as.data.frame(stats_km$clust_km)
+  rownames(df_clust) <- df$subj_id
+  df_clust <- cbind(subj_id=rownames(df_clust), df_clust)
+  rownames(df_clust) <- NULL
+  colnames(df_clust)[2] <- "km_clust"
+  
+  #
+  df_clust <- .k_grp(df_clust, col_list)
+  df <- merge(
+    x=df,
+    y=df_clust,
+    by="subj_id",
+    all = T
+  )
+  
+  return(list(
+    "df_sik" = df,
+    "stats_pc" = stats_pc,
+    "plot_pc" = plot_pc,
+    "stats_km" = stats_km,
+    "plot_km" = plot_km
+  ))
+}
+
+
+#' Fit Post DWI scalars with HGAMs, grouped by k-means.
+#' 
+#' TODO
+export("scalar_gams")
+scalar_gams <- function(df_afq, tract, df_scan_imp){
+  
+  # Callosum Temporal shows kmeans group differences on mem_ver in post,
+  # but minimal differences on vis_mot.
+  
+  #
+  imp_clust <- workflows$impact_cluster(df_scan_imp, "post")
+  subj_exp <- imp_clust$df_sik[which(imp_clust$df_sik$km_grp != 1), ]$subj_id
+  
+  tract <- "Left Inferior Fronto-occipital"
+  df <- df_afq[which(df_afq$tract_name == tract & df_afq$scan_name == "post"), ]
+  df$group <- "con"
+  df[which(df$subj_id %in% subj_exp), ]$group <- "exp"
+  
+  #
+  fit_GS <- fit_gams$gam_gs(df, "dti_fa", "group")
+  fit_GSO <- fit_gams$gam_gso(df, "dti_fa", "group")
+  
+  #
+  impact_meas <- "mem_vis"
+  df <- merge(
+    x = df,
+    y = df_scan_imp[, c("subj_id", "scan_name", impact_meas)],
+    by = c("subj_id", "scan_name"),
+    all.x = T
+  )
+  
+  #
+  fit_G_intx <- fit_gams$gam_g_intx(df, "dti_fa", impact_meas)
+  plot(fit_G_intx)
+  p <- getViz(fit_G_intx)
+  plot(p)
+
+  #
+  fit_GS_intx <- fit_gams$gam_gs_intx(df, "dti_fa", "group", impact_meas)
+  plot(fit_GS_intx)
+  p <- getViz(fit_GS_intx)
+  plot(p)
+  
+  fit_GSO_intx <- fit_gams$gam_gso_intx(df, "dti_fa", "group", impact_meas)
+  plot(fit_GSO_intx)
+  p <- getViz(fit_GSO_intx)
+  plot(p)
+  #
+  
+}
+
+
 
 #' Fit DWI scalars with longitudinal HGAMs.
 #' 
 #' TODO
-export("scalar_gams")
-scalar_gams <- function(df_afq, tract){
+export("scalar_lgams")
+scalar_lgams <- function(df_afq, tract){
   
   df <- df_afq[which(df_afq$tract_name == tract), ]
   

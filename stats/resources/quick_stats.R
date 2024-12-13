@@ -110,3 +110,29 @@ wc_ranksum <- function(col_name, df, visit_name) {
     )
   )
 }
+
+
+#' Conduct Principal Components Analysis
+#' TODO
+export("run_pca")
+run_pca <- function(df, col_list){
+  df <- df[stats::complete.cases(df[, col_list]), ]
+  stats_pc <- stats::prcomp(df[, col_list], center=T, scale.=T)
+  return(stats_pc)
+}
+
+
+#' Conduct K-means clustering
+#' TODO
+export("run_kmeans")
+run_kmeans <- function(df, col_list, num_k){
+  df <- df[stats::complete.cases(df[, col_list]), ]
+  data_norm <- scale(df[, col_list])
+  stats_km <- stats::kmeans(data_norm, centers = num_k, nstart=100)
+  
+  clust_km <- stats_km$cluster
+  rownames(data_norm) <- df$subj_id
+  return(list(
+    "data_norm" = data_norm, "stats_km" = stats_km, "clust_km" = clust_km)
+  )
+}

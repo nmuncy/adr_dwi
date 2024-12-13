@@ -7,6 +7,8 @@ import(gridExtra)
 import(lattice)
 import(latticeExtra)
 import(directlabels)
+import(factoextra)
+import(psych)
 
 quick_stats <- use("resources/quick_stats.R")
 
@@ -23,6 +25,43 @@ quick_stats <- use("resources/quick_stats.R")
   return(out_name)
 }
 
+
+#' PCA eigenvector
+#' TODO
+export("draw_pca")
+draw_pca <- function(stats_pc){
+  plot_eig <- fviz_eig(stats_pc, addlabels=T)
+  plot_bip <- fviz_pca_biplot(stats_pc, label="var")
+  return(list("plot_eig" = plot_eig, "plot_biplot" = plot_bip))
+}
+
+
+#' K-means cluster
+#' TODO
+export("draw_kmeans")
+draw_kmeans <- function(data_norm, clust_km){
+  plot_kmean <- fviz_cluster(list(data=data_norm, cluster = clust_km))
+  return(plot_kmean)
+}
+
+
+#' Impact pairs
+#' TODO
+export("draw_impact_pairs")
+draw_impact_pairs <- function(df, col_list, num_k){
+  if(num_k == 3){
+    bg_arg <- c("blue", "red", "green")
+  }else if(num_k == 5){
+    bg_arg <- c("blue", "red", "green", "orange", "purple")
+  }
+  plot_pairs <- pairs.panels(
+    df[, col_list],
+    bg=bg_arg[df$km_grp],
+    gap = 0,
+    pch = 21
+  )
+  # return(plot_pairs)
+}
 
 #' Make XYplot tracking participants by visit.
 #'

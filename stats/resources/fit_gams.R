@@ -322,7 +322,7 @@ gam_gsio_intx <- function(
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
-
+  
   #
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
@@ -330,7 +330,7 @@ gam_gsio_intx <- function(
   df$group <- factor(df$group)
   df$groupOF <- factor(df$group, ordered = T)
   names(df)[names(df) == impact_meas] <- "impact_meas"
-
+  
   #
   fit_GSIO_intx <- bam(
     dti_scalar ~ s(subj_id, bs = "re") +
@@ -357,7 +357,7 @@ gam_lgsi <- function(df, scalar_name, k_max = 40) {
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
-
+  
   #
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
@@ -383,7 +383,7 @@ gam_lgsio <- function(df, scalar_name, k_max = 40) {
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
-
+  
   #
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"

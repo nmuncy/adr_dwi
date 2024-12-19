@@ -304,7 +304,7 @@ impact_cluster <- function(df_scan_imp, scan_name) {
     by = "subj_id",
     all = T
   )
-
+  
   return(list(
     "df_sik" = df,
     "stats_pc" = stats_pc,
@@ -329,20 +329,20 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
   # Callosum Temporal shows kmeans group differences on mem_ver in post,
   # but minimal differences on vis_mot.
   # Left Inferior Fronto-occipital was flat across effects.
-
+  
   #
   imp_clust <- workflows$impact_cluster(df_scan_imp, "post")
   subj_exp <- imp_clust$df_sik[which(imp_clust$df_sik$km_grp != 1), ]$subj_id
-
+  
   tract <- "Callosum Temporal"
   df <- df_afq[which(df_afq$tract_name == tract & df_afq$scan_name == "post"), ]
   df$group <- "con"
   df[which(df$subj_id %in% subj_exp), ]$group <- "exp"
-
+  
   #
   fit_GSI <- fit_gams$gam_gsi(df, "dti_rd", "group")
   fit_GSIO <- fit_gams$gam_gsio(df, "dti_rd", "group")
-
+  
   #
   impact_meas <- "mem_vis"
   df <- merge(
@@ -351,19 +351,19 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
     by = c("subj_id", "scan_name"),
     all.x = T
   )
-
+  
   #
   fit_G_intx <- fit_gams$gam_g_intx(df, "dti_fa", impact_meas)
   plot(fit_G_intx)
   p <- getViz(fit_G_intx)
   plot(p)
-
+  
   #
   fit_GSI_intx <- fit_gams$gam_gsi_intx(df, "dti_fa", "group", impact_meas)
   plot(fit_GSI_intx)
   p <- getViz(fit_GSI_intx)
   plot(p)
-
+  
   fit_GSIO_intx <- fit_gams$gam_gsio_intx(df, "dti_fa", "group", impact_meas)
   plot(fit_GSIO_intx)
   p <- getViz(fit_GSIO_intx)
@@ -390,9 +390,10 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
+  print(scalar_name)
   h_tract <- fit_gams$switch_tract(tract)
   scalar <- strsplit(scalar_name, "_")[[1]][2]
-
+  
   # # Get (and make/save if needed) LGSI model.
   # rds_lgsi <- paste0(
   #   getwd(), "/rda_objects/fit_LGSI_", h_tract, "_", scalar, ".Rda"
@@ -406,7 +407,7 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
   # gam.check(fit_LGSI)
   # summary(fit_LGSI)
   # plot(fit_LGSI)
-
+  
   # Get (and make/save if needed) LGSIO model, write summary stats to disk.
   rds_lgsio <- paste0(
     getwd(), "/rda_objects/fit_LGSIO_", h_tract, "_", scalar, ".Rda"

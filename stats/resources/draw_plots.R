@@ -205,6 +205,51 @@ draw_group_smooth <- function(plot_obj, attr_num, tract) {
 }
 
 
+.find_sig_nodes <- function(p_data, sig_dir="less"){
+  # find sig nodes
+  if(sig_dir == "less"){
+    sig_rows <- which(p_data$est < 0 & p_data$ub < 0)
+    y_start <- min(p_data$lb)
+    y_end <- 0
+  }else if(sig_dir == "more"){
+    sig_rows <- which(p_data$est > 0 & p_data$lb > 0)
+    y_start <- 0
+    y_end <- max(p_data$ub)
+  }
+  sig_nodes <- p_data[sig_rows, ]$nodeID
+  
+  if(length(sig_nodes) == 0){
+    return(NULL)
+  }
+  
+  # find start, end points of sig regions
+  vec_start <- sig_nodes[1]
+  vec_end <- vector()
+  num_nodes <- length(sig_nodes)
+  c <- 2
+  while (c < num_nodes) {
+    cc <- c + 1
+    if (sig_nodes[cc] > sig_nodes[c] + 1) {
+      vec_end <- append(vec_end, sig_nodes[c])
+      vec_start <- append(vec_start, sig_nodes[cc])
+    }
+    c <- cc
+  }
+  vec_end <- append(vec_end, sig_nodes[num_nodes])
+  
+  # make df for drawing rectangles
+  d_rect <- data.frame(
+    x_start = vec_start,
+    x_end = vec_end,
+    y_start = rep(y_start, length(vec_start)),
+    y_end = rep(y_end, length(vec_start))
+  )
+  d_rect$x_start <- d_rect$x_start
+  d_rect$x_end <- d_rect$x_end
+  return(d_rect)
+}
+
+
 export("draw_group_smooth_diff")
 draw_group_smooth_diff <- function(plot_obj, grp_num, attr_num, tract) {
   # Draw difference of group smooths of AFQ tract.
@@ -222,26 +267,32 @@ draw_group_smooth_diff <- function(plot_obj, grp_num, attr_num, tract) {
   p <- plot(sm(plot_obj, grp_num))
   p_data <- as.data.frame(p$data$fit)
   colnames(p_data) <- c("nodeID", "est", "ty", "se")
-  GY_min <- min(p_data$est)
-  GY_max <- max(p_data$est)
+  gy_min <- min(p_data$est)
+  gy_max <- max(p_data$est)
 
   # unpack difference smooth data
   p <- plot(sm(plot_obj, attr_num)) +
     geom_hline(yintercept = 0)
   p_data <- as.data.frame(p$data$fit)
   colnames(p_data) <- c("nodeID", "est", "ty", "se")
-
-  # find sig nodes
   p_data$lb <- as.numeric(p_data$est - (2.5 * p_data$se))
   p_data$ub <- as.numeric(p_data$est + (2.5 * p_data$se))
-  sig_rows <- which(
-    (p_data$est < 0 & p_data$ub < 0) |
-      (p_data$est > 0 & p_data$lb > 0)
-  )
-  sig_nodes <- p_data[sig_rows, ]$nodeID
   
-  # Account for lag of significance
-  if(length(sig_nodes) == 0){
+  # Determine highest/lowest max/min across global and group smooths
+  GY_max <- pmax(gy_max, max(p_data$est))
+  GY_min <- pmin(gy_min, min(p_data$est))
+  
+  # Find nodes that differ
+  rect_less <- .find_sig_nodes(p_data, sig_dir="less")
+  rect_more <- .find_sig_nodes(p_data, sig_dir="more")
+  
+  if(is.data.frame(rect_less) & is.data.frame(rect_more)){
+    d_rect <- rbind(rect_less, rect_more)
+  }else if(is.data.frame(rect_less)){
+    d_rect <- rect_less
+  }else if(is.data.frame(rect_more)){
+    d_rect <- rect_more
+  }else{
     pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
       geom_hline(yintercept = 0) +
       geom_line() +
@@ -258,32 +309,59 @@ draw_group_smooth_diff <- function(plot_obj, grp_num, attr_num, tract) {
       )
     return(list("diff" = pp))
   }
+  
 
-  # find start, end points of sig regions
-  vec_start <- sig_nodes[1]
-  vec_end <- vector()
-  y_min <- min(p_data$lb)
-  num_nodes <- length(sig_nodes)
-  c <- 2
-  while (c < num_nodes) {
-    cc <- c + 1
-    if (sig_nodes[cc] > sig_nodes[c] + 1) {
-      vec_end <- append(vec_end, sig_nodes[c])
-      vec_start <- append(vec_start, sig_nodes[cc])
-    }
-    c <- cc
-  }
-  vec_end <- append(vec_end, sig_nodes[num_nodes])
+  # # find sig nodes
+  # sig_rows <- which(
+  #   (p_data$est < 0 & p_data$ub < 0) |
+  #     (p_data$est > 0 & p_data$lb > 0)
+  # )
+  # sig_nodes <- p_data[sig_rows, ]$nodeID
+  
+  # # Account for lag of significance
+  # if(dim(d_rect)[1] == 0){
+  #   pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
+  #     geom_hline(yintercept = 0) +
+  #     geom_line() +
+  #     geom_ribbon(
+  #       aes(ymin = .data$lb, ymax = .data$ub),
+  #       alpha = 0.2
+  #     ) +
+  #     scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
+  #     coord_cartesian(ylim=c(GY_min,GY_max)) +
+  #     theme(
+  #       text = element_text(family = "Times New Roman"),
+  #       axis.title.y = element_blank(),
+  #       axis.title.x = element_blank()
+  #     )
+  #   return(list("diff" = pp))
+  # }
 
-  # make df for drawing rectangles
-  d_rect <- data.frame(
-    x_start = vec_start,
-    x_end = vec_end,
-    y_start = rep(y_min, length(vec_start)),
-    y_end = rep(0, length(vec_start))
-  )
-  d_rect$x_start <- d_rect$x_start
-  d_rect$x_end <- d_rect$x_end
+  # # find start, end points of sig regions
+  # vec_start <- sig_nodes[1]
+  # vec_end <- vector()
+  # y_min <- min(p_data$lb)
+  # num_nodes <- length(sig_nodes)
+  # c <- 2
+  # while (c < num_nodes) {
+  #   cc <- c + 1
+  #   if (sig_nodes[cc] > sig_nodes[c] + 1) {
+  #     vec_end <- append(vec_end, sig_nodes[c])
+  #     vec_start <- append(vec_start, sig_nodes[cc])
+  #   }
+  #   c <- cc
+  # }
+  # vec_end <- append(vec_end, sig_nodes[num_nodes])
+  # 
+  # # make df for drawing rectangles
+  # d_rect <- data.frame(
+  #   x_start = vec_start,
+  #   x_end = vec_end,
+  #   y_start = rep(y_min, length(vec_start)),
+  #   y_end = rep(0, length(vec_start))
+  # )
+  # d_rect$x_start <- d_rect$x_start
+  # d_rect$x_end <- d_rect$x_end
 
   # draw
   pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +

@@ -398,6 +398,8 @@ gam_lgsio <- function(df, scalar_name, k_max = 40) {
     discrete = T,
     nthreads = 4
   )
+  
+  
   return(fit_LGSIO)
 }
 

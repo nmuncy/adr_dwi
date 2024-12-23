@@ -440,6 +440,41 @@ p <- getViz(fit_GSO)
 plot(p)
 
 
+# GAM: All tracts for Post ----
+df <- df_afq[which(df_afq$scan_name == "post"), ]
+
+fit_I <- bam(
+  dti_fa ~ s(subj_id, tract_name, bs = "re") +
+    s(node_id, by = tract_name, bs = "tp", k = 40),
+  data = df,
+  family = betar(link = "logit"),
+  method = "fREML",
+  discrete = T,
+  nthreads=12
+)
+saveRDS(fit_I, file = paste0(getwd(), "/rda_objects/fit_I_fa.Rda"))
+summary(fit_I)
+plot(fit_I)
+
+
+# https://stackoverflow.com/questions/68956080/how-to-specify-a-hierarchical-gam-hgam-model-with-two-categorical-a-continuo
+# https://stackoverflow.com/questions/47934100/how-to-specify-the-non-linear-interaction-of-two-factor-variables-in-generalised?rq=3
+# https://stackoverflow.com/questions/63023080/interactions-between-categorical-terms-in-gam-mgcv?rq=3
+df <- df_afq[which(df_afq$scan_name != "rtp"), ]
+
+fit_LI <- bam(
+  dti_fa ~ s(subj_id, by = interaction(tract_name, scan_name), bs = "re") +
+    s(node_id, by = interaction(tract_name, scan_name), bs = "tp", k = 40) +
+    interaction(tract_name, scan_name),
+  data = df,
+  family = betar(link = "logit"),
+  method = "fREML",
+  discrete = T,
+  nthreads=12
+)
+saveRDS(fit_LI, file = paste0(getwd(), "/rda_objects/fit_LI_fa.Rda"))
+plot(fit_LI)
+
 
 
 

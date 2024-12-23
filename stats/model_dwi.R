@@ -33,6 +33,7 @@ draw_plots$draw_impact_pairs(imp_clust$df_sik, c(7:10), 3)
 # TODO longitudinal GAMs of ordered factors (base, post, rtp) for scalars
 # TODO GAMs of scalars for post by k-means group
 # TODO above, with impact interactions
+# TODO update CI calc from 2.5*SE -> 1.96*SE
 tract_list <- unique(df_afq$tract_name)
 for(tract in tract_list){
   print(tract)

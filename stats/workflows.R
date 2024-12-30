@@ -1,3 +1,4 @@
+import(grDevices)
 import(dplyr)
 import(lubridate)
 import("stats", "complete.cases")
@@ -21,8 +22,16 @@ quick_stats <- use("resources/quick_stats.R")
 #'
 #' @returns Dataframe of impact composite scores.
 .clean_impact <- function() {
-  # Get data from db_adr
-  df_imp <- pull_data$get_user_comp()
+  # Check for local csv, read-in or pull from db_adr
+  data_dir <- paste(dirname(getwd()), "data", sep = "/")
+  imp_path <- paste(data_dir, "df_impact.csv", sep = "/")
+
+  if (!file.exists(imp_path)) {
+    df <- pull_data$get_user_comp()
+    utils::write.csv(df, imp_path, row.names = F)
+    rm(df)
+  }
+  df_imp <- utils::read.csv(imp_path)
 
   # Manage column types, names
   df_imp$subj_id <- factor(df_imp$subj_id)
@@ -61,11 +70,19 @@ quick_stats <- use("resources/quick_stats.R")
 #'
 #' Clip tail nodes (x<10, x>89).
 #'
-#' @return Dataframe of AFQ tract metrics.
+#' @returns Dataframe of AFQ tract metrics.
 export("clean_afq")
 clean_afq <- function() {
-  # Get data from db_adr
-  df_afq <- pull_data$get_afq()
+  # Check for local csv, ead-in data or pull for db_adr.
+  data_dir <- paste(dirname(getwd()), "data", sep = "/")
+  afq_path <- paste(data_dir, "df_afq.csv", sep = "/")
+
+  if (!file.exists(afq_path)) {
+    df <- pull_data$get_afq()
+    utils::write.csv(df, afq_path, row.names = F)
+    rm(df)
+  }
+  df_afq <- utils::read.csv(afq_path)
 
   # Manage column types, clip tails
   df_afq$subj_id <- factor(df_afq$subj_id)
@@ -171,15 +188,26 @@ get_scan_impact <- function() {
       diff_scan_impact = as.numeric(s_date - i_date)
     )
   df_scan_imp <- subset(df_scan_imp, select = -c(i_date, s_date))
+
+  # Check for local csv, ead-in data or pull for db_adr.
+  data_dir <- paste(dirname(getwd()), "data", sep = "/")
+  out_path <- paste(data_dir, "df_impact_scan.csv", sep = "/")
+  utils::write.csv(df_scan_imp, out_path, row.names = F)
+
   return(df_scan_imp)
 }
 
 
 #' Generate impact better-worse data plots.
 #'
-#' TODO
-export("imp_bet_wor")
-imp_bet_wor <- function(df) {
+#' Organize impact measures by groups of subjects who had better
+#' post scores than base, and those who had worse scores. Track
+#' individual subjects and also compute descriptive and
+#' non-parametrics stats.
+#'
+#' @param df Dataframe of impact data, output of get_scan_impact().
+export("impact_better_worse")
+impact_better_worse <- function(df) {
   for (col_name in c(
     "tot_symp", "mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl"
   )
@@ -191,53 +219,25 @@ imp_bet_wor <- function(df) {
 }
 
 
-.fit_plot <- function(df, tract, scalar_name){
-  if(! scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))){
-    stop("Unexpected scalar_name")
-  }
-  h_tract <- fit_gams$switch_tract(tract)
-  scalar <- strsplit(scalar_name, "_")[[1]][2]
-  
-  #
-  rds_gs <- paste0(
-    getwd(), "/rda_objects/fit_GS_", h_tract,"_", scalar, ".Rda"
-  )
-  if (!file.exists(rds_gs)) {
-    h_gam <- fit_gams$gam_lgs(df, scalar_name)
-    saveRDS(h_gam, file = rds_gs)
-    rm(h_gam)
-  }
-  fit_GS <- readRDS(rds_gs)
-  
-  #
-  rds_gso <- paste0(
-    getwd(), "/rda_objects/fit_GSO_", h_tract,"_", scalar, ".Rda"
-  )
-  if (!file.exists(rds_gso)) {
-    h_gam <- fit_gams$gam_lgso(df, scalar_name)
-    saveRDS(h_gam, file = rds_gso)
-    rm(h_gam)
-  }
-  fit_GSO <- readRDS(rds_gso)
-  
-  #
-  plots <- draw_plots$draw_grid(
-    fit_GS, fit_GSO, 2, 3, 3, 4, tract, toupper(scalar)
-  )
-  return(list(
-    "fit_GS" = fit_GS,
-    "fit_GSO" = fit_GSO,
-    "plots" = plots
-  ))
-}
-
-.k_grp <- function(df_clust, col_list){
-  # Organize group labels for consistency, by know members of groups
-  if(length(col_list) == 4){
+#' Identify subjects of K-means groups.
+#'
+#' Identify which subjects are classified in the various k-means groups.
+#' As k-means applies group labels at random, hardcode known members
+#' for consistent group membership.
+#'
+#' Currently only supports k-means with 3 groups (for use with post data) when
+#' investigating mem_vis, mem_ver, vis_mot, and rx_time.
+#'
+#' @param df_clust Dataframe generated from run_kmeans$clust_km.
+#' @param col_list Vector column numbers corresponding to Impact measures.
+#' @returns Dataframe with added column km_grp.
+.k_grp <- function(df_clust, col_list) {
+  # Organize group labels for consistency, by known members of groups
+  if (length(col_list) == 4) {
     grp_c_lab <- df_clust[which(df_clust$subj_id == 216), ]$km_clust
     grp_b_lab <- df_clust[which(df_clust$subj_id == 110), ]$km_clust
     grp_a_lab <- df_clust[which(df_clust$subj_id == 267), ]$km_clust
-    
+
     df_clust$km_grp <- 1
     df_clust[which(df_clust$km_clust == grp_b_lab), ]$km_grp <- 2
     df_clust[which(df_clust$km_clust == grp_c_lab), ]$km_grp <- 3
@@ -246,49 +246,62 @@ imp_bet_wor <- function(df) {
 }
 
 
-
-#' Check Impact data for clustering
-#' 
-#' TODO
+#' Check Impact data for clustering.
+#'
+#' Conduct principal component and k-means clustering analyses
+#' for specified scan_name. Currently only includes mem_vis, mem_ver,
+#' vis_mot, and rx_time Impact responses.
+#'
+#' @param df_scan_imp Dataframe, output of get_scan_impact().
+#' @param scan_name String, Name of scan: base, post, or rtp.
+#' @returns Named list containing a df with impact groups (df_sik), stats
+#'    for kmeans and pca (stats_km, stats_pc), and plots for kmeans and
+#'    pca (plot_km, plot_pc).
 export("impact_cluster")
-impact_cluster <- function(df_scan_imp, scan_name){
-  
-  #
+impact_cluster <- function(df_scan_imp, scan_name) {
+  if (!scan_name %in% c("base", "post", "rtp")) {
+    stop("Unexpected scan_name")
+  }
+
+  # Subset dataframe and set column, cluter values
   df <- df_scan_imp[which(df_scan_imp$scan_name == scan_name), ]
   col_list <- c(7:10) # Impact meas items, exclude imp_ctl & tot_symp
   num_k <- 3
-  
-  #
+
+  # Conduct PCA
   stats_pc <- quick_stats$run_pca(df, col_list)
   # print(stats_pc)
   # summary(stats_pc)
-  
+
+  # Make PCA plots
   plot_pc <- draw_plots$draw_pc(stats_pc)
   # print(plot_pc$plot_eig)
   # print(plot_pc$plot_biplot)
-  
-  #
+
+  # Conduct K-means
   stats_km <- quick_stats$run_kmeans(df, col_list, num_k)
   # print(stats_km$stats_km)
+
+  # Make K-means plots
   clust_km <- stats_km$clust_km
   data_norm <- stats_km$data_norm
   plot_km <- draw_plots$draw_kmean(stats_km$data_norm, stats_km$clust_km)
   # print(plot_km)
-  table(stats_km$clust_km)
-  
-  #
+  # table(stats_km$clust_km)
+
+  # Convert clustering to dataframe
   df_clust <- as.data.frame(stats_km$clust_km)
   rownames(df_clust) <- df$subj_id
-  df_clust <- cbind(subj_id=rownames(df_clust), df_clust)
+  df_clust <- cbind(subj_id = rownames(df_clust), df_clust)
   rownames(df_clust) <- NULL
   colnames(df_clust)[2] <- "km_clust"
-  
-  #
+
+  # Add grouping to impact
   df_clust <- .k_grp(df_clust, col_list)
   df <- merge(
-    x=df,
-    y=df_clust,
-    by="subj_id",
+    x = df,
+    y = df_clust,
+    by = "subj_id",
     all = T
   )
   
@@ -303,26 +316,32 @@ impact_cluster <- function(df_scan_imp, scan_name){
 
 
 #' Fit Post DWI scalars with HGAMs, grouped by k-means.
-#' 
-#' TODO
-export("scalar_gams")
-scalar_gams <- function(df_afq, tract, df_scan_imp){
-  
+#'
+#' Investigate scalars from post scans, accounting for k-means grouping
+#' (output of impact_cluster()).
+#'
+#' @param df_afq Dataframe, output of clean_afq().
+#' @param tract String, name of AFQ tract (corresponds to df_afq$tract_name).
+#' @param df_scan_imp Dataframe, output of get_scan_impact().
+#' @param imp_clust Named list, output of impact_cluster().
+export("gams_post_kmeans")
+gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
   # Callosum Temporal shows kmeans group differences on mem_ver in post,
   # but minimal differences on vis_mot.
+  # Left Inferior Fronto-occipital was flat across effects.
   
   #
   imp_clust <- workflows$impact_cluster(df_scan_imp, "post")
   subj_exp <- imp_clust$df_sik[which(imp_clust$df_sik$km_grp != 1), ]$subj_id
   
-  tract <- "Left Inferior Fronto-occipital"
+  tract <- "Callosum Temporal"
   df <- df_afq[which(df_afq$tract_name == tract & df_afq$scan_name == "post"), ]
   df$group <- "con"
   df[which(df$subj_id %in% subj_exp), ]$group <- "exp"
   
   #
-  fit_GS <- fit_gams$gam_gs(df, "dti_fa", "group")
-  fit_GSO <- fit_gams$gam_gso(df, "dti_fa", "group")
+  fit_GSI <- fit_gams$gam_gsi(df, "dti_rd", "group")
+  fit_GSIO <- fit_gams$gam_gsio(df, "dti_rd", "group")
   
   #
   impact_meas <- "mem_vis"
@@ -338,47 +357,131 @@ scalar_gams <- function(df_afq, tract, df_scan_imp){
   plot(fit_G_intx)
   p <- getViz(fit_G_intx)
   plot(p)
-
+  
   #
-  fit_GS_intx <- fit_gams$gam_gs_intx(df, "dti_fa", "group", impact_meas)
-  plot(fit_GS_intx)
-  p <- getViz(fit_GS_intx)
+  fit_GSI_intx <- fit_gams$gam_gsi_intx(df, "dti_fa", "group", impact_meas)
+  plot(fit_GSI_intx)
+  p <- getViz(fit_GSI_intx)
   plot(p)
   
-  fit_GSO_intx <- fit_gams$gam_gso_intx(df, "dti_fa", "group", impact_meas)
-  plot(fit_GSO_intx)
-  p <- getViz(fit_GSO_intx)
+  fit_GSIO_intx <- fit_gams$gam_gsio_intx(df, "dti_fa", "group", impact_meas)
+  plot(fit_GSIO_intx)
+  p <- getViz(fit_GSIO_intx)
   plot(p)
   #
-  
 }
 
 
+#' Fit and coordinate plotting of longitudinal HGAMs.
+#'
+#' Support longitudinal modeling and plotting of scalars. Makes longitudinal
+#' GAMs with global and group smooths with group wiggliness (LGSI) and also
+#' global and group smooths as ordered factors (LGSIO).
+#'
+#' Used to unload redundant work from gams_long_scalar().
+#'
+#' @param df Dataframe containing AFQ data.
+#' @param tract String, name of AFQ tract (corresponds to df$tract_name).
+#' @param scalar_name String, name of DTI scalar (corresponds to df column).
+#' @param returns Named list organized by GAM fits (fit_LGSI, fit_LGSIO)
+#'    and the smooth plots (plot).
+.fit_plot_gams_long <- function(df, tract, scalar_name) {
+  # Validate user args, get tract/scalar names
+  if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
+    stop("Unexpected scalar_name")
+  }
+  print(scalar_name)
+  h_tract <- fit_gams$switch_tract(tract)
+  scalar <- strsplit(scalar_name, "_")[[1]][2]
+  
+  # # Get (and make/save if needed) LGSI model.
+  # rds_lgsi <- paste0(
+  #   getwd(), "/rda_objects/fit_LGSI_", h_tract, "_", scalar, ".Rda"
+  # )
+  # if (!file.exists(rds_lgsi)) {
+  #   h_gam <- fit_gams$gam_lgsi(df, scalar_name)
+  #   saveRDS(h_gam, file = rds_lgsi)
+  #   rm(h_gam)
+  # }
+  # fit_LGSI <- readRDS(rds_lgsi)
+  # gam.check(fit_LGSI)
+  # summary(fit_LGSI)
+  # plot(fit_LGSI)
+  
+  # Get (and make/save if needed) LGSIO model, write summary stats to disk.
+  rds_lgsio <- paste0(
+    getwd(), "/rda_objects/fit_LGSIO_", h_tract, "_", scalar, ".Rda"
+  )
+  if (!file.exists(rds_lgsio)) {
+    h_gam <- fit_gams$gam_lgsio(df, scalar_name)
+    saveRDS(h_gam, file = rds_lgsio)
+    rm(h_gam)
+  }
+  fit_LGSIO <- readRDS(rds_lgsio)
+  sum_lgsio <- paste0(
+    getwd(), "/gam_summaries/fit_LGSIO_", h_tract, "_", scalar, ".txt"
+  )
+  fit_gams$write_gam_stats(fit_LGSIO, sum_lgsio)
+  # gam.check(fit_LGSIO)
+  # summary(fit_LGSIO)
+  # plot(fit_LGSIO)
+
+  # Coordinate drawing of smooths
+  plots <- draw_plots$draw_long_ordered_grid(fit_LGSIO, tract, toupper(scalar))
+  return(list(
+    # "fit_LGSI" = fit_LGSI,
+    "fit_LGSIO" = fit_LGSIO,
+    "plots" = plots
+  ))
+}
+
 
 #' Fit DWI scalars with longitudinal HGAMs.
-#' 
-#' TODO
-export("scalar_lgams")
-scalar_lgams <- function(df_afq, tract){
-  
+#'
+#' Fit DWI data (FA, RD, AD, MD) with longitudinal hierarchical
+#' GAMS using both global and group smooths (and group wiggliness).
+#' Also fit as ordered factor for group (post/rtp vs base).
+#'
+#' @param df_afq Dataframe output of clean_afq().
+#' @param tract String, name of AFQ tract (corresponds to df_afq$tract_name).
+#' @returns Nested named with FA, AD, RD, MD objects for GAM fit (gam_LGSI),
+#'    ordered GAM fit (gam_LGSIO), and plots (gam_plots).
+export("gams_long")
+gams_long <- function(df_afq, tract) {
+  # Subset dataframe by tract
   df <- df_afq[which(df_afq$tract_name == tract), ]
-  
-  obj_FA <- .fit_plot(df, tract, "dti_fa")
-  obj_MD <- .fit_plot(df, tract, "dti_md")
-  obj_RD <- .fit_plot(df, tract, "dti_rd")
-  obj_AD <- .fit_plot(df, tract, "dti_ad")
-  
+
+  # Get GAMs and plots for each scalar
+  obj_FA <- .fit_plot_gams_long(df, tract, "dti_fa")
+  obj_MD <- .fit_plot_gams_long(df, tract, "dti_md")
+  obj_RD <- .fit_plot_gams_long(df, tract, "dti_rd")
+  obj_AD <- .fit_plot_gams_long(df, tract, "dti_ad")
+
+  # Assemble and write plots
+  h_tract <- fit_gams$switch_tract(tract)
+  grDevices::png(
+    filename = paste0(getwd(), "/plots/fit_LGSIO_", h_tract, ".png"),
+    units = "in",
+    height = 10,
+    width = 8,
+    res = 600
+  )
+  draw_plots$draw_scalar_grid(
+    obj_FA$plots, obj_MD$plots, obj_AD$plots, obj_RD$plots
+  )
+  grDevices::dev.off()
+
   return(list(
-    gam_GS = list(
-      "FA" = obj_FA$fit_GS, "RD" = obj_RD$fit_GS, 
-      "AD" = obj_AD$fit_GS, "MD" = obj_MD$fit_GS
+    gam_LGSI = list(
+      "FA" = obj_FA$fit_LGSI, "RD" = obj_RD$fit_LGSI,
+      "AD" = obj_AD$fit_LGSI, "MD" = obj_MD$fit_LGSI
     ),
-    gam_GSO = list(
-      "FA" = obj_FA$fit_GSO, "RD" = obj_RD$fit_GSO, 
-      "AD" = obj_AD$fit_GSO, "MD" = obj_MD$fit_GSO
+    gam_LGSIO = list(
+      "FA" = obj_FA$fit_LGSIO, "RD" = obj_RD$fit_LGSIO,
+      "AD" = obj_AD$fit_LGSIO, "MD" = obj_MD$fit_LGSIO
     ),
     gam_plots = list(
-      "FA" = obj_FA$plots, "RD" = obj_RD$plots, 
+      "FA" = obj_FA$plots, "RD" = obj_RD$plots,
       "AD" = obj_AD$plots, "MD" = obj_MD$plots
     )
   ))
@@ -386,21 +489,21 @@ scalar_lgams <- function(df_afq, tract){
 
 
 #' Fit DWI scalars X Impact with longitudinal HGAMs.
-#' 
+#'
 #' TODO
-export("scalar_intx_gams")
-scalar_intx_gams <- function(df_afq, df_scan_imp, tract, post_sess){
+export("gams_long_intx")
+gams_long_intx <- function(df_afq, df_scan_imp, tract, post_sess) {
   # if(! post_sess %in% c("post", "rtp")){
   #   stop("Unexpected post_sess")
   # }
-  
+
   #
   # df <- df_afq[which(
   #   df_afq$tract_name == tract &
   #     df_afq$scan_name %in% c("base", post_sess)
   # ), ]
   df <- df_afq[which(df_afq$tract_name == tract), ]
-  
+
   #
   impact_meas <- "mem_vis"
   df <- merge(
@@ -409,12 +512,12 @@ scalar_intx_gams <- function(df_afq, df_scan_imp, tract, post_sess){
     by = c("subj_id", "scan_name"),
     all.x = T
   )
-  
+
   #
   fit_FA <- fit_gams$gam_gs_intx(df, "dti_fa", impact_meas)
   fit_FAO <- fit_gams$gam_gso_intx(df, "dti_fa", impact_meas)
-  
-  
+
+
   return(list(
     gam_GS_intx = list(
       "FA" = fit_FA,
@@ -451,7 +554,7 @@ scalar_intx_gams <- function(df_afq, df_scan_imp, tract, post_sess){
 #'   # gam.check(fit_S, rep=1000)
 #'   # summary(fit_S)
 #'   # plot(fit_S)
-#' 
+#'
 #'   #
 #'   fit_S <- bam(
 #'     dti_fa ~ s(subj_id, scan_name, bs = "re") +
@@ -465,7 +568,7 @@ scalar_intx_gams <- function(df_afq, df_scan_imp, tract, post_sess){
 #'   # gam.check(fit_S)
 #'   # summary(fit_S)
 #'   # plot(fit_S)
-#' 
+#'
 #'   #
 #'   df$scanOF <- factor(df$scan_name, ordered = T)
 #'   fit_SO <- bam(
@@ -481,8 +584,8 @@ scalar_intx_gams <- function(df_afq, df_scan_imp, tract, post_sess){
 #'   # plot(fit_SO)
 #'   return(list(gamGS = fit_S, gamGSO = fit_SO))
 #' }
-#' 
-#' 
+#'
+#'
 #' #' Run GAM with randomized sample
 #' #'
 #' export("gam_rand")
@@ -490,24 +593,24 @@ scalar_intx_gams <- function(df_afq, df_scan_imp, tract, post_sess){
 #'   # Identify subjs with base and post
 #'   subj_list <- unique(df[which(df$scan_name == "post"), ]$subj_id)
 #'   df <- df[which(df$subj_id %in% subj_list), ]
-#' 
+#'
 #'   # Rand subjs
 #'   set.seed(seed)
 #'   subj_list <- sample(subj_list)
 #'   grp_a <- subj_list[1:32]
 #'   grp_b <- subj_list[33:65]
-#' 
+#'
 #'   # Replace dti_fa of post for grp_a with base of grp_b
 #'   idx_a_post <- which(df$scan_name == "post" & df$subj_id %in% grp_a)
 #'   idx_b_base <- which(df$scan_name == "base" & df$subj_id %in% grp_b)
 #'   df[idx_a_post, ]$dti_fa <- df[idx_b_base, ]$dti_fa
-#' 
+#'
 #'   # Run GAM
 #'   fit_rand <- gam_spar(df)
 #'   return(fit_rand)
 #' }
-#' 
-#' 
+#'
+#'
 #' #' Gam interaction
 #' #'
 #' export("gam_intx")
@@ -525,7 +628,7 @@ scalar_intx_gams <- function(df_afq, df_scan_imp, tract, post_sess){
 #'   # gam.check(fit_intx)
 #'   # summary(fit_intx)
 #'   # plot(fit_intx)
-#' 
+#'
 #'   df$scanOF <- factor(df$scan_name, ordered = T)
 #'   fit_intxOF <- bam(
 #'     dti_fa ~ s(subj_id, scan_name, bs = "re") +
@@ -540,8 +643,6 @@ scalar_intx_gams <- function(df_afq, df_scan_imp, tract, post_sess){
 #'     method = "fREML",
 #'     discrete = T
 #'   )
-#' 
+#'
 #'   return(list(gamIntx = fit_intx, gamIntxOF = fit_intxOF))
 #' }
-
-

@@ -12,7 +12,7 @@ df_scan_imp <- workflows$get_scan_impact()
 
 
 # Check Impact measures ----
-workflows$imp_bet_wor(df_scan_imp)
+workflows$impact_better_worse(df_scan_imp)
 
 # scan_name <- "post"
 imp_clust <- workflows$impact_cluster(df_scan_imp, "post")
@@ -29,20 +29,19 @@ draw_plots$draw_impact_pairs(imp_clust$df_sik, c(7:10), 3)
 
 
 # Check AFQ gam ----
-
-tract <- "Left Inferior Fronto-occipital"
-for(tract in unique(df_afq$tract_name)){
+#
+# TODO longitudinal GAMs of ordered factors (base, post, rtp) for scalars
+# TODO GAMs of scalars for post by k-means group
+# TODO above, with impact interactions
+# TODO update CI calc from 2.5*SE -> 1.96*SE
+tract_list <- unique(df_afq$tract_name)
+for(tract in tract_list){
   print(tract)
-  tract_gams <- workflows$scalar_lgams(df_afq, tract)
-  grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$FA)
+  tract_gams <- workflows$gams_long(df_afq, tract)
 }
+# summary(tract_gams$gam_LGSIO$FA)
+# grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$FA)
 
-
-summary(tract_gams$gam_GSO$FA)
-grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$FA)
-# grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$RD)
-# grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$AD)
-# grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$MD)
 
 
 # Intx smooths

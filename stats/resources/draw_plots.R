@@ -275,8 +275,8 @@ draw_group_smooth_diff <- function(plot_obj, grp_num, attr_num, tract) {
     geom_hline(yintercept = 0)
   p_data <- as.data.frame(p$data$fit)
   colnames(p_data) <- c("nodeID", "est", "ty", "se")
-  p_data$lb <- as.numeric(p_data$est - (2.5 * p_data$se))
-  p_data$ub <- as.numeric(p_data$est + (2.5 * p_data$se))
+  p_data$lb <- as.numeric(p_data$est - (1.96 * p_data$se))
+  p_data$ub <- as.numeric(p_data$est + (1.96 * p_data$se))
   
   # Determine highest/lowest max/min across global and group smooths
   GY_max <- pmax(gy_max, max(p_data$est))

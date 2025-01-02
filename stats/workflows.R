@@ -2,11 +2,6 @@ import(grDevices)
 import(dplyr)
 import(lubridate)
 import("stats", "complete.cases")
-import(mgcv)
-import(fitdistrplus)
-# import(itsadug)
-import(mgcViz)
-import(viridis)
 
 pull_data <- use("resources/pull_data.R")
 transform_data <- use("resources/transform_data.R")
@@ -268,25 +263,15 @@ impact_cluster <- function(df_scan_imp, scan_name) {
   col_list <- c(7:10) # Impact meas items, exclude imp_ctl & tot_symp
   num_k <- 3
 
-  # Conduct PCA
+  # Conduct PCA and make plots
   stats_pc <- quick_stats$run_pca(df, col_list)
-  # print(stats_pc)
-  # summary(stats_pc)
-
-  # Make PCA plots
   plot_pc <- draw_plots$draw_pc(stats_pc)
-  # print(plot_pc$plot_eig)
-  # print(plot_pc$plot_biplot)
 
-  # Conduct K-means
+  # Conduct K-means and make plots
   stats_km <- quick_stats$run_kmeans(df, col_list, num_k)
-  # print(stats_km$stats_km)
-
-  # Make K-means plots
   clust_km <- stats_km$clust_km
   data_norm <- stats_km$data_norm
   plot_km <- draw_plots$draw_kmean(stats_km$data_norm, stats_km$clust_km)
-  # print(plot_km)
   # table(stats_km$clust_km)
 
   # Convert clustering to dataframe
@@ -316,6 +301,8 @@ impact_cluster <- function(df_scan_imp, scan_name) {
 
 
 #' Fit Post DWI scalars with HGAMs, grouped by k-means.
+#' 
+#' TODO finalize or remove.
 #'
 #' Investigate scalars from post scans, accounting for k-means grouping
 #' (output of impact_cluster()).
@@ -353,20 +340,20 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
   )
   
   #
-  fit_G_intx <- fit_gams$gam_g_intx(df, "dti_fa", impact_meas)
+  fit_G_intx <- fit_gams$mod_g_intx(df, "dti_fa", impact_meas)
   plot(fit_G_intx)
   p <- getViz(fit_G_intx)
   plot(p)
   
   #
-  fit_GSI_intx <- fit_gams$gam_gsi_intx(df, "dti_fa", "group", impact_meas)
-  plot(fit_GSI_intx)
-  p <- getViz(fit_GSI_intx)
+  fit_GI_intx <- fit_gams$mod_gi_intx(df, "dti_fa", "group", impact_meas)
+  plot(fit_GI_intx)
+  p <- getViz(fit_GI_intx)
   plot(p)
   
-  fit_GSIO_intx <- fit_gams$gam_gsio_intx(df, "dti_fa", "group", impact_meas)
-  plot(fit_GSIO_intx)
-  p <- getViz(fit_GSIO_intx)
+  fit_GIO_intx <- fit_gams$mod_gio_intx(df, "dti_fa", "group", impact_meas)
+  plot(fit_GIO_intx)
+  p <- getViz(fit_GIO_intx)
   plot(p)
   #
 }
@@ -375,15 +362,15 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
 #' Fit and coordinate plotting of longitudinal HGAMs.
 #'
 #' Support longitudinal modeling and plotting of scalars. Makes longitudinal
-#' GAMs with global and group smooths with group wiggliness (LGSI) and also
-#' global and group smooths as ordered factors (LGSIO).
+#' GAMs with global and group smooths with group wiggliness (LGI) and also
+#' global and group smooths as ordered factors (LGIO).
 #'
 #' Used to unload redundant work from gams_long_scalar().
 #'
 #' @param df Dataframe containing AFQ data.
 #' @param tract String, name of AFQ tract (corresponds to df$tract_name).
 #' @param scalar_name String, name of DTI scalar (corresponds to df column).
-#' @param returns Named list organized by GAM fits (fit_LGSI, fit_LGSIO)
+#' @param returns Named list organized by GAM fits (fit_LGI, fit_LGIO)
 #'    and the smooth plots (plot).
 .fit_plot_gams_long <- function(df, tract, scalar_name) {
   # Validate user args, get tract/scalar names
@@ -394,43 +381,43 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
   h_tract <- fit_gams$switch_tract(tract)
   scalar <- strsplit(scalar_name, "_")[[1]][2]
   
-  # # Get (and make/save if needed) LGSI model.
-  # rds_lgsi <- paste0(
-  #   getwd(), "/rda_objects/fit_LGSI_", h_tract, "_", scalar, ".Rda"
-  # )
-  # if (!file.exists(rds_lgsi)) {
-  #   h_gam <- fit_gams$gam_lgsi(df, scalar_name)
-  #   saveRDS(h_gam, file = rds_lgsi)
-  #   rm(h_gam)
-  # }
-  # fit_LGSI <- readRDS(rds_lgsi)
-  # gam.check(fit_LGSI)
-  # summary(fit_LGSI)
-  # plot(fit_LGSI)
-  
-  # Get (and make/save if needed) LGSIO model, write summary stats to disk.
-  rds_lgsio <- paste0(
-    getwd(), "/rda_objects/fit_LGSIO_", h_tract, "_", scalar, ".Rda"
+  # Get (and make/save if needed) LGI model.
+  rds_lgi <- paste0(
+    getwd(), "/rda_objects/fit_LGI_", h_tract, "_", scalar, ".Rda"
   )
-  if (!file.exists(rds_lgsio)) {
-    h_gam <- fit_gams$gam_lgsio(df, scalar_name)
-    saveRDS(h_gam, file = rds_lgsio)
+  if (!file.exists(rds_lgi)) {
+    h_gam <- fit_gams$mod_lgi(df, scalar_name)
+    saveRDS(h_gam, file = rds_lgi)
     rm(h_gam)
   }
-  fit_LGSIO <- readRDS(rds_lgsio)
-  sum_lgsio <- paste0(
-    getwd(), "/gam_summaries/fit_LGSIO_", h_tract, "_", scalar, ".txt"
+  fit_LGI <- readRDS(rds_lgi)
+  gam.check(fit_LGI)
+  summary(fit_LGI)
+  plot(fit_LGI)
+  
+  # Get (and make/save if needed) LGIO model, write summary stats to disk.
+  rds_lgio <- paste0(
+    getwd(), "/rda_objects/fit_LGIO_", h_tract, "_", scalar, ".Rda"
   )
-  fit_gams$write_gam_stats(fit_LGSIO, sum_lgsio)
-  # gam.check(fit_LGSIO)
-  # summary(fit_LGSIO)
-  # plot(fit_LGSIO)
+  if (!file.exists(rds_lgio)) {
+    h_gam <- fit_gams$mod_lgio(df, scalar_name)
+    saveRDS(h_gam, file = rds_lgio)
+    rm(h_gam)
+  }
+  fit_LGIO <- readRDS(rds_lgio)
+  sum_lgio <- paste0(
+    getwd(), "/gam_summaries/fit_LGIO_", h_tract, "_", scalar, ".txt"
+  )
+  fit_gams$write_gam_stats(fit_LGIO, sum_lgio)
+  # gam.check(fit_LGIO)
+  # summary(fit_LGIO)
+  # plot(fit_LGIO)
 
   # Coordinate drawing of smooths
-  plots <- draw_plots$draw_long_ordered_grid(fit_LGSIO, tract, toupper(scalar))
+  plots <- draw_plots$draw_long_ordered_grid(fit_LGIO, tract, toupper(scalar))
   return(list(
-    # "fit_LGSI" = fit_LGSI,
-    "fit_LGSIO" = fit_LGSIO,
+    "fit_LGI" = fit_LGI,
+    "fit_LGIO" = fit_LGIO,
     "plots" = plots
   ))
 }
@@ -444,8 +431,8 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
 #'
 #' @param df_afq Dataframe output of clean_afq().
 #' @param tract String, name of AFQ tract (corresponds to df_afq$tract_name).
-#' @returns Nested named with FA, AD, RD, MD objects for GAM fit (gam_LGSI),
-#'    ordered GAM fit (gam_LGSIO), and plots (gam_plots).
+#' @returns Nested named with FA, AD, RD, MD objects for GAM fit (gam_LGI),
+#'    ordered GAM fit (gam_LGIO), and plots (gam_plots).
 export("gams_long")
 gams_long <- function(df_afq, tract) {
   # Subset dataframe by tract
@@ -460,7 +447,7 @@ gams_long <- function(df_afq, tract) {
   # Assemble and write plots
   h_tract <- fit_gams$switch_tract(tract)
   grDevices::png(
-    filename = paste0(getwd(), "/plots/fit_LGSIO_", h_tract, ".png"),
+    filename = paste0(getwd(), "/plots/fit_LGIO_", h_tract, ".png"),
     units = "in",
     height = 10,
     width = 8,
@@ -472,13 +459,13 @@ gams_long <- function(df_afq, tract) {
   grDevices::dev.off()
 
   return(list(
-    gam_LGSI = list(
-      "FA" = obj_FA$fit_LGSI, "RD" = obj_RD$fit_LGSI,
-      "AD" = obj_AD$fit_LGSI, "MD" = obj_MD$fit_LGSI
+    gam_LGI = list(
+      "FA" = obj_FA$fit_LGI, "RD" = obj_RD$fit_LGI,
+      "AD" = obj_AD$fit_LGI, "MD" = obj_MD$fit_LGI
     ),
-    gam_LGSIO = list(
-      "FA" = obj_FA$fit_LGSIO, "RD" = obj_RD$fit_LGSIO,
-      "AD" = obj_AD$fit_LGSIO, "MD" = obj_MD$fit_LGSIO
+    gam_LGIO = list(
+      "FA" = obj_FA$fit_LGIO, "RD" = obj_RD$fit_LGIO,
+      "AD" = obj_AD$fit_LGIO, "MD" = obj_MD$fit_LGIO
     ),
     gam_plots = list(
       "FA" = obj_FA$plots, "RD" = obj_RD$plots,
@@ -532,6 +519,8 @@ gams_long_intx <- function(df_afq, df_scan_imp, tract, post_sess) {
 }
 
 
+# TODO add methods below to workflow method, and refactor so that
+# common methods are being used for all model fits.
 
 #' #' HGAM of Callosum Superior Parietal.
 #' #'

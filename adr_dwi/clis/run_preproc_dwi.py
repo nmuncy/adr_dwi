@@ -1,6 +1,12 @@
-"""Title.
+"""Conduct preprocessing of DWI data via FSL.
 
-TODO
+Prepare for and use topup and eddy to preprocess ADR DWI data.
+Schedules an SBATCH array for all subjects specified or found
+lacking the output files. Final output are found in
+data-dir/derivatives/dwi_preproc.
+
+Requires:
+    - FSL to be executable in system OS.
 
 Examples:
     preproc_dwi --subj 0003 --sess 1
@@ -12,6 +18,8 @@ Examples:
 import os
 import sys
 import glob
+import platform
+import shutil
 from datetime import datetime
 import textwrap
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -97,6 +105,12 @@ def main():
     subj_all = args.subj_all
 
     log = helper.MakeLogger(os.path.basename(__file__))
+
+    # Validate env
+    if "swan" not in platform.uname().node:
+        raise EnvironmentError("Intended for use on HCC.")
+    if not shutil.which("fslroi"):
+        raise EnvironmentError("Missing FSL in environment")
 
     # Setup
     work_par = os.path.join(work_dir, "dwi_preproc")

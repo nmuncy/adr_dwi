@@ -1,6 +1,12 @@
-"""Title.
+"""Clean shared Impact data and coordination inserting into database.
 
-TODO
+Notes:
+    This module is written for an internal data share which assumes very
+    specific formats for each shared dataframe.
+
+BuildPartDemo: Clean and build participant demographics table.
+BuildImpactPrimary: Clean and build impact tables from primary share.
+BuildImpactSecondary: Clean and build impact tables from secondary share.
 
 """
 
@@ -17,7 +23,22 @@ log = helper.MakeLogger(os.path.basename(__file__))
 
 
 class BuildPartDemo:
-    """Title.
+    """Build participant demographics table from shared data.
+
+    Clean data from data_dir/raw_particpant_list.xlsx and then
+    build the following db_adr tables:
+        - ref_subj
+        - tbl_demo
+        - tbl_scan_dates
+
+    Args:
+        data_dir: Location of data directory, containing raw shared files.
+        db_con: Database connection object, database.DbConnect instance.
+        ref_maps: SQL reference mapping object, database.RefMaps instance.
+
+    Notes:
+        - Uses data that has been lightly cleaned manually.
+        - Execute method load_part_demo() first (see example).
 
     Example:
         build_demo = build_survey.BuildPartDemo(*args)
@@ -41,7 +62,12 @@ class BuildPartDemo:
         self._data_dir = data_dir
 
     def load_part_demo(self):
-        """Title."""
+        """Load raw participant demographic info.
+
+        Raises:
+            FileNotFoundError: Missing raw_participant_list.xlsx in data_dir.
+
+        """
         log.write.info("Loading part demo data")
         raw_demo = os.path.join(self._data_dir, "raw_participant_list.xlsx")
         if not os.path.exists(raw_demo):
@@ -50,7 +76,7 @@ class BuildPartDemo:
         self._clean_part()
 
     def _clean_part(self):
-        """Title."""
+        """Remove subjects without baseline IDs, manage column names."""
         log.write.info("Cleaning participant data")
         self._df_part = self._df_part[
             self._df_part["SubjectID_baseline"].notna()
@@ -60,8 +86,10 @@ class BuildPartDemo:
         self._df_part.columns = self._df_part.columns.str.replace(" ", "_")
 
     def ref_subj(self):
-        """Title."""
+        """Build db_adr.ref_subj by aligning subject IDs across visits."""
         log.write.info("Making ref_subj")
+
+        # Manage ID columns
         self._df_part["subj_id"] = (
             self._df_part["SubjectID_baseline"].str[3:7].astype(int)
         )
@@ -73,7 +101,7 @@ class BuildPartDemo:
         self._df_part["subj_sky_fu2"] = self._df_part["Follow_up_2_SKY_"]
         self._df_part["subj_sky_twin"] = self._df_part["Twin_SKY_"]
 
-        #
+        # Extract only subject ID columns
         col_sub = [
             "subj_id",
             "subj_name",
@@ -85,7 +113,8 @@ class BuildPartDemo:
         df_subj = self._df_part[col_sub].copy()
         df_subj = df_subj.replace(np.nan, None)
 
-        #
+        # Prep for database insert - proper column names, format,
+        # and foreign keys.
         col_new = {
             x: x.split("_")[-1]
             for x in col_sub
@@ -93,8 +122,6 @@ class BuildPartDemo:
         }
         df_subj = df_subj.rename(columns=col_new)
         col_list = [y for x, y in col_new.items()]
-
-        #
         df_long = pd.melt(
             df_subj,
             id_vars=["subj_id", "subj_name"],
@@ -108,7 +135,7 @@ class BuildPartDemo:
             lambda x: self._ref_maps.get_id("test", x, "sky_type"), axis=1
         )
 
-        #
+        # Send data to db_adr.ref_subj
         database.build_table(
             "ref_subj",
             df_long,
@@ -117,27 +144,31 @@ class BuildPartDemo:
         )
 
     def tbl_demo(self):
-        """Title."""
+        """Build db_adr.tbl_demo with participant demographics."""
         log.write.info("Making tbl_demo")
+
+        # Find relevant columns
         self._df_part["sex"] = self._df_part["Gender"].str[:1]
         self._df_part["age_base"] = self._df_part["Age_at_Baseline"].astype(
             int
         )
 
-        #
+        # Subset and insert
         col_list = ["subj_id", "sex", "age_base"]
         df_demo = self._df_part[col_list].copy()
         df_demo = df_demo.replace(np.nan, None)
         database.build_table("tbl_demo", df_demo, col_list, self._db_con)
 
     def scan_date(self):
-        """Title."""
+        """Build db_adr.tbl_scan_dates with participant scan dates."""
         log.write.info("Making tbl_scan_date")
+
+        # Identify relevant columns
         self._df_part["base"] = self._df_part["Date_of_Baseline"]
         self._df_part["fu1"] = self._df_part["Date_of_Follow_up_1"]
         self._df_part["fu2"] = self._df_part["Date_of_Follow_up_2"]
 
-        #
+        # Format to db_adr
         df_scan = self._df_part[["subj_id", "base", "fu1", "fu2"]].copy()
         df_long = pd.melt(
             df_scan,
@@ -149,7 +180,7 @@ class BuildPartDemo:
         )
         df_long = df_long.dropna()
 
-        #
+        # Add foreign keys and manage date values, insert into table
         df_long["scan_id"] = df_long.apply(
             lambda x: self._ref_maps.get_id("test", x, "scan_name"), axis=1
         )
@@ -165,7 +196,26 @@ class BuildPartDemo:
 
 
 class BuildImpactPrimary:
-    """Title.
+    """Build impact tables from primary shared data.
+
+    Clean data from data_dir/raw_impact_a.xlsx and then build
+    the following db_adr tables:
+        - tbl_impact_dates
+        - tbl_impact_user
+        - tbl_impact_word
+        - tbl_impact_design
+        - tbl_impact_xo
+        - tbl_impact_color
+        - tbl_impact_three
+
+    Args:
+        data_dir: Location of data directory, containing raw shared files.
+        db_con: Database connection object, database.DbConnect instance.
+        ref_maps: SQL reference mapping object, database.RefMaps instance.
+
+    Notes:
+        - Uses data that has been lightly cleaned manually.
+        - Execute method load_data() first (see example).
 
     Example:
         build_imp_prim = build_survey.BuildImpactPrimary(*args)
@@ -187,7 +237,12 @@ class BuildImpactPrimary:
         self._data_dir = data_dir
 
     def load_data(self):
-        """Title."""
+        """Load raw impact data, uses sheet titled 'v1_clean'.
+
+        Raises:
+            FileNotFoundError: Missing raw_impact_a.xlsx in data_dir.
+
+        """
         log.write.info("Loading primary impact data")
         raw_impact = os.path.join(self._data_dir, "raw_impact_a.xlsx")
         if not os.path.exists(raw_impact):
@@ -196,9 +251,10 @@ class BuildImpactPrimary:
         self._clean_impact()
 
     def _clean_impact(self):
-        """Title."""
+        """Clean impact data."""
         log.write.info("Cleaning primary impact data")
-        #
+
+        # Match impact name with db_adr key values
         switch_test = {
             "Baseline": "base",
             "Post-Injury 1": "fu1",
@@ -210,8 +266,6 @@ class BuildImpactPrimary:
             switch_test
         )
         self._test_type_list = [x for _, x in switch_test.items()]
-
-        #
         self._df_clean["test_id"] = self._df_clean.apply(
             lambda x: self._ref_maps.get_id("test", x, "testType"), axis=1
         )
@@ -253,15 +307,14 @@ class BuildImpactPrimary:
                 sky_name, sky_type
             )
 
-        # Forward fill subj_ids, manage type
+        # Forward fill subj_ids and manage type, update column names
         self._df_clean["subj_id"] = self._df_clean["subj_id"].ffill(axis=0)
         self._df_clean["subj_id"] = self._df_clean["subj_id"].astype("Int64")
-
-        #
         self._df_clean = self._df_clean.rename(columns={"tbi_num": "num_tbi"})
 
     def make_impact_tables(self):
-        """Title."""
+        """Entrypoint method for sending impact data to db_adr."""
+        # Coordinate private methods.
         for self._test_type in self._test_type_list:
             self._impact_date()
             self._user_data()
@@ -272,7 +325,8 @@ class BuildImpactPrimary:
             self._three_data()
 
     def _impact_date(self):
-        """Title."""
+        """Send data to db_adr.tbl_impact_dates."""
+        # Subset with relevant data
         col_date = [
             "subj_id",
             "test_id",
@@ -284,6 +338,8 @@ class BuildImpactPrimary:
             self._df_clean["testType"] == self._test_type
         ].tolist()
         df_dates = self._df_clean.loc[idx_type, col_date].copy()
+
+        # Manage datetime type and column, insert data
         df_dates["testDate"] = df_dates["testDate"].dt.strftime("%Y-%m-%d")
         df_dates = df_dates.rename(columns={"testDate": "impact_date"})
         database.build_table(
@@ -294,8 +350,7 @@ class BuildImpactPrimary:
         )
 
     def _user_data(self):
-        """Title."""
-        #
+        """Send data to db_adr.tbl_impact_user."""
         log.write.info(
             f"Building tbl_impact_user for visit: {self._test_type}"
         )
@@ -333,8 +388,7 @@ class BuildImpactPrimary:
         )
 
     def _word_data(self):
-        """Title."""
-        #
+        """Send data to db_adr.tbl_impact_word."""
         log.write.info(
             f"Building tbl_impact_word for visit: {self._test_type}"
         )
@@ -355,7 +409,7 @@ class BuildImpactPrimary:
         ].tolist()
         df = self._df_clean.loc[idx_type, col_sub].copy()
 
-        #
+        # Identify relevant columns
         col_list = [
             "subj_id",
             "test_id",
@@ -371,8 +425,7 @@ class BuildImpactPrimary:
         database.build_table("tbl_impact_word", df, col_list, self._db_con)
 
     def _design_data(self):
-        """Title."""
-        #
+        """Send data to db_adr.tbl_impact_design."""
         log.write.info(
             f"Building tbl_impact_design for visit: {self._test_type}"
         )
@@ -393,7 +446,7 @@ class BuildImpactPrimary:
         ].tolist()
         df = self._df_clean.loc[idx_type, col_sub].copy()
 
-        #
+        # Identify relevant columns
         col_list = [
             "subj_id",
             "test_id",
@@ -409,11 +462,10 @@ class BuildImpactPrimary:
         database.build_table("tbl_impact_design", df, col_list, self._db_con)
 
     def _xo_data(self):
-        """Title."""
-        #
+        """Send data to db_adr.tbl_impact_xo."""
         log.write.info(f"Building tbl_impact_xo for visit: {self._test_type}")
 
-        # Extract identifier and wordItem columns
+        # Extract identifier and xo columns
         col_sub = [x for x in self._df_clean.columns if "XO" in x]
         col_sub = [
             "subj_id",
@@ -429,7 +481,7 @@ class BuildImpactPrimary:
         ].tolist()
         df = self._df_clean.loc[idx_type, col_sub].copy()
 
-        #
+        # Identify relevant columns
         col_list = [
             "subj_id",
             "test_id",
@@ -443,13 +495,12 @@ class BuildImpactPrimary:
         database.build_table("tbl_impact_xo", df, col_list, self._db_con)
 
     def _color_data(self):
-        """Title."""
-        #
+        """Send data to db_adr.tbl_impact_color."""
         log.write.info(
             f"Building tbl_impact_color for visit: {self._test_type}"
         )
 
-        # Extract identifier and wordItem columns
+        # Extract identifier and color columns
         col_sub = [x for x in self._df_clean.columns if "color" in x]
         col_sub = [
             "subj_id",
@@ -465,7 +516,7 @@ class BuildImpactPrimary:
         ].tolist()
         df = self._df_clean.loc[idx_type, col_sub].copy()
 
-        #
+        # Identify relevant columns
         col_list = [
             "subj_id",
             "test_id",
@@ -478,13 +529,12 @@ class BuildImpactPrimary:
         database.build_table("tbl_impact_color", df, col_list, self._db_con)
 
     def _three_data(self):
-        """Title."""
-        #
+        """Send data to db_adr.tbl_impact_three."""
         log.write.info(
             f"Building tbl_impact_three for visit: {self._test_type}"
         )
 
-        # Extract identifier and wordItem columns
+        # Extract identifier and three columns
         col_sub = [x for x in self._df_clean.columns if "three" in x]
         col_sub = [
             "subj_id",
@@ -500,12 +550,12 @@ class BuildImpactPrimary:
         ].tolist()
         df = self._df_clean.loc[idx_type, col_sub].copy()
 
-        #
+        # Manage precision
         df["threeLettersPercentageLettersCorrect"] = df[
             "threeLettersPercentageLettersCorrect"
         ].round(2)
 
-        #
+        # Identify relevant columns
         col_list = [
             "subj_id",
             "test_id",
@@ -521,7 +571,25 @@ class BuildImpactPrimary:
 
 
 class BuildImpactSecondary:
-    """Title.
+    """Build impact tables from secondary shared data.
+
+    Clean data from data_dir/raw_impact_b.xlsx and then build
+    the following db_adr tables:
+        - tbl_impact_dates
+        - tbl_impact_user
+        - tbl_impact_design
+        - tbl_impact_xo
+        - tbl_impact_color
+        - tbl_impact_three
+
+    Args:
+        data_dir: Location of data directory, containing raw shared files.
+        db_con: Database connection object, database.DbConnect instance.
+        ref_maps: SQL reference mapping object, database.RefMaps instance.
+
+    Notes:
+        - Uses data that has been lightly cleaned manually.
+        - Execute method load_data() first (see example).
 
     Example:
         build_imp_sec = build_survey.BuildImpactSecondary(*args)
@@ -543,7 +611,12 @@ class BuildImpactSecondary:
         self._data_dir = data_dir
 
     def load_data(self):
-        """Title."""
+        """Load raw impact data.
+
+        Raises:
+            FileNotFoundError: Missing raw_impact_b.xlsx in data_dir.
+
+        """
         log.write.info("Loading secondary impact data")
         raw_impact = os.path.join(self._data_dir, "raw_impact_b.xlsx")
         if not os.path.exists(raw_impact):
@@ -551,7 +624,7 @@ class BuildImpactSecondary:
         self._df_clean = pd.read_excel(raw_impact)
 
     def make_impact_tables(self):
-        """Title."""
+        """Entrypoint method for sending impact data to db_adr."""
         test_type_list = self._df_clean["test_id"].unique()
         for self._test_id in test_type_list:
             self._impact_date()
@@ -559,7 +632,10 @@ class BuildImpactSecondary:
             self._other_data()
 
     def _impact_date(self):
-        """Title."""
+        """Send data to db_adr.tbl_impact_dates."""
+        log.write.info(f"Building tbl_impact_dates for visit: {self._test_id}")
+
+        # Identify relevant columns
         col_date = [
             "subj_id",
             "test_id",
@@ -571,12 +647,12 @@ class BuildImpactSecondary:
         ].tolist()
         df_dates = self._df_clean.loc[idx_type, col_date].copy()
 
-        #
+        # Manage col types and names
         df_dates["testDate"] = df_dates["testDate"].dt.strftime("%Y-%m-%d")
         df_dates = df_dates.rename(columns={"testDate": "impact_date"})
         df_dates = df_dates.replace(np.nan, None)
 
-        #
+        # Send data to database
         database.build_table(
             "tbl_impact_dates",
             df_dates,
@@ -585,8 +661,7 @@ class BuildImpactSecondary:
         )
 
     def _user_data(self):
-        """Title."""
-        #
+        """Send data to db_adr.tbl_impact_user."""
         log.write.info(f"Building tbl_impact_user for visit: {self._test_id}")
 
         # Extract identifier and userItem columns
@@ -608,7 +683,13 @@ class BuildImpactSecondary:
         )
 
     def _other_data(self):
-        """Title."""
+        """Send data to db_adr tables.
+
+        Send data to tbl_impact_design, tbl_impact_xo, tbl_impact_color,
+        and tbl_impact_three.
+
+        """
+        # Determine id and table columns
         id_cols = ["subj_id", "test_id", "num_tbi"]
         map_cols = {
             "design": [x for x in self._df_clean.columns if "design" in x],
@@ -617,6 +698,7 @@ class BuildImpactSecondary:
             "three": [x for x in self._df_clean.columns if "three" in x],
         }
 
+        # Send data to each planned table
         for tbl, sub_cols in map_cols.items():
             log.write.info(
                 f"Building tbl_impact_{tbl} for visit: {self._test_id}"

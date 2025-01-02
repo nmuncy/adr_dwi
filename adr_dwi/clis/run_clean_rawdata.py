@@ -1,6 +1,15 @@
-"""TODO
+"""Fully BIDSify rawdata.
 
-Examples:
+Data copied from attic/barbey/shared/ADR is nearly BIDS compliant,
+this will finish the BIDS-ification process for anat, dwi, and
+fmap files copied to data-dir/rawdata.
+
+Notes:
+    - To be used after manual copying (scp) of data from attic to nrdstor.
+    - Assumes the extra DWI and SWI files have manually been removed from
+        nrdstor rawdata.
+
+Example:
     clean_raw -r
 
 """
@@ -8,6 +17,7 @@ Examples:
 import os
 import sys
 import textwrap
+import platform
 from argparse import ArgumentParser, RawTextHelpFormatter
 from adr_dwi import submit
 
@@ -52,6 +62,14 @@ def main():
     args = get_args().parse_args()
     data_dir = args.data_dir
     run = args.run
+
+    # Validate env
+    if "swan" not in platform.uname().node:
+        raise EnvironmentError("Intended for use on HCC.")
+
+    # Allow for call to print help
+    if not run:
+        return
 
     # Setup data and log dirs
     log_dir = os.path.join(data_dir, "logs", "clean_rawdata")

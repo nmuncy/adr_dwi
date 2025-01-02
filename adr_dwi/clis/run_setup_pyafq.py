@@ -1,10 +1,17 @@
-"""Title.
+"""Make and aggregate files needed to run pyAFQ.
 
-TODO
+Setup working location with all files required to run pyAFQ, including
+BIDS dataset_description.json, config.toml, preprocessed DWI files,
+and brain masks. Schedules an SBATCH array for all subjects specified or
+found to have required preprocessed files. Output will be found in
+work-dir/dwi_afq.
+
+Requires:
+    - FSL to be executable in system OS.
 
 Examples:
-    setup_afq --subj 0003 --sess 1
-    setup_afq --subj-all
+    setup_pyafq --subj 0003 --sess 1
+    setup_pyafq --subj-all
 
 
 """
@@ -12,6 +19,8 @@ Examples:
 import os
 import sys
 import glob
+import platform
+import shutil
 from datetime import datetime
 import textwrap
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -98,6 +107,12 @@ def main():
 
     log = helper.MakeLogger(os.path.basename(__file__))
 
+    # Validate env
+    if "swan" not in platform.uname().node:
+        raise EnvironmentError("Intended for use on HCC.")
+    if not shutil.which("bet"):
+        raise EnvironmentError("Missing FSL in environment")
+
     # Setup
     work_par = os.path.join(work_dir, "dwi_afq")
     log_dir = os.path.join(
@@ -161,7 +176,7 @@ def main():
     # Report and submit jobs
     subj_sess = [(x, y) for x, y_list in data_avail.items() for y in y_list]
     log.write.info(f"Submitting jobs for: {subj_sess}")
-    _, _ = submit.sched_setup_afq_array(
+    _, _ = submit.sched_setup_pyafq_array(
         subj_sess, arr_size, data_dir, work_dir, log_dir
     )
 

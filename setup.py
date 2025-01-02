@@ -11,8 +11,8 @@ setup(
             "adr_dwi=adr_dwi.entrypoint:main",
             "clean_raw=adr_dwi.clis.run_clean_rawdata:main",
             "preproc_dwi=adr_dwi.clis.run_preproc_dwi:main",
-            "setup_afq=adr_dwi.clis.run_setup_afq:main",
-            "run_afq=adr_dwi.clis.run_afq:main",
+            "setup_pyafq=adr_dwi.clis.run_setup_pyafq:main",
+            "run_pyafq=adr_dwi.clis.run_pyafq:main",
         ]
     },
     include_package_data=True,

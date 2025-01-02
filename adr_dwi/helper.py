@@ -3,6 +3,7 @@
 MakeLogger: Supply logging object.
 afni_sing: Supply AFNI singularity call.
 get_ext: Return extension or .nii.gz.
+is_empty: Check if file is empty.
 
 """
 
@@ -56,9 +57,7 @@ class MakeLogger:
 log = MakeLogger(os.path.basename(__file__))
 
 
-def afni_sing(
-    subj_work: PT,
-) -> list:
+def afni_sing(subj_work: PT) -> list:
     """Supply singularity call for AFNI.
 
     Args:
@@ -93,5 +92,5 @@ def get_ext(suff: str) -> str:
 
 
 def is_empty(file_path: PT) -> bool:
-    """Title."""
+    """Return whether a file is empty."""
     return os.stat(file_path).st_size == 0

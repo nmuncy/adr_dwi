@@ -4,12 +4,17 @@ A MySQL server runs on a separate linux machine (Gimli), hosting
 a database called db_adr. These methods allow the user to
 connect to, pull data from, and send data to the database.
 
+Notes:
+    Currently expects workstation to be named 'gimli' and the compute
+    cluster 'swan'. Also accepts Mac users ('Darwin').
+
+build_afq: Send datat to db_adr.tbl_afq.
+build_impact_user: Send data to db_adr.tbl_impact_user.
+build_table: Send data to db_adr given input.
 DbConnect: Connect to MySQL server over SSH connection (or locally)
     and provide methods for interacting with db_adr.
 RefMaps: Supply mapping attributes of reference name to ID, and
     other methods, attributes for such mappings.
-
-TODO switch RSA_GIMLI for RSA_WS
 
 """
 
@@ -37,12 +42,17 @@ class DbConnect:
     """Supply db_adr database connection and interaction methods.
 
     Requires:
-        OS gLobal variable SQL_PASS: User password to db_adr.
-        OS global variable RSA_GIMLI: Path to RSA key for SSH access to Gimli.
+        - OS gLobal variable SQL_PASS: User password to db_adr.
+        - OS global variable RSA_WS: Path to RSA key for SSH access to work
+            station running MySQL server.
 
     Attributes:
         con : mysql.connector.connection_cext.CMySQLConnection
             Connection object to database
+
+    Notes:
+        Currently depends on machine named 'gimli' for local connection, at
+        specified IP address. See initializer and _connect_ssh methods.
 
     Example:
         db_con = DbConnect()
@@ -71,8 +81,8 @@ class DbConnect:
             self._connect_remote()
 
     def _connect_local(self):
-        """Connect to MySQL server from Gimli."""
-        log.write.info("Connecting from Gimli")
+        """Connect to MySQL server from work station."""
+        log.write.info("Connecting from work station")
         self.con = mysql.connector.connect(
             host="localhost",
             user=os.environ["USER"],
@@ -84,10 +94,10 @@ class DbConnect:
         """Connect to MySQL server from remote."""
         log.write.info("Connecting from HCC")
         try:
-            os.environ["RSA_GIMLI"]
+            os.environ["RSA_WS"]
         except KeyError as e:
             raise Exception(
-                "No global variable 'RSA_GIMLI' defined in user env"
+                "No global variable 'RSA_WS' defined in user env"
             ) from e
 
         self._connect_ssh()
@@ -102,13 +112,11 @@ class DbConnect:
     def _connect_ssh(self):
         """Start ssh tunnel."""
         log.write.info("Starting SSH tunnel")
-        rsa_gimli = paramiko.RSAKey.from_private_key_file(
-            os.environ["RSA_GIMLI"]
-        )
+        rsa_ws = paramiko.RSAKey.from_private_key_file(os.environ["RSA_WS"])
         self._ssh_tunnel = SSHTunnelForwarder(
             ("10.64.118.79", 22),
             ssh_username=os.environ["USER"],
-            ssh_pkey=rsa_gimli,
+            ssh_pkey=rsa_ws,
             remote_bind_address=("127.0.0.1", 3306),
         )
         self._ssh_tunnel.start()
@@ -345,8 +353,20 @@ def build_impact_user(df_user: pd.DataFrame, ref_maps: Type[RefMaps]):
 
 
 def build_afq(df: pd.DataFrame) -> pd.DataFrame:
-    """Title."""
+    """Insert data into db_adr.tbl_afq.
+
+    Format pyAFQ output for insertion into database.
+
+    Args:
+        df: Dataframe of afq derivative tract_profiles.csv
+
+    Returns:
+        Formatted dataframe used for insertion.
+
+    """
     log.write.info("Sending AFQ data to db_adr.tbl_afq")
+
+    # Start connection and load references
     db_con = DbConnect()
     ref_maps = RefMaps(db_con)
 
@@ -376,5 +396,7 @@ def build_afq(df: pd.DataFrame) -> pd.DataFrame:
     )
     tbl_input = list(df[col_list].itertuples(index=False, name=None))
     db_con.exec_many(sql_cmd, tbl_input)
+
+    # Clean up
     db_con.close_con()
     return df

@@ -29,9 +29,13 @@ better_worse <- function(col_name, df, visit_name) {
 }
 
 
-#' Find average change
+#' Find average change of metric.
 #'
-#' @param TODO
+#' @param col_name Column name of df for testing.
+#' @param df Dataframe of impact data.
+#' @param visit_name String name of scan visit (base, post, or rtp).
+#' @returns Named list, avg_bet = average value of those who got better
+#' across visits; avg_wor = avergae value of those who got worse across visits.
 export("score_change")
 score_change <- function(col_name, df, visit_name) {
   df_sub <- reshape(
@@ -112,8 +116,11 @@ wc_ranksum <- function(col_name, df, visit_name) {
 }
 
 
-#' Conduct Principal Components Analysis
-#' TODO
+#' Conduct Principal Components Analysis of impact data.
+#' 
+#' @param df Dataframe of impact scores.
+#' @param col_list List of columns to include in PCA.
+#' @returns PCA (prcomp) stats object.
 export("run_pca")
 run_pca <- function(df, col_list){
   df <- df[stats::complete.cases(df[, col_list]), ]
@@ -123,7 +130,12 @@ run_pca <- function(df, col_list){
 
 
 #' Conduct K-means clustering
-#' TODO
+#' 
+#' @param df Dataframe of impact scores.
+#' @param col_list List of columns to include in k-means analysis.
+#' @param num_k Numeric, specify number of centers.
+#' @returns Named list containing scaled data (data_norm), kmeans stats
+#'    object (stats_km), and cluster lists (clust_km).
 export("run_kmeans")
 run_kmeans <- function(df, col_list, num_k){
   df <- df[stats::complete.cases(df[, col_list]), ]

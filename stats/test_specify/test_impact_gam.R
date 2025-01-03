@@ -22,7 +22,7 @@ library("factoextra")
 library("ggbiplot")
 
 df_post <- df_scan_imp[which(df_scan_imp$scan_name == "post"), ]
-df_post <- df_post[complete.cases(df_post[, 7:12]), ]#7:10
+df_post <- df_post[complete.cases(df_post[, 7:12]), ] # 7:10
 
 # hist(df_post$mem_ver, breaks = 20)
 # hist(df_post$mem_vis, breaks = 20)
@@ -31,14 +31,14 @@ df_post <- df_post[complete.cases(df_post[, 7:12]), ]#7:10
 # hist(df_post$imp_ctl, breaks = 20)
 # hist(df_post$tot_symp, breaks = 20)
 
-pc_post <- prcomp(df_post[,7:12], center=T, scale. = T) #7:10
+pc_post <- prcomp(df_post[, 7:12], center = T, scale. = T) # 7:10
 pc_post$center
 pc_post$scale
 print(pc_post)
 summary(pc_post)
 
-fviz_eig(pc_post, addlabels=T)
-fviz_pca_biplot(pc_post, label="var")
+fviz_eig(pc_post, addlabels = T)
+fviz_pca_biplot(pc_post, label = "var")
 
 # ellipse.prob=0.68
 # ellipse=T,
@@ -46,13 +46,13 @@ ggbiplot(
   pc_post,
   obs.scale = 1,
   var.scale = 1,
-  circle=T
-) + 
-  scale_color_discrete(name="") +
+  circle = T
+) +
+  scale_color_discrete(name = "") +
   theme(legend.direction = "horizontal")
 
-# # Invert rx_time 
-# df_post$rx_time_inv <- 
+# # Invert rx_time
+# df_post$rx_time_inv <-
 #   (max(df_post$rx_time) - df_post$rx_time) + min(df_post$rx_time)
 # pc_post <- prcomp(df_post[,c(7:9,15)], center=T, scale. = T)
 # pc_post$center
@@ -71,26 +71,26 @@ library("ggplot2")
 library("ggpubr")
 
 df_post <- df_scan_imp[which(df_scan_imp$scan_name == "post"), ]
-df_post <- df_post[complete.cases(df_post[, 7:10]), ] #7:12
+df_post <- df_post[complete.cases(df_post[, 7:10]), ] # 7:12
 
 # Normalize and check distance
-data_norm <- scale(df_post[, 7:10]) #7:12
+data_norm <- scale(df_post[, 7:10]) # 7:12
 data_dist <- dist(data_norm)
 fviz_nbclust(data_norm, kmeans, method = "wss")
 
 # K-means, determine cluster membership
-km_post <- kmeans(data_norm, centers = 3, nstart=100) #5
+km_post <- kmeans(data_norm, centers = 3, nstart = 100) # 5
 print(km_post)
 
 km_clust <- km_post$cluster
 rownames(data_norm) <- df_post$subj_id
-fviz_cluster(list(data=data_norm, cluster = km_clust))
+fviz_cluster(list(data = data_norm, cluster = km_clust))
 table(km_clust)
 
 # Plot
 km_clust <- as.data.frame(km_clust)
 rownames(km_clust) <- df_post$subj_id
-km_clust <- cbind(subj_id=rownames(km_clust), km_clust)
+km_clust <- cbind(subj_id = rownames(km_clust), km_clust)
 rownames(km_clust) <- NULL
 
 # Organize group labels for consistency, by know members of groups
@@ -104,22 +104,22 @@ km_clust[which(km_clust$km_clust == grp_c_lab), ]$km_grp <- 3
 
 
 df_post_grp <- merge(
-  x=df_post,
-  y=km_clust,
-  by="subj_id",
+  x = df_post,
+  y = km_clust,
+  by = "subj_id",
   all = T
 )
 
-plot(df_post_grp$mem_ver, col=factor(df_post_grp$km_grp))
-plot(df_post_grp$mem_vis, col=factor(df_post_grp$km_grp))
-plot(df_post_grp$vis_mot, col=factor(df_post_grp$km_grp))
-plot(df_post_grp$rx_time, col=factor(df_post_grp$km_grp))
-plot(df_post_grp$tot_symp, col=factor(df_post_grp$km_grp))
-plot(df_post_grp$imp_ctl, col=factor(df_post_grp$km_grp))
+plot(df_post_grp$mem_ver, col = factor(df_post_grp$km_grp))
+plot(df_post_grp$mem_vis, col = factor(df_post_grp$km_grp))
+plot(df_post_grp$vis_mot, col = factor(df_post_grp$km_grp))
+plot(df_post_grp$rx_time, col = factor(df_post_grp$km_grp))
+plot(df_post_grp$tot_symp, col = factor(df_post_grp$km_grp))
+plot(df_post_grp$imp_ctl, col = factor(df_post_grp$km_grp))
 
 pairs.panels(
-  df_post_grp[, 7:10],  #7:12
-  bg=c("blue", "red", "green")[df_post_grp$km_grp],
+  df_post_grp[, 7:10], # 7:12
+  bg = c("blue", "red", "green")[df_post_grp$km_grp],
   # bg=c("blue", "red", "green", "orange", "purple")[df_post_grp$km_grp],
   gap = 0,
   pch = 21
@@ -127,50 +127,50 @@ pairs.panels(
 
 # Check Simpson's Paradox
 ggplot(
-  data=df_post_grp,
-  aes(x=vis_mot, y=mem_vis, color=factor(km_grp))
+  data = df_post_grp,
+  aes(x = vis_mot, y = mem_vis, color = factor(km_grp))
 ) +
   geom_point() +
-  stat_smooth(method=lm, se=F) +
+  stat_smooth(method = lm, se = F) +
   scale_color_manual(
-    breaks=c("1", "2", "3"),#, "4", "5"
-    values=c("blue", "red", "green")#, "orange", "purple"
+    breaks = c("1", "2", "3"), # , "4", "5"
+    values = c("blue", "red", "green") # , "orange", "purple"
   ) +
-  stat_cor(method="pearson")
+  stat_cor(method = "pearson")
 
-# Add global line  
+# Add global line
 ggplot(
-  data=df_post_grp,
-  aes(x=vis_mot, y=mem_vis)
+  data = df_post_grp,
+  aes(x = vis_mot, y = mem_vis)
 ) +
-  geom_point(aes(color=factor(km_grp))) +
-  stat_smooth(method=lm, aes(color=factor(km_grp)), se=F) +
+  geom_point(aes(color = factor(km_grp))) +
+  stat_smooth(method = lm, aes(color = factor(km_grp)), se = F) +
   scale_color_manual(
-    breaks=c("1", "2", "3", "4", "5"),
-    values=c("blue", "red", "green", "orange", "purple")
+    breaks = c("1", "2", "3", "4", "5"),
+    values = c("blue", "red", "green", "orange", "purple")
   ) +
-  stat_cor(method="pearson", aes(color=factor(km_grp))) +
-  stat_cor(method="pearson", label.x=40, label.y=38) +
-  geom_smooth(method=lm, color="black", se=F)
+  stat_cor(method = "pearson", aes(color = factor(km_grp))) +
+  stat_cor(method = "pearson", label.x = 40, label.y = 38) +
+  geom_smooth(method = lm, color = "black", se = F)
 
 
 # RF: Base vs Post ----
 #
 # OOB err rate with 6 param = 39.25%
-# 
+#
 library("randomForest")
 
 
 df <- df_scan_imp[
-  which(df_scan_imp$scan_name != "rtp"), 
+  which(df_scan_imp$scan_name != "rtp"),
   c(
-    "subj_id", "scan_name", "mem_ver", "mem_vis", 
+    "subj_id", "scan_name", "mem_ver", "mem_vis",
     "vis_mot", "rx_time", "imp_ctl", "tot_symp"
   )
 ]
 df$scan_name <- as.character(df$scan_name)
 rf <- randomForest(
-  factor(scan_name) ~ mem_ver + 
+  factor(scan_name) ~ mem_ver +
     mem_vis + vis_mot + rx_time + imp_ctl + tot_symp,
   data = df,
   ntree = 700,
@@ -181,32 +181,33 @@ rf
 importance(rf)
 
 plot(rf)
-varImpPlot(rf, sort=F, main="base vs post RF importance")
+varImpPlot(rf, sort = F, main = "base vs post RF importance")
 
 
 # MERF: Base vs Post vs RTP ----
 library("LongituRF")
 
-df <- df_scan_imp[, 
+df <- df_scan_imp[
+  ,
   c(
-    "subj_id", "scan_name", "mem_ver", "mem_vis", 
+    "subj_id", "scan_name", "mem_ver", "mem_vis",
     "vis_mot", "rx_time", "imp_ctl", "tot_symp"
   )
 ]
 df$time <- 1
-df[which(df$scan_name == "post"),]$time <- 2
-df[which(df$scan_name == "rtp"),]$time <- 3
+df[which(df$scan_name == "post"), ]$time <- 2
+df[which(df$scan_name == "rtp"), ]$time <- 3
 df$z <- 1 # TODO specify
 
 merf <- MERF(
-  x=df[,3:8],
-  y=df$scan_name,
-  z=df$z,
-  id=df$subj_id,
-  time=df$time,
-  mtry=2,
-  ntree=500,
-  sto="BM"
+  x = df[, 3:8],
+  y = df$scan_name,
+  z = df$z,
+  id = df$subj_id,
+  time = df$time,
+  mtry = 2,
+  ntree = 500,
+  sto = "BM"
 )
 
 
@@ -217,22 +218,22 @@ library(viridis)
 library(rgl)
 
 df <- subset(
-  df_scan_imp, 
+  df_scan_imp,
   select = c(
-    "subj_id", "scan_name", "mem_ver", "mem_vis", 
+    "subj_id", "scan_name", "mem_ver", "mem_vis",
     "vis_mot", "rx_time", "imp_ctl", "tot_symp"
   )
 )
 
-df$scan_time <-1
-df[which(df$scan_name == "post"),]$scan_time <- 2
-df[which(df$scan_name == "rtp"),]$scan_time <- 3
+df$scan_time <- 1
+df[which(df$scan_name == "post"), ]$scan_time <- 2
+df[which(df$scan_name == "rtp"), ]$scan_time <- 3
 
 
 # descdist(df$mem_vis)
 # hist(df$mem_vis)
 fit_mem <- gam(
-  mem_vis ~ s(scan_time, bs="tp", k=3) + s(subj_id, bs = "re"),
+  mem_vis ~ s(scan_time, bs = "tp", k = 3) + s(subj_id, bs = "re"),
   data = df,
   family = gaussian(),
   method = "REML"
@@ -270,7 +271,7 @@ fit_GSO <- bam(
     s(node_id, bs = "tp", k = 40) +
     s(node_id, by = scanOF, bs = "fs", k = 40),
   data = df,
-  family =  betar(link = "logit"),
+  family = betar(link = "logit"),
   method = "fREML",
   discrete = T
 )
@@ -282,13 +283,229 @@ p <- getViz(fit_GSO)
 plot(p)
 
 
+# GAM: Tract Post-Base, RTP-Base differences ----
+tract <- "Left Anterior Thalamic"
+df <- df_afq[which(df_afq$tract_name == tract), ]
+# df <- df_afq[which(df$scan_name != "rtp"), ]
+
+# Convert wide for delta calc
+df <- subset(
+  df,
+  select = c("subj_id", "scan_name", "tract_name", "node_id", "dti_fa")
+)
+df_wide <- reshape(
+  df,
+  idvar = c("subj_id", "node_id"), timevar = "scan_name",
+  direction = "wide"
+)
+
+# # Fit delta fa
+# df_wide$delta.fa <- df_wide$dti_fa.post - df_wide$dti_fa.base
+# fit_DG <- bam(
+#   delta.fa ~ s(subj_id, bs = "re") +
+#     s(node_id, bs = "tp", k = 40),
+#   data = df_wide,
+#   family = gaussian(),
+#   method = "fREML",
+#   discrete = T
+# )
+# gam.check(fit_DG)
+# summary(fit_DG)
+# plot(fit_DG)
+#
+# p <- getViz(fit_DG)
+# plot(p)
+
+df_wide$delta.post_base <- df_wide$dti_fa.post - df_wide$dti_fa.base
+df_wide$delta.rtp_base <- df_wide$dti_fa.rtp - df_wide$dti_fa.base
+df_wide <- na.omit(df_wide)
+hist(df_wide$delta.rtp_base)
+
+# Reshape to long
+df_wide <- subset(
+  df_wide,
+  select = c(
+    "subj_id", "node_id", "tract_name.base",
+    "delta.post_base", "delta.rtp_base"
+  )
+)
+df_long <- reshape(
+  df_wide,
+  direction = "long",
+  varying = c("delta.post_base", "delta.rtp_base"),
+  times = c("post_base", "rtp_base"),
+  idvar = c("subj_id", "node_id")
+)
+colnames(df_long)[3:4] <- c("tract_name", "comp_scan")
+rownames(df_long) <- NULL
+df_long$comp_scan <- factor(df_long$comp_scan)
+
+
+# Fit delta FA for groups post-base, rtp-base.
+#
+# Same diff splines as LGIO, smaller dev explained (15.4%)
+fit_LDI <- bam(
+  delta ~ s(subj_id, comp_scan, bs = "re") +
+    s(node_id, by = comp_scan, bs = "tp", k = 50),
+  data = df_long,
+  family = gaussian(),
+  method = "fREML",
+  discrete = T
+)
+gam.check(fit_LDI)
+summary(fit_LDI)
+plot(fit_LDI)
+
+
+rds_lgio <- paste0(
+  getwd(), "/rda_objects/fit_LGIO_laThal_fa.Rda"
+)
+fit_LGIO <- readRDS(rds_lgio)
+gam.check(fit_LGIO)
+summary(fit_LGIO)
+plot(fit_LGIO)
+
+
+
+# GAM: WB Post-Base, RTP-Base differences ----
+#
+# The GAM: Tract difference splines (above) produced the same smooths
+# as the LGSIO model, so it might be possible to fit all data at once
+# using the same difference approach.
+
+# Convert wide for delta calc
+df <- subset(
+  df_afq,
+  select = c("subj_id", "scan_name", "tract_name", "node_id", "dti_fa")
+)
+df_wide <- reshape(
+  df,
+  idvar = c("subj_id", "node_id", "tract_name"), timevar = "scan_name",
+  direction = "wide"
+)
+df_wide$delta.post_base <- df_wide$dti_fa.post - df_wide$dti_fa.base
+df_wide$delta.rtp_base <- df_wide$dti_fa.rtp - df_wide$dti_fa.base
+# hist(df_wide$delta.rtp_base)
+# hist(df_wide$delta.post_base)
+
+df_wide <- subset(
+  df_wide,
+  select = c(
+    "subj_id", "tract_name", "node_id", "delta.post_base", "delta.rtp_base"
+  )
+)
+df_long <- reshape(
+  df_wide,
+  direction = "long",
+  varying = c("delta.post_base", "delta.rtp_base"),
+  times = c("post_base", "rtp_base"),
+  idvar = c("subj_id", "tract_name", "node_id")
+)
+colnames(df_long)[4] <- c("comp_scan")
+rownames(df_long) <- NULL
+df_long$comp_scan <- factor(df_long$comp_scan)
+rm(df_wide, df)
+
+
+# #
+# fit_LDI <- bam(
+#   delta ~ s(subj_id, by = interaction(tract_name, comp_scan), bs = "re") +
+#     s(node_id, by = interaction(tract_name, comp_scan), bs = "tp", k = 40) +
+#     interaction(tract_name, comp_scan),
+#   data = df_long,
+#   family = gaussian(),
+#   method = "fREML",
+#   discrete = T
+# )
+
+# Manually calc interactions
+df_long$tract_scan <- interaction(df_long$tract_name, df_long$comp_scan)
+
+fit_LDI <- bam(
+  delta ~ s(subj_id, by = tract_scan, bs = "re") +
+    s(node_id, by = tract_scan, bs = "tp", k = 40) +
+    tract_name + comp_scan + tract_scan,
+  data = df_long,
+  family = gaussian(),
+  method = "fREML",
+  discrete = T
+)
+rds_ldi <- paste0(getwd(), "/rda_objects/fit_LDI_2_fa.Rda")
+saveRDS(fit_LDI, file = rds_ldi)
+
+fit_LDI <- readRDS(rds_ldi)
+gam.check(fit_LDI)
+summary(fit_LDI)
+plot(fit_LDI)
+
+p <- getViz(fit_LDI)
+plot(p)
+
+
+# GAM: WB Longitudinal ----
+#
+# As GAM: WB diff is working, use long model to avoid
+# dropping data in diff calc.
+df <- subset(
+  df_afq,
+  select = c("subj_id", "scan_name", "tract_name", "node_id", "dti_fa")
+)
+df$tract_scan <- interaction(df$tract_name, df$scan_name)
+
+fit_LGI <- bam(
+  dti_fa ~ s(subj_id, by = tract_scan, bs = "re") +
+    s(node_id, by = tract_name, bs = "tp", k = 40) +
+    s(node_id, by = tract_scan, bs = "tp", k = 40) +
+    tract_name + scan_name + tract_scan,
+  data = df,
+  family = betar(link = "logit"),
+  method = "fREML",
+  discrete = T,
+  nthreads = 12
+)
+rds_lgi <- paste0(getwd(), "/rda_objects/fit_LGI_fa.Rda")
+saveRDS(fit_LGI, file = rds_lgi)
+
+fit_LGI <- readRDS(rds_lgi)
+gam.check(fit_LGI)
+summary(fit_LGI)
+plot(fit_LGI)
+
+p <- getViz(fit_LGI)
+plot(p)
+
+
+# # Reduce to only CC tracts
+# library("data.table")
+# df_r <- subset(
+#   df_afq,
+#   select = c("subj_id", "scan_name", "tract_name", "node_id", "dti_fa")
+# )
+# df_r <- df_r[df_r$tract_name %like% "Callosum", ]
+# df_r$tract_scan <- interaction(df_r$tract_name, df_r$scan_name)
+# 
+# fit_LGI_cc <- bam(
+#   dti_fa ~ s(subj_id, by = tract_scan, bs = "re") +
+#     s(node_id, by = tract_name, bs = "tp", k = 40) +
+#     s(node_id, by = tract_scan, bs = "tp", k = 40) +
+#     tract_name + scan_name + tract_scan,
+#   data = df_r,
+#   family = betar(link = "logit"),
+#   method = "fREML",
+#   discrete = T,
+#   nthreads = 12
+# )
+# rds_lgi_cc <- paste0(getwd(), "/rda_objects/fit_LGI_cc_fa.Rda")
+# saveRDS(fit_LGI_cc, file = rds_lgi_cc)
+
+
 # GAM: Post tract by K-group 1 vs 2, 3 ----
 tract <- "Callosum Temporal"
 df <- df_afq[which(df_afq$tract_name == tract & df_afq$scan_name == "post"), ]
 
 subj_exp <- df_post_grp[which(df_post_grp$km_grp != 1), ]$subj_id
 df$grp <- "con"
-df[which(df$subj_id %in% subj_exp),]$grp <- "exp"
+df[which(df$subj_id %in% subj_exp), ]$grp <- "exp"
 df$grp <- factor(df$grp)
 
 plot(df$node_id, df$dti_fa)
@@ -318,7 +535,7 @@ fit_GSO <- bam(
     s(node_id, bs = "tp", k = 40) +
     s(node_id, by = grpOF, bs = "fs", k = 40),
   data = df,
-  family =  betar(link = "logit"),
+  family = betar(link = "logit"),
   method = "fREML",
   discrete = T
 )
@@ -345,7 +562,8 @@ fit_GS_intx <- bam(
   dti_fa ~ s(subj_id, bs = "re") +
     s(node_id, bs = "tp", k = 40) +
     ti(
-      node_id, mem_vis, by = grp, 
+      node_id, mem_vis,
+      by = grp,
       bs = c("tp", "tp"), k = c(50, 5)
     ),
   data = df,
@@ -363,10 +581,10 @@ plot(p)
 
 #
 open3d()
-mfrow3d(1,2)
-plotRGL(sm(p, 3), xlab = "mem_vis", ylab="node_id", main="base", residuals=T)
+mfrow3d(1, 2)
+plotRGL(sm(p, 3), xlab = "mem_vis", ylab = "node_id", main = "base", residuals = T)
 next3d()
-plotRGL(sm(p, 4), xlab = "mem_vis", ylab="node_id", main="post", residuals=T)
+plotRGL(sm(p, 4), xlab = "mem_vis", ylab = "node_id", main = "post", residuals = T)
 
 
 # Global fit, ordered group smooth, memory
@@ -374,7 +592,8 @@ fit_GSO_intx <- bam(
   dti_fa ~ s(subj_id, bs = "re") +
     s(node_id, bs = "tp", k = 40) +
     ti(
-      node_id, mem_vis, by = grpOF, 
+      node_id, mem_vis,
+      by = grpOF,
       bs = c("tp", "tp"), k = c(50, 5)
     ),
   data = df,
@@ -392,8 +611,8 @@ plot(p)
 
 #
 open3d()
-mfrow3d(1,1)
-plotRGL(sm(p, 3), xlab = "mem_vis", ylab="node_id", main="base", residuals=T)
+mfrow3d(1, 1)
+plotRGL(sm(p, 3), xlab = "mem_vis", ylab = "node_id", main = "base", residuals = T)
 
 
 
@@ -428,7 +647,7 @@ fit_GSO <- bam(
     s(node_id, bs = "tp", k = 40) +
     s(node_id, by = scanOF, bs = "fs", k = 40),
   data = df_k,
-  family =  betar(link = "logit"),
+  family = betar(link = "logit"),
   method = "fREML",
   discrete = T
 )
@@ -450,13 +669,21 @@ fit_I <- bam(
   family = betar(link = "logit"),
   method = "fREML",
   discrete = T,
-  nthreads=12
+  nthreads = 12
 )
-saveRDS(fit_I, file = paste0(getwd(), "/rda_objects/fit_I_fa.Rda"))
+rds_i <- paste0(getwd(), "/rda_objects/fit_I_fa.Rda")
+saveRDS(fit_I, file = rds_i)
+# summary(fit_I)
+# plot(fit_I)
+
+fit_I <- readRDS(rds_i)
+gam.check(fit_I)
 summary(fit_I)
 plot(fit_I)
 
 
+
+# GAM: All tracts longitudinal ----
 # https://stackoverflow.com/questions/68956080/how-to-specify-a-hierarchical-gam-hgam-model-with-two-categorical-a-continuo
 # https://stackoverflow.com/questions/47934100/how-to-specify-the-non-linear-interaction-of-two-factor-variables-in-generalised?rq=3
 # https://stackoverflow.com/questions/63023080/interactions-between-categorical-terms-in-gam-mgcv?rq=3
@@ -470,7 +697,7 @@ fit_LI <- bam(
   family = betar(link = "logit"),
   method = "fREML",
   discrete = T,
-  nthreads=12
+  nthreads = 12
 )
 saveRDS(fit_LI, file = paste0(getwd(), "/rda_objects/fit_LI_fa.Rda"))
 plot(fit_LI)
@@ -499,7 +726,8 @@ fit_GS_intx <- bam(
   dti_fa ~ s(subj_id, scan_name, bs = "re") +
     s(node_id, bs = "tp", k = 40) +
     ti(
-      node_id, mem_vis, by = scan_name, 
+      node_id, mem_vis,
+      by = scan_name,
       bs = c("tp", "tp"), k = c(50, 5)
     ),
   data = df,
@@ -517,12 +745,12 @@ plot(p)
 
 #
 open3d()
-mfrow3d(1,3)
-plotRGL(sm(p, 3), xlab = "mem_vis", ylab="node_id", main="base", residuals=T)
+mfrow3d(1, 3)
+plotRGL(sm(p, 3), xlab = "mem_vis", ylab = "node_id", main = "base", residuals = T)
 next3d()
-plotRGL(sm(p, 4), xlab = "mem_vis", ylab="node_id", main="post", residuals=T)
+plotRGL(sm(p, 4), xlab = "mem_vis", ylab = "node_id", main = "post", residuals = T)
 next3d()
-plotRGL(sm(p, 5), xlab = "mem_vis", ylab="node_id", main="rtp", residuals=T)
+plotRGL(sm(p, 5), xlab = "mem_vis", ylab = "node_id", main = "rtp", residuals = T)
 
 length(which(df_k$scan_name == "post" & df_k$node_id == 10))
 length(which(df_k$scan_name == "rtp" & df_k$node_id == 10))
@@ -537,8 +765,8 @@ df_base_cov <- df_base[which(df_base$node_id == node_list[1]), ]
 subj_base <- as.character(df_base_cov$subj_id)
 num_base <- length(subj_base)
 seq_base_cov <- seq(
-  min(df_base_cov[, "mem_vis"]), 
-  max(df_base_cov[, "mem_vis"]), 
+  min(df_base_cov[, "mem_vis"]),
+  max(df_base_cov[, "mem_vis"]),
   length = num_base
 )
 
@@ -548,8 +776,8 @@ df_post_cov <- df_post[which(df_post$node_id == node_list[1]), ]
 subj_post <- as.character(df_post_cov$subj_id)
 num_post <- length(subj_post)
 seq_post_cov <- seq(
-  min(df_post_cov[, "mem_vis"]), 
-  max(df_post_cov[, "mem_vis"]), 
+  min(df_post_cov[, "mem_vis"]),
+  max(df_post_cov[, "mem_vis"]),
   length = num_post
 )
 
@@ -559,8 +787,8 @@ df_rtp_cov <- df_rtp[which(df_rtp$node_id == node_list[1]), ]
 subj_rtp <- as.character(df_rtp_cov$subj_id)
 num_rtp <- length(subj_rtp)
 seq_rtp_cov <- seq(
-  min(df_rtp_cov[, "mem_vis"]), 
-  max(df_rtp_cov[, "mem_vis"]), 
+  min(df_rtp_cov[, "mem_vis"]),
+  max(df_rtp_cov[, "mem_vis"]),
   length = num_rtp
 )
 
@@ -583,21 +811,21 @@ z_min <- min(c(df_pred_base_intx$fit, df_pred_base_intx$fit), na.rm = T)
 z_max <- max(c(df_pred_base_intx$fit, df_pred_base_intx$fit), na.rm = T)
 
 ggplot(
-  df_pred_base_intx, 
+  df_pred_base_intx,
   aes(x = node_id, y = mem_vis, z = fit)
-  ) +
+) +
   geom_tile(aes(fill = fit)) +
   geom_contour(colour = "black") +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
   scale_fill_viridis(
-    option = "D", 
+    option = "D",
     name = "Est. FA Fit",
     limits = c(z_min, z_max)
   ) +
   theme(
     text = element_text(family = "Times New Roman"),
     plot.title = element_text(size = 12),
-    legend.text=element_text(size = 10),
+    legend.text = element_text(size = 10),
     axis.title.y = element_blank(),
     axis.title.x = element_blank()
   )
@@ -620,21 +848,21 @@ pred_post_fit[ind_excl] <- NA
 df_pred_post_intx <- cbind(df_pred_post_intx, fit = pred_post_fit)
 
 ggplot(
-  df_pred_post_intx, 
+  df_pred_post_intx,
   aes(x = node_id, y = mem_vis, z = fit)
 ) +
   geom_tile(aes(fill = fit)) +
   geom_contour(colour = "black") +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
   scale_fill_viridis(
-    option = "D", 
+    option = "D",
     name = "Est. FA Fit",
     limits = c(z_min, z_max)
   ) +
   theme(
     text = element_text(family = "Times New Roman"),
     plot.title = element_text(size = 12),
-    legend.text=element_text(size = 10),
+    legend.text = element_text(size = 10),
     axis.title.y = element_blank(),
     axis.title.x = element_blank()
   )
@@ -657,21 +885,21 @@ pred_rtp_fit[ind_excl] <- NA
 df_pred_rtp_intx <- cbind(df_pred_rtp_intx, fit = pred_rtp_fit)
 
 ggplot(
-  df_pred_rtp_intx, 
+  df_pred_rtp_intx,
   aes(x = node_id, y = mem_vis, z = fit)
 ) +
   geom_tile(aes(fill = fit)) +
   geom_contour(colour = "black") +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
   scale_fill_viridis(
-    option = "D", 
+    option = "D",
     name = "Est. FA Fit",
     limits = c(z_min, z_max)
   ) +
   theme(
     text = element_text(family = "Times New Roman"),
     plot.title = element_text(size = 12),
-    legend.text=element_text(size = 10),
+    legend.text = element_text(size = 10),
     axis.title.y = element_blank(),
     axis.title.x = element_blank()
   )
@@ -683,7 +911,8 @@ fit_GSO_intx <- bam(
   dti_fa ~ s(subj_id, scan_name, bs = "re") +
     s(node_id, bs = "tp", k = 40) +
     ti(
-      node_id, mem_vis, by = scanOF, 
+      node_id, mem_vis,
+      by = scanOF,
       bs = c("tp", "tp"), k = c(50, 5)
     ),
   data = df,
@@ -698,14 +927,14 @@ plot(fit_GSO_intx)
 p <- getViz(fit_GSO_intx)
 plot(p)
 
-saveRDS(fit_GSO_intx, file=file_gso_intx)
+saveRDS(fit_GSO_intx, file = file_gso_intx)
 
 #
 open3d()
-mfrow3d(1,2)
-plotRGL(sm(p, 3), xlab = "mem_vis", ylab="node_id", main="post-base")
+mfrow3d(1, 2)
+plotRGL(sm(p, 3), xlab = "mem_vis", ylab = "node_id", main = "post-base")
 next3d()
-plotRGL(sm(p, 4), xlab = "mem_vis", ylab="node_id", main="rtp-base")
+plotRGL(sm(p, 4), xlab = "mem_vis", ylab = "node_id", main = "rtp-base")
 
 
 
@@ -718,8 +947,8 @@ df_post_cov <- df_post[which(df_post$node_id == node_list[1]), ]
 subj_post <- as.character(df_post_cov$subj_id)
 num_post <- length(subj_post)
 seq_post_cov <- seq(
-  min(df_post_cov[, "mem_vis"]), 
-  max(df_post_cov[, "mem_vis"]), 
+  min(df_post_cov[, "mem_vis"]),
+  max(df_post_cov[, "mem_vis"]),
   length = num_post
 )
 
@@ -731,13 +960,14 @@ df_pred_post_intx <- data.frame(
   mem_vis = rep(seq_post_cov, each = num_node)
 )
 pred_intx_diff <- as.data.frame(predict.gam(
-  fit_GSO_intx, df_pred_post_intx, type = "terms"
+  fit_GSO_intx, df_pred_post_intx,
+  type = "terms"
 ))
 colnames(pred_intx_diff) <- c("subj.scan", "node", "fit.post", "fit.rtp")
 pred_intx_diff <- cbind(df_pred_post_intx, fit = pred_intx_diff$fit.post)
 
 ggplot(
-  pred_intx_diff, 
+  pred_intx_diff,
   aes(x = node_id, y = mem_vis, z = fit)
 ) +
   geom_tile(aes(fill = fit)) +
@@ -748,7 +978,7 @@ ggplot(
   theme(
     text = element_text(family = "Times New Roman"),
     plot.title = element_text(size = 12),
-    legend.text=element_text(size = 10),
+    legend.text = element_text(size = 10),
     axis.title.y = element_blank(),
     axis.title.x = element_blank()
   )
@@ -760,8 +990,8 @@ df_rtp_cov <- df_rtp[which(df_rtp$node_id == node_list[1]), ]
 subj_rtp <- as.character(df_rtp_cov$subj_id)
 num_rtp <- length(subj_rtp)
 seq_rtp_cov <- seq(
-  min(df_rtp_cov[, "mem_vis"]), 
-  max(df_rtp_cov[, "mem_vis"]), 
+  min(df_rtp_cov[, "mem_vis"]),
+  max(df_rtp_cov[, "mem_vis"]),
   length = num_rtp
 )
 
@@ -773,13 +1003,14 @@ df_pred_rtp_intx <- data.frame(
   mem_vis = rep(seq_rtp_cov, each = num_node)
 )
 pred_intx_diff <- as.data.frame(predict.gam(
-  fit_GSO_intx, df_pred_rtp_intx, type = "terms"
+  fit_GSO_intx, df_pred_rtp_intx,
+  type = "terms"
 ))
 colnames(pred_intx_diff) <- c("subj.scan", "node", "fit.post", "fit.rtp")
 pred_intx_diff <- cbind(df_pred_rtp_intx, fit = pred_intx_diff$fit.rtp)
 
 ggplot(
-  pred_intx_diff, 
+  pred_intx_diff,
   aes(x = node_id, y = mem_vis, z = fit)
 ) +
   geom_tile(aes(fill = fit)) +
@@ -790,7 +1021,7 @@ ggplot(
   theme(
     text = element_text(family = "Times New Roman"),
     plot.title = element_text(size = 12),
-    legend.text=element_text(size = 10),
+    legend.text = element_text(size = 10),
     axis.title.y = element_blank(),
     axis.title.x = element_blank()
   )

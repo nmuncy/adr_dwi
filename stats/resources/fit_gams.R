@@ -50,13 +50,14 @@ switch_tract <- function(tract_name) {
 #' HGAM of Callosum Superior Parietal.
 #'
 #' Deprecated, use for testing.
+#' TODO remove
 #'
 #' Fit HGAMs with AFQ FA values to generate global, group,
 #' and ordered group smooths.
 #'
 #' @param df TODO
 export("gam_spar")
-gam_spar <- function(df) {
+.gam_spar <- function(df) {
   #
   # fit_S <- bam(
   #   dti_fa ~ s(node_id, bs="tp", k=40, m=2) +
@@ -105,9 +106,10 @@ gam_spar <- function(df) {
 #' HGAM of Callosum Superior Parietal with random sample
 #'
 #' Deprecated, use for testing.
+#' TODO remove
 #'
 export("gam_rand")
-gam_rand <- function(df, seed) {
+.gam_rand <- function(df, seed) {
   # Identify subjs with base and post
   subj_list <- unique(df[which(df$scan_name == "post"), ]$subj_id)
   df <- df[which(df$subj_id %in% subj_list), ]
@@ -132,9 +134,10 @@ gam_rand <- function(df, seed) {
 #' Gam interaction for Callosum Superior Parietal and total symptom.
 #'
 #' Deprecated, used for testing.
+#' TODO remove
 #'
 export("gam_intx")
-gam_intx <- function(df) {
+.gam_intx <- function(df) {
   fit_intx <- bam(
     dti_fa ~ s(subj_id, scan_name, bs = "re") +
       s(node_id, bs = "tp", k = 40) +
@@ -182,83 +185,102 @@ write_gam_stats <- function(gam_obj, out_file) {
 }
 
 
-#' Fit HGAM with global, group smooths and wiggliness.
-#' @param df TODO
-export("gam_gsi")
-gam_gsi <- function(df, scalar_name, col_group, k_max = 40) {
+#' Fit dwi data via HGAM with global, group smooths and wiggliness.
+#' 
+#' @param df Dataframe of AFQ data for single tract.
+#' @param scalar_name DWI metric, dti_fa, dti_rd, dti_md, or dti_ad.
+#' @param col_group Column of df holding group factor.
+#' @param k_max Numeric, parameter for smooth k argument.
+#' @returns mgcv::bam fit object.
+export("mod_gi")
+mod_gi <- function(df, scalar_name, col_group, k_max = 40) {
   # Validate scalar name
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
 
-  #
+  # Identify columns of df for scalar and group, as well
+  # as family used for scalar.
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
   names(df)[names(df) == col_group] <- "group"
   df$group <- factor(df$group)
 
-  #
-  fit_GSI <- bam(
+  # Fit data
+  fit_GI <- bam(
     dti_scalar ~ s(subj_id, bs = "re") +
-      s(node_id, bs = "tp", k = k_max) +
-      s(node_id, by = group, bs = "tp", k = k_max),
+      s(node_id, bs = "tp", k = k_max, m = 2) +
+      s(node_id, by = group, bs = "tp", k = k_max), m = 1,
     data = df,
     family = fam_scalar,
     method = "fREML",
     discrete = T,
     nthreads = 4
   )
-  return(fit_GSI)
+  return(fit_GI)
 }
 
 
-#' Fit ordered HGAM with global, group smooths and wiggliness.
-#' @param df TODO
-export("gam_gsio")
-gam_gsio <- function(df, scalar_name, col_group, k_max = 40) {
+#' Fit dwi data via ordered HGAM with global, group smooths and wiggliness.
+#' 
+#' Compare group B smooth to that of group A using ordered factors.
+#' 
+#' @param df Dataframe of AFQ data for single tract.
+#' @param scalar_name DWI metric, dti_fa, dti_rd, dti_md, or dti_ad.
+#' @param col_group Column of df holding group factor.
+#' @param k_max Numeric, parameter for smooth k argument.
+#' @returns mgcv::bam fit object.
+export("mod_gio")
+mod_gio <- function(df, scalar_name, col_group, k_max = 40) {
   # Validate scalar name
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
 
-  #
+  # Setup, make ordered factor column
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
   names(df)[names(df) == col_group] <- "group"
   df$group <- factor(df$group)
   df$groupOF <- factor(df$group, ordered = T)
 
-  #
-  fit_GSIO <- bam(
+  # Fit data
+  fit_GIO <- bam(
     dti_scalar ~ s(subj_id, bs = "re") +
-      s(node_id, bs = "tp", k = k_max) +
-      s(node_id, by = groupOF, bs = "tp", k = k_max),
+      s(node_id, bs = "tp", k = k_max, m = 2) +
+      s(node_id, by = groupOF, bs = "tp", k = k_max, m = 1),
     data = df,
     family = fam_scalar,
     method = "fREML",
     discrete = T,
     nthreads = 4
   )
-  return(fit_GSIO)
+  return(fit_GIO)
 }
 
 
-#' Fit HGAM with global and interaction with Impact item smooths.
-#' @param df TODO
-export("gam_g_intx")
-gam_g_intx <- function(
+#' Fit dwi data via GAM with global, impact, and interaction smooths. 
+#' 
+#' @param df Dataframe of AFQ data for single tract.
+#' @param scalar_name DWI metric, dti_fa, dti_rd, dti_md, or dti_ad.
+#' @param impact_meas Column name of impact measure.
+#' @param ks_max Numeric, parameter for global smooth k argument.
+#' @param ki_max Numeric, parameter for interaction smooth k argument.
+#' @returns mgcv::bam fit object.
+export("mod_g_intx")
+mod_g_intx <- function(
     df, scalar_name, impact_meas, ks_max = 40, ki_max = 50) {
   # Validate scalar name
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
 
-  #
+  # Identify family and columns
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
   names(df)[names(df) == impact_meas] <- "impact_meas"
 
-  #
+  # Fit data
   fit_G_intx <- bam(
     dti_scalar ~ s(subj_id, bs = "re") +
       s(node_id, bs = "tp", k = ks_max) +
@@ -274,26 +296,33 @@ gam_g_intx <- function(
 }
 
 
-#' Fit HGAM with global, group smooths and wiggliness, and
-#' interaction with Impact item smooths.
-#' @param df TODO
-export("gam_gsi_intx")
-gam_gsi_intx <- function(
+#' Fit dwi data via GAM with global, impact, and interaction smooths accounting
+#' for group differences. 
+#' 
+#' @param df Dataframe of AFQ data for single tract.
+#' @param scalar_name DWI metric, dti_fa, dti_rd, dti_md, or dti_ad.
+#' @param col_group Column of df holding group factor.
+#' @param impact_meas Column name of impact measure.
+#' @param ks_max Numeric, parameter for global smooth k argument.
+#' @param ki_max Numeric, parameter for interaction smooth k argument.
+#' @returns mgcv::bam fit object.
+export("mod_gi_intx")
+mod_gi_intx <- function(
     df, scalar_name, col_group, impact_meas, ks_max = 40, ki_max = 50) {
   # Validate scalar name
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
 
-  #
+  # Identify relevant columns
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
   names(df)[names(df) == col_group] <- "group"
   df$group <- factor(df$group)
   names(df)[names(df) == impact_meas] <- "impact_meas"
 
-  #
-  fit_GSI_intx <- bam(
+  # Fit data
+  fit_GI_intx <- bam(
     dti_scalar ~ s(subj_id, bs = "re") +
       s(node_id, bs = "tp", k = ks_max) +
       s(impact_meas, by = group, bs = "tp", k = 5) +
@@ -308,22 +337,29 @@ gam_gsi_intx <- function(
     discrete = T,
     nthreads = 4
   )
-  return(fit_GSI_intx)
+  return(fit_GI_intx)
 }
 
 
-#' Fit ordered HGAM with global, group smooths, and
+#' Fit dwi data via ordered HGAM with global, group smooths, and
 #' interaction with Impact item smooths.
-#' @param df TODO
-export("gam_gsio_intx")
-gam_gsio_intx <- function(
+#' 
+#' @param df Dataframe of AFQ data for single tract.
+#' @param scalar_name DWI metric, dti_fa, dti_rd, dti_md, or dti_ad.
+#' @param col_group Column of df holding group factor.
+#' @param impact_meas Column name of impact measure.
+#' @param ks_max Numeric, parameter for global smooth k argument.
+#' @param ki_max Numeric, parameter for interaction smooth k argument.
+#' @returns mgcv::bam fit object.
+export("mod_gio_intx")
+mod_gio_intx <- function(
     df, scalar_name, col_group, impact_meas, ks_max = 40, ki_max = 50) {
   # Validate scalar name
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
   
-  #
+  # Identify relevant columns
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
   names(df)[names(df) == col_group] <- "group"
@@ -331,8 +367,8 @@ gam_gsio_intx <- function(
   df$groupOF <- factor(df$group, ordered = T)
   names(df)[names(df) == impact_meas] <- "impact_meas"
   
-  #
-  fit_GSIO_intx <- bam(
+  # Fit data
+  fit_GIO_intx <- bam(
     dti_scalar ~ s(subj_id, bs = "re") +
       s(node_id, bs = "tp", k = ks_max) +
       ti(
@@ -346,22 +382,29 @@ gam_gsio_intx <- function(
     discrete = T,
     nthreads = 4
   )
-  return(fit_GSIO_intx)
+  return(fit_GIO_intx)
 }
 
-#' Fit longitudinal HGAM with global, group smooths.
-#' @param df TODO
-export("gam_lgsi")
-gam_lgsi <- function(df, scalar_name, k_max = 40) {
+#' Fit longitudinal HGAM with global, group smooths and wiggliness.
+#' 
+#' Pool within subject across multiple scans.
+#' 
+#' @param df Dataframe of AFQ data for single tract.
+#' @param scalar_name DWI metric, dti_fa, dti_rd, dti_md, or dti_ad.
+#' @returns mgcv::bam fit object.
+export("mod_lgi")
+mod_lgi <- function(df, scalar_name, k_max = 40) {
   # Validate scalar name
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
   
-  #
+  # Determine family and relevant cols
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
-  fit_LGSI <- bam(
+  
+  # Fit data
+  fit_LGI <- bam(
     dti_scalar ~ s(subj_id, scan_name, bs = "re") +
       s(node_id, bs = "tp", k = k_max, m = 2) +
       s(node_id, by = scan_name, bs = "tp", k = k_max, m = 1),
@@ -371,24 +414,32 @@ gam_lgsi <- function(df, scalar_name, k_max = 40) {
     discrete = T,
     nthreads = 4
   )
-  return(fit_LGSI)
+  return(fit_LGI)
 }
 
 
-#' Fit longitudinal HGAM with global, group smooths.
-#' @param df TODO
-export("gam_lgsio")
-gam_lgsio <- function(df, scalar_name, k_max = 40) {
+#' Fit longitudinal HGAM with global, group (ordered) smooths and wiggliness.
+#' 
+#' Pool within subject across multiple scans, and compare group B (or more) 
+#' smooth to that of group A using ordered factors.
+#' 
+#' @param df Dataframe of AFQ data for single tract.
+#' @param scalar_name DWI metric, dti_fa, dti_rd, dti_md, or dti_ad.
+#' @returns mgcv::bam fit object.
+export("mod_lgio")
+mod_lgio <- function(df, scalar_name, k_max = 40) {
   # Validate scalar name
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
   
-  #
+  # Determine family and relevant cols
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
   df$scanOF <- factor(df$scan_name, ordered = T)
-  fit_LGSIO <- bam(
+  
+  # Fit data
+  fit_LGIO <- bam(
     dti_scalar ~ s(subj_id, scan_name, bs = "re") +
       s(node_id, bs = "tp", k = k_max, m = 2) +
       s(node_id, by = scanOF, bs = "tp", k = k_max, m = 1),
@@ -398,16 +449,14 @@ gam_lgsio <- function(df, scalar_name, k_max = 40) {
     discrete = T,
     nthreads = 4
   )
-  
-  
-  return(fit_LGSIO)
+  return(fit_LGIO)
 }
 
 
 #' Fit longitudinal HGAM with global, group, and
 #' interaction with Impact item smooths.
 #'
-#' TODO
+#' TODO finalize specification.
 export("gam_lgsi_intx")
 gam_lgsi_intx <- function(df, scalar_name, impact_meas, ks_max = 40, ki_max = 50) {
   # Validate user args
@@ -448,7 +497,7 @@ gam_lgsi_intx <- function(df, scalar_name, impact_meas, ks_max = 40, ki_max = 50
 #' Fit longitudinal HGAM with global, group, and
 #' interaction with Impact item smooths.
 #'
-#' TODO
+#' TODO finalize specification.
 export("gam_lgsio_intx")
 gam_lgsio_intx <- function(df, scalar_name, impact_meas, ks_max = 40, ki_max = 50) {
   # Validate user args

@@ -11,10 +11,11 @@ import("stats", "reshape")
 #' @param cols (list) Column names to update
 #' @param values (list) Values for insertion into df.
 #' @returns Updated dataframe.
-.chg_df <- function(df, id, visit, cols, values){
+.chg_df <- function(df, id, visit, cols, values) {
   df[which(df$subj_id == id & df$scan_name == visit), cols] <- values
   return(df)
 }
+
 
 #' Manually manage fringe cases of matched impact-scan sessions.
 #'
@@ -27,33 +28,30 @@ import("stats", "reshape")
 #' @returns Long dataframe with mappings.
 export("fix_impact_scan")
 fix_impact_scan <- function(df) {
+  # Plan columns to fix and their respective values
   fix_cols <- c("impact_name", "impact_date", "num_tbi")
   empty_vals <- c(NA, NA, NA)
-  
-  # Currently specified individually, could be looped
-  # TODO refactor
-  df <- .chg_df(df, 3, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 14, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 42, "post", fix_cols, empty_vals)
-  df <- .chg_df(df, 43, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 55, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 58, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 89, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 96, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 97, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 119, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 145, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 147, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 308, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 9012, "rtp", fix_cols, empty_vals)
-  df <- .chg_df(df, 9027, "post", fix_cols, empty_vals)
+
+  # Manage missing RTP data.
+  rtp_list <- c(3, 14, 43, 55, 58, 89, 96, 97, 119, 145, 147, 308, 9012)
+  for (id in rtp_list) {
+    df <- .chg_df(df, id, "rtp", fix_cols, empty_vals)
+  }
+
+  # Manage missing Post data.
+  post_list <- c(42, 9027)
+  for (id in c()) {
+    df <- .chg_df(df, id, "post", fix_cols, empty_vals)
+  }
   return(df)
 }
 
 
 #' Identify subjects who get better from base to fu1.
-#' 
+#'
 #' Deprecated.
+#' 
+#' TODO remove.
 #'
 #' @param col_name Column name for testing.
 #' @param df Dataframe of data.
@@ -109,6 +107,7 @@ fu1_better <- function(col_name, df, low = FALSE) {
   return(df_long)
 }
 
+
 #' Determine where impact scores get better in post than base.
 #'
 #' @param col_name Column name for testing.
@@ -124,7 +123,7 @@ compare_base_post <- function(col_name, df, low = FALSE) {
     df,
     idvar = "subj_id", timevar = "scan_name", direction = "wide"
   )
-  
+
   # Find subjs that get better from base-post
   df_wide <- df_wide[!is.na(df_wide[paste0(col_name, ".post")]), ]
   df_wide$base_v_post <- "worse"
@@ -138,7 +137,7 @@ compare_base_post <- function(col_name, df, low = FALSE) {
     ] <- "better"
   }
   df_wide$base_v_post <- as.factor(df_wide$base_v_post)
-  
+
   # Convert back to long
   df_long <- reshape(
     df_wide,
@@ -157,63 +156,8 @@ compare_base_post <- function(col_name, df, low = FALSE) {
 }
 
 
-#' TODO
-#' 
-export("comp_group")
-comp_group <- function(df) {
-  df_corr <- df[, 1:10]
-  imp_names <- c("mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl", "tot_symp")
-  colnames(df_corr)[5:10] <- imp_names
-
-  #
-  df_wide <- reshape(
-    df_corr,
-    idvar = "subj_id",
-    timevar = "visit_name",
-    direction = "wide"
-  )
-
-  # TODO refactor
-  df_wide$mem_ver_chg_grp <- "worse"
-  df_wide$mem_ver_chg_grp[
-    df_wide$mem_ver.fu1 > df_wide$mem_ver.base
-  ] <- "better"
-  df_wide$mem_ver_chg <- df_wide$mem_ver.fu1 - df_wide$mem_ver.base
-
-  df_wide$tot_symp_chg_grp <- "worse"
-  df_wide$tot_symp_chg_grp[
-    df_wide$tot_symp.fu1 < df_wide$tot_symp.base
-  ] <- "better"
-  df_wide$tot_symp_chg <- df_wide$tot_symp.fu1 - df_wide$tot_symp.base
-
-  df_wide$mem_vis_chg_grp <- "worse"
-  df_wide$mem_ver_chg_grp[
-    df_wide$mem_vis.fu1 > df_wide$mem_vis.base
-  ] <- "better"
-  df_wide$mem_vis_chg <- df_wide$mem_vis.fu1 - df_wide$mem_vis.base
-
-  df_wide$vis_mot_chg_grp <- "worse"
-  df_wide$mem_ver_chg_grp[
-    df_wide$vis_mot.fu1 > df_wide$vis_mot.base
-  ] <- "better"
-  df_wide$vis_mot_chg <- df_wide$vis_mot.fu1 - df_wide$vis_mot.base
-
-  df_wide$rx_time_chg_grp <- "worse"
-  df_wide$rx_time_chg_grp[
-    df_wide$rx_time.fu1 < df_wide$rx_time.base
-  ] <- "better"
-  df_wide$rx_time_chg <- df_wide$rx_time.fu1 - df_wide$rx_time.base
-
-  df_wide$imp_ctl_chg_grp <- "worse"
-  df_wide$imp_ctl_chg_grp[
-    df_wide$imp_ctl.fu1 > df_wide$imp_ctl.base
-  ] <- "better"
-  df_wide$imp_ctl_chg <- df_wide$imp_ctl.fu1 - df_wide$imp_ctl.base
-
-  return(df_wide)
-}
-
 # Deprecated
+# TODO remove
 .long_wide <- function(df) {
   df_wide <- df %>%
     pivot_wider(

@@ -1,10 +1,8 @@
 """Methods for processing data.
 
 cnt_nvol: Determine number of EPI volumes.
-BidsAnat: BIDSify anat files.
-BidsDwi: BIDSify dwi files.
-BidsFmap: BIDSify fmap files.
-BidsOrg: Organize BidsAnat, BidsDwi, and BidsFmap into one class.
+BidsOrg: Methods for BIDSifying anat, dwi, and fmap shared ADR rawdata.
+DwiPreproc: Methods for preprocessing DWI data via FSL's topup and eddy.
 
 """
 
@@ -70,14 +68,14 @@ class _SetSubjSess:
         self._data_dir = val
 
 
-class BidsAnat(_SetSubjSess):
+class _BidsAnat(_SetSubjSess):
     """BIDSify anat directory.
 
     Assumes local attic organization of anat containing MEMPRAGE files and
     SWI files removed.
 
     Example:
-        bids_anat = process.BidsAnat()
+        bids_anat = process._BidsAnat()
         bids_anat.subj = "sub-0001"
         bids_anat.sess = "ses-1"
         bids_anat.data_dir = "/path/to/BIDS/dir"
@@ -86,8 +84,8 @@ class BidsAnat(_SetSubjSess):
     """
 
     def __init__(self):
-        """Initialize BidsAnat."""
-        log.write.info("Initializing BidsAnat")
+        """Initialize _BidsAnat."""
+        log.write.info("Initializing _BidsAnat")
         _SetSubjSess.__init__(self)
 
     def _find_anat(self):
@@ -131,14 +129,14 @@ class BidsAnat(_SetSubjSess):
         return f"{subj}_{sess}_acq-MEMPRAGErms_run-1_T1w{out_ext}"
 
 
-class BidsDwi(_SetSubjSess):
+class _BidsDwi(_SetSubjSess):
     """BIDSify dwi directory.
 
-    Assumes local attic organization of DWI containing with b0 and
+    Assumes local attic organization of DWI with b0 and
     b1000t files removed.
 
     Example:
-        bids_dwi = process.BidsDwi()
+        bids_dwi = process._BidsDwi()
         bids_dwi.subj = "sub-0001"
         bids_dwi.sess = "ses-1"
         bids_dwi.data_dir = "/path/to/BIDS/dir"
@@ -147,8 +145,8 @@ class BidsDwi(_SetSubjSess):
     """
 
     def __init__(self):
-        """Initialize BidsDwi."""
-        log.write.info("Initializing BidsDwi")
+        """Initialize _BidsDwi."""
+        log.write.info("Initializing _BidsDwi")
         _SetSubjSess.__init__(self)
 
     def _find_dwi(self):
@@ -181,7 +179,7 @@ class BidsDwi(_SetSubjSess):
             os.rename(file_path, os.path.join(file_dir, new_name))
 
 
-class BidsFmap(_SetSubjSess):
+class _BidsFmap(_SetSubjSess):
     """BIDSify fmap directory.
 
     Assumes local attic organization of fmap files.
@@ -191,7 +189,7 @@ class BidsFmap(_SetSubjSess):
         - Requires BIDSified DWI files.
 
     Example:
-        bids_fmap = process.BidsFmap()
+        bids_fmap = process._BidsFmap()
         bids_fmap.subj = "sub-0001"
         bids_fmap.sess = "ses-1"
         bids_fmap.data_dir = "/path/to/BIDS/dir"
@@ -202,8 +200,8 @@ class BidsFmap(_SetSubjSess):
     """
 
     def __init__(self):
-        """Initialize BidsFmap."""
-        log.write.info("Initializing BidsFmap")
+        """Initialize _BidsFmap."""
+        log.write.info("Initializing _BidsFmap")
         _SetSubjSess.__init__(self)
 
     def _find_fmap(self, ext: str = "*"):
@@ -305,22 +303,37 @@ class BidsFmap(_SetSubjSess):
             os.remove(tmp_file)
 
 
-class BidsOrg(BidsAnat, BidsDwi, BidsFmap):
-    """Combine BIDS classes into one for centralized methods.
+class BidsOrg(_BidsAnat, _BidsDwi, _BidsFmap):
+    """Provide methods for BIDSifying anat, dwi, and famp data.
 
-    Inherits BidsAnat, BidsDwi, and BidsFmap.
+    Combine BIDS classes into one for centralized methods, inherits
+    _BidsAnat, _BidsDwi, and _BidsFmap.
+
+    Example:
+        # Initialize and set attrs
+        bids_org = process.BidsOrg()
+        bids_org.subj = "sub-0001"
+        bids_org.sess = "ses-1"
+        bids_org.data_dir = "/path/to/BIDS/dir"
+
+        # Execute fixing methods
+        bids_org.fix_anat_names()
+        bids_org.fix_dwi_names()
+        bids_org.fix_fmap_names()
+        bids_org.fix_fmap_intended()
+        bids_org.fix_fmap_vols()
 
     """
 
     def __init__(self):
         """Initialize BidsOrg."""
         log.write.info("Initializing BidsOrg")
-        BidsAnat.__init__(self)
-        BidsDwi.__init__(self)
-        BidsFmap.__init__(self)
+        _BidsAnat.__init__(self)
+        _BidsDwi.__init__(self)
+        _BidsFmap.__init__(self)
 
 
-class FslTopup:
+class _FslTopup:
     """Methods for preparing for, executing FSL's topup."""
 
     def extract_b0(self, in_path: PT, out_name: str) -> PT:
@@ -356,7 +369,7 @@ class FslTopup:
         """Combine AP and PA b0 files via fslmerge.
 
         Args:
-            ap_path: Location of AP b0 file, see FslTopup.extract_b0().
+            ap_path: Location of AP b0 file, see _FslTopup.extract_b0().
             pa_path: Location of PA b0 file, same note.
             out_name: Optional, desired output prefix.
 
@@ -433,9 +446,9 @@ class FslTopup:
 
         Args:
             ap_pa_b0: Location of combined AP/PA b0 file, see
-                FslTopup.combine_b0().
+                _FslTopup.combine_b0().
             acq_param: Location of acquisition parameter file,
-                see FslTopup.acq_param().
+                see _FslTopup.acq_param().
             job_name: Name of job for scheduler.
             log_dir: Location for capturing STDOUT/ERR.
             out_name: Optional, output prefix.
@@ -472,7 +485,7 @@ class FslTopup:
         return (out_coef, out_unwarp)
 
 
-class FslEddy:
+class _FslEddy:
     """Methods for preparing for, executing FSL's eddy."""
 
     def get_mean(self, file_path: PT) -> PT:
@@ -611,11 +624,11 @@ class FslEddy:
             dwi_bvec: Location of bvec file.
             dwi_bval: Location of bval file.
             dwi_json: Location of json file.
-            dwi_topup: Location of topup output, see FslTopup.run_topup().
+            dwi_topup: Location of topup output, see _FslTopup.run_topup().
             brain_mask: Location of brain mask, see FslEddy.brain_mask().
             index: Location of index file, see FslEddy.write_index().
             acq_param: Location of acquisition parameter file, see
-                FslTopup.acq_param().
+                _FslTopup.acq_param().
             out_name: Output file name.
             job_name: Name of job for scheduler.
             log_dir: Location for capturing STDOUT/ERR.
@@ -676,8 +689,13 @@ class FslEddy:
         return out_path
 
 
-class DwiPreproc(FslTopup, FslEddy):
+class DwiPreproc(_FslTopup, _FslEddy):
     """Methods for preprocessing DWI with FSL tools.
+
+    Inhertis _FslTopup, _FslEddy.
+
+    Requires:
+        FSL to be executable in system OS.
 
     Args:
         subj: BIDS subject ID.

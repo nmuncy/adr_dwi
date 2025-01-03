@@ -21,6 +21,7 @@ import("RMySQL")
   return(db_con)
 }
 
+
 #' Pull scan dates.
 #'
 #' Deprecated.
@@ -40,6 +41,7 @@ get_scan_dates <- function() {
   dbDisconnect(db_con)
   return(df)
 }
+
 
 #' Pull Impact user composites.
 #'

@@ -1,15 +1,22 @@
-"""Title.
+"""Generate tractographic profiles via pyAFQ.
 
-TODO
+Use pyAFQ to model preprocessed DWI via probabilistic tractography
+using constrained spherical deconvolution metrics. Generates a
+dataframe titled tract_profiles.csv in data-dir/derivatives/afq as
+well as subject-specific tracts. The reference file bin/config.toml
+is used to specify the pyAFQ API call.
+
+Requires:
+    - Global variable 'SING_PYAFQ' to hold path to singularity image of AFQ.
 
 Examples:
-    run_afq -r
-
+    run_pyafq -r
 
 """
 
 import os
 import sys
+import platform
 from datetime import datetime
 import textwrap
 from argparse import ArgumentParser, RawTextHelpFormatter
@@ -69,6 +76,14 @@ def main():
     work_dir = args.work_dir
     run = args.run
 
+    # Validate env
+    if "swan" not in platform.uname().node:
+        raise EnvironmentError("Intended for use on HCC.")
+    try:
+        os.environ["SING_PYAFQ"]
+    except KeyError:
+        raise EnvironmentError("Missing required variable SING_PYAFQ")
+
     # Allow for call to print help
     if not run:
         return
@@ -83,7 +98,7 @@ def main():
         os.makedirs(log_dir)
 
     # Report and submit jobs
-    _, _ = submit.sched_afq(data_dir, work_dir, log_dir)
+    _, _ = submit.sched_pyafq(data_dir, work_dir, log_dir)
 
 
 if __name__ == "__main__":

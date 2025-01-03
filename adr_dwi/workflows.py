@@ -1,11 +1,16 @@
 """Methods for coordinating various workflows.
 
-setup_db: Insert data into db_adr from local XLSX files.
-clean_rawdata: BIDSify ADR rawdata data.
-preproc_dwi: Preprocess DWI data with FSL.
+When the same workflow is conducted for multiple subjects, a wrapper
+method is provided to allow for scheduling all subjects as an array.
 
-TODO check data workflow
-TODO changes afq to pyafq
+clean_rawdata: BIDSify ADR rawdata data.
+insert_pyafq: Send pyAFQ node metrics to db_adr.
+preproc_dwi: Preprocess DWI data with FSL.
+run_pyafq: Run pyAFQ workflow on preprocessed DWI data.
+setup_pyafq: Setup for running pyAFQ on preprocessed DWI data.
+setup_db: Insert data into db_adr from local XLSX files.
+wrap_preproc_dwi: Trigger preproc_dwi as part of scheduled array.
+wrap_setup_afq: Trigger setup_pyafq as part of scheduled array.
 
 """
 
@@ -148,6 +153,9 @@ def preproc_dwi(
     Raises:
         FileNotFoundError: Missing final eddy file.
 
+    Returns:
+        Location of preprocessed DWI file.
+
     """
     log.write.info(f"Starting preproc_dwi: {subj}, {sess}")
 
@@ -226,7 +234,15 @@ def wrap_preproc_dwi(
     work_dir: PT,
     log_dir: PT,
 ):
-    """Title.
+    """Submit preproc_dwi for array task ID.
+
+    Use array task ID to identify subject and session in subj_sess.
+
+    Args:
+        subj_sess: Tuples of BIDS subject, session IDs.
+        data_dir: BIDS data location.
+        work_dir: Location for intermediates.
+        log_dir: Location for writing stdout/err.
 
     Raises:
         EnvironmentError: OS global variable 'SLURM_ARRAY_TASK_ID' not found.
@@ -247,13 +263,39 @@ def wrap_preproc_dwi(
     _ = preproc_dwi(subj, sess, data_dir, work_dir, log_dir)
 
 
-def setup_afq(
+def setup_pyafq(
     subj: str,
     sess: str,
     data_dir: PT,
     work_dir: PT,
-):
-    """Title."""
+) -> PT:
+    """Setup for running pyAFQ.
+
+    Copy relevant files from data_dir to work_dir and then generate a
+    brain mask via FSL's bet.
+
+    Requires:
+        FSL to be executable in system OS.
+
+    Args:
+        subj: BIDS subject ID.
+        sess: BIDS session ID.
+        data_dir: Location of BIDS organized directory.
+        work_dir: Location for intermediates.
+
+    Raises:
+        EnvironmentError: FSL not executable in system OS.
+        FileNotFoundError: Missing expected preprocessed DWI,
+            or final output file.
+
+    Returns:
+        Location of brain mask.
+
+    """
+    # Validate environment
+    if not shutil.which("bet"):
+        raise EnvironmentError("Missing FSL in environment")
+
     # Setup, avoid repeating work
     subj_work = os.path.join(work_dir, "dwi_afq", subj, sess, "dwi")
     if not os.path.exists(subj_work):
@@ -310,12 +352,21 @@ def setup_afq(
     return out_mask
 
 
-def wrap_setup_afq(
+def wrap_setup_pyafq(
     subj_sess: list,
     data_dir: PT,
     work_dir: PT,
 ):
-    """Title.
+    """Submit setup_pyafq for array task ID.
+
+    Write a dataset_description.json and config.toml (adr_dwi.bin.config.toml)
+    to meet pyAFQ requirements, then use array task ID to identify subject and
+    session in subj_sess.
+
+    Args:
+        subj_sess: Tuples of BIDS subject, session IDs.
+        data_dir: BIDS data location.
+        work_dir: Location for intermediates.
 
     Raises:
         EnvironmentError: OS global variable 'SLURM_ARRAY_TASK_ID' not found.
@@ -351,11 +402,32 @@ def wrap_setup_afq(
     # Identify iteration subject and session list
     subj, sess = subj_sess[int(arr_id)]
     log.write.info(f"Starting setup_afq for: {subj}, {sess}")
-    _ = setup_afq(subj, sess, data_dir, work_dir)
+    _ = setup_pyafq(subj, sess, data_dir, work_dir)
 
 
 def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
-    """Title."""
+    """Run pyAFQ workflow.
+
+    Use preprocessed DWI data to conduct tractography via pyAFQ. Assumes
+    the output of preproc_dwi() has been properly organized (setup_pyafq())
+    for all subjects. Output will be found in data_dir/derivatives/afq.
+
+    Requires:
+        Global variable 'SING_PYAFQ' to hold path to singularity image of AFQ.
+
+    Args:
+        data_dir: Location of BIDS organized directory.
+        work_dir: Location for intermediates.
+        log_dir: Location for writing stdout/err.
+
+    Raises:
+        KeyError: Missing global variable 'SING_PYAFQ'.
+        FileNotFoundError: Missing expected output in work_dir or data_dir.
+
+    Returns:
+        Location of output tract_profiles.csv.
+
+    """
     # Check env
     try:
         sing_afq = os.environ["SING_PYAFQ"]
@@ -408,7 +480,16 @@ def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
 
 
 def insert_pyafq() -> pd.DataFrame:
-    """Title."""
+    """Insert data from pyAFQ tract_profiles.csv into db_adr.tbl_afq.
+
+    Raises:
+        EnvironmentError: Method not executed on HCC.
+        FileNotFoundError: Missing pyAFQ output csv.
+
+    Returns:
+        Formatted dataframe used for insertion.
+
+    """
     log.write.info("Inserting pyAFQ values into db_adr")
 
     # Verify env

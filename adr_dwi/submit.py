@@ -1,9 +1,12 @@
 """Methods for interacting with SLURM scheduler and subprocesses.
 
-simp_subproc: Submit bash command as subprocess.
+sched_clean_rawdata: Schedule cleaning rawdata.
+sched_gpu: Schedule bash command with SLURM on GPU.
+sched_preproc_array: Schedule array of DWI preprocessing jobs.
+sched_pyafq: Schedule pyAFQ workflow.
+sched_setup_pyafq_array: Schedule array of pyAFQ setup jobs.
 sched_subproc: Schedule bash command with SLURM.
-
-TODO
+simp_subproc: Submit bash command as subprocess.
 
 """
 
@@ -171,11 +174,13 @@ def sched_preproc_array(
     work_dir: PT,
     log_dir: PT,
 ) -> tuple:
-    """Title.
+    """Schedule array of jobs for preprocessing DWI data.
 
     Args:
-        TODO
+        subj_sess: Tuples of BIDS subject, session IDs.
+        arr_size: Number of jobs to run simultaneously.
         data_dir: BIDS data location.
+        work_dir: Location for intermediates.
         log_dir: Location for writing stdout/err.
 
     Returns:
@@ -214,18 +219,20 @@ def sched_preproc_array(
     return (h_out, h_err)
 
 
-def sched_setup_afq_array(
+def sched_setup_pyafq_array(
     subj_sess: list,
     arr_size: int,
     data_dir: PT,
     work_dir: PT,
     log_dir: PT,
 ) -> tuple:
-    """Title.
+    """Schedule array of jobs for preparing for pyAFQ.
 
     Args:
-        TODO
+        subj_sess: Tuples of BIDS subject, session IDs.
+        arr_size: Number of jobs to run simultaneously.
         data_dir: BIDS data location.
+        work_dir: Location for intermediates.
         log_dir: Location for writing stdout/err.
 
     Returns:
@@ -242,7 +249,7 @@ def sched_setup_afq_array(
 
         from adr_dwi import workflows
 
-        workflows.wrap_setup_afq(
+        workflows.wrap_setup_pyafq(
             {subj_sess},
             "{data_dir}",
             "{work_dir}",
@@ -263,15 +270,16 @@ def sched_setup_afq_array(
     return (h_out, h_err)
 
 
-def sched_afq(
+def sched_pyafq(
     data_dir: PT,
     work_dir: PT,
     log_dir: PT,
 ) -> tuple:
-    """Title.
+    """Schedule workflow to run pyAFQ.
 
     Args:
         data_dir: BIDS data location.
+        work_dir: Location for intermediates.
         log_dir: Location for writing stdout/err.
 
     Returns:

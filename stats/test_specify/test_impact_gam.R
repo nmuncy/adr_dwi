@@ -343,7 +343,7 @@ df_long$comp_scan <- factor(df_long$comp_scan)
 
 # Fit delta FA for groups post-base, rtp-base.
 #
-# Same diff splines as LGSIO, smaller dev explained (15.4%)
+# Same diff splines as LGIO, smaller dev explained (15.4%)
 fit_LDI <- bam(
   delta ~ s(subj_id, comp_scan, bs = "re") +
     s(node_id, by = comp_scan, bs = "tp", k = 50),
@@ -357,10 +357,10 @@ summary(fit_LDI)
 plot(fit_LDI)
 
 
-rds_lgsio <- paste0(
-  getwd(), "/rda_objects/fit_LGSIO_laThal_fa.Rda"
+rds_lgio <- paste0(
+  getwd(), "/rda_objects/fit_LGIO_laThal_fa.Rda"
 )
-fit_LGIO <- readRDS(rds_lgsio)
+fit_LGIO <- readRDS(rds_lgio)
 gam.check(fit_LGIO)
 summary(fit_LGIO)
 plot(fit_LGIO)
@@ -474,6 +474,29 @@ plot(fit_LGI)
 p <- getViz(fit_LGI)
 plot(p)
 
+
+# # Reduce to only CC tracts
+# library("data.table")
+# df_r <- subset(
+#   df_afq,
+#   select = c("subj_id", "scan_name", "tract_name", "node_id", "dti_fa")
+# )
+# df_r <- df_r[df_r$tract_name %like% "Callosum", ]
+# df_r$tract_scan <- interaction(df_r$tract_name, df_r$scan_name)
+# 
+# fit_LGI_cc <- bam(
+#   dti_fa ~ s(subj_id, by = tract_scan, bs = "re") +
+#     s(node_id, by = tract_name, bs = "tp", k = 40) +
+#     s(node_id, by = tract_scan, bs = "tp", k = 40) +
+#     tract_name + scan_name + tract_scan,
+#   data = df_r,
+#   family = betar(link = "logit"),
+#   method = "fREML",
+#   discrete = T,
+#   nthreads = 12
+# )
+# rds_lgi_cc <- paste0(getwd(), "/rda_objects/fit_LGI_cc_fa.Rda")
+# saveRDS(fit_LGI_cc, file = rds_lgi_cc)
 
 
 # GAM: Post tract by K-group 1 vs 2, 3 ----

@@ -10,6 +10,24 @@ draw_plots <- use("resources/draw_plots.R")
 quick_stats <- use("resources/quick_stats.R")
 
 
+#' Setup project analysis directory.
+#'
+#' @returns Path to NRDStor project analysis directory for
+#' Gimli (linux) and Frodo (mac) workstations.
+.analysis_dir <- function() {
+  if (Sys.info()["sysname"] == "Linux") {
+    an_dir <- "/run/user/1001/gvfs/smb-share:server=nrdstor.unl.edu,share=nrdstor/muncylab/nmuncy2/ADR/analyses"
+  } else if (Sys.info()["sysname"] == "Darwin") {
+    an_dir <- "/Volumes/nrdstor/muncylab/nmuncy2/ADR/analyses"
+  }
+  dir.create(file.path(an_dir, "dataframes"), showWarnings = F)
+  dir.create(file.path(an_dir, "stats_gams/gam_summaries"), showWarnings = F)
+  dir.create(file.path(an_dir, "stats_gams/rda_objects"), showWarnings = F)
+  dir.create(file.path(an_dir, "stats_gams/plots"), showWarnings = F)
+  return(an_dir)
+}
+
+
 #' Pull and clean impact data.
 #'
 #' Update impact names and add days post FU1 (diff_post) for
@@ -18,8 +36,10 @@ quick_stats <- use("resources/quick_stats.R")
 #' @returns Dataframe of impact composite scores.
 .clean_impact <- function() {
   # Check for local csv, read-in or pull from db_adr
-  data_dir <- paste(dirname(getwd()), "data", sep = "/")
-  imp_path <- paste(data_dir, "df_impact.csv", sep = "/")
+  imp_path <- paste(
+    .analysis_dir(), "dataframes", "df_impact.csv",
+    sep = "/"
+  )
 
   if (!file.exists(imp_path)) {
     df <- pull_data$get_user_comp()
@@ -69,8 +89,7 @@ quick_stats <- use("resources/quick_stats.R")
 export("clean_afq")
 clean_afq <- function() {
   # Check for local csv, ead-in data or pull for db_adr.
-  data_dir <- paste(dirname(getwd()), "data", sep = "/")
-  afq_path <- paste(data_dir, "df_afq.csv", sep = "/")
+  afq_path <- paste(.analysis_dir(), "dataframes", "df_afq.csv", sep = "/")
 
   if (!file.exists(afq_path)) {
     df <- pull_data$get_afq()
@@ -185,8 +204,10 @@ get_scan_impact <- function() {
   df_scan_imp <- subset(df_scan_imp, select = -c(i_date, s_date))
 
   # Check for local csv, ead-in data or pull for db_adr.
-  data_dir <- paste(dirname(getwd()), "data", sep = "/")
-  out_path <- paste(data_dir, "df_impact_scan.csv", sep = "/")
+  out_path <- paste(
+    .analysis_dir(), "dataframes", "df_impact_scan.csv",
+    sep = "/"
+  )
   utils::write.csv(df_scan_imp, out_path, row.names = F)
 
   return(df_scan_imp)
@@ -289,7 +310,7 @@ impact_cluster <- function(df_scan_imp, scan_name) {
     by = "subj_id",
     all = T
   )
-  
+
   return(list(
     "df_sik" = df,
     "stats_pc" = stats_pc,
@@ -301,7 +322,7 @@ impact_cluster <- function(df_scan_imp, scan_name) {
 
 
 #' Fit Post DWI scalars with HGAMs, grouped by k-means.
-#' 
+#'
 #' TODO finalize or remove.
 #'
 #' Investigate scalars from post scans, accounting for k-means grouping
@@ -316,20 +337,20 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
   # Callosum Temporal shows kmeans group differences on mem_ver in post,
   # but minimal differences on vis_mot.
   # Left Inferior Fronto-occipital was flat across effects.
-  
+
   #
   imp_clust <- workflows$impact_cluster(df_scan_imp, "post")
   subj_exp <- imp_clust$df_sik[which(imp_clust$df_sik$km_grp != 1), ]$subj_id
-  
+
   tract <- "Callosum Temporal"
   df <- df_afq[which(df_afq$tract_name == tract & df_afq$scan_name == "post"), ]
   df$group <- "con"
   df[which(df$subj_id %in% subj_exp), ]$group <- "exp"
-  
+
   #
   fit_GSI <- fit_gams$gam_gsi(df, "dti_rd", "group")
   fit_GSIO <- fit_gams$gam_gsio(df, "dti_rd", "group")
-  
+
   #
   impact_meas <- "mem_vis"
   df <- merge(
@@ -338,24 +359,57 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
     by = c("subj_id", "scan_name"),
     all.x = T
   )
-  
+
   #
   fit_G_intx <- fit_gams$mod_g_intx(df, "dti_fa", impact_meas)
   plot(fit_G_intx)
   p <- getViz(fit_G_intx)
   plot(p)
-  
+
   #
   fit_GI_intx <- fit_gams$mod_gi_intx(df, "dti_fa", "group", impact_meas)
   plot(fit_GI_intx)
   p <- getViz(fit_GI_intx)
   plot(p)
-  
+
   fit_GIO_intx <- fit_gams$mod_gio_intx(df, "dti_fa", "group", impact_meas)
   plot(fit_GIO_intx)
   p <- getViz(fit_GIO_intx)
   plot(p)
   #
+}
+
+
+#' Model all tracts for post-base and rtp-base differences (delta).
+#'
+#' Conduct longitudinal HGAM with all tracts and scan times so subject variance
+#' is pooled across tracts and scans.
+#'
+#' @param df_afq Dataframe containing AFQ data.
+#' @returns mgcv::bam fit object.
+export("gam_delta_long_all")
+gam_delta_long_all <- function(df_afq) {
+  analysis_dir <- .analysis_dir()
+  
+  # Calculate delta and run model
+  df <- transform_data$calc_fa_delta(df_afq)
+  rds_ldi <- paste0(analysis_dir, "/stats_gams/rda_objects/fit_LDI_fa.Rda")
+  if (!file.exists(rds_ldi)) {
+    h_gam <- fit_gams$mod_ldi(df)
+    saveRDS(h_gam, file = rds_ldi)
+    rm(h_gam)
+  }
+  fit_LDI <- readRDS(rds_ldi)
+  
+  # Mine, print summary stats
+  sum_ldi <- paste0(analysis_dir, "/stats_gams/gam_summaries/fit_LDI_fa.txt")
+  if(!file.exists(sum_ldi)){
+    fit_gams$write_gam_stats(fit_LDI, sum_ldi)
+  }
+  
+  # Generate plots
+  
+  return(fit_LDI)
 }
 
 
@@ -370,20 +424,22 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
 #' @param df Dataframe containing AFQ data.
 #' @param tract String, name of AFQ tract (corresponds to df$tract_name).
 #' @param scalar_name String, name of DTI scalar (corresponds to df column).
-#' @param returns Named list organized by GAM fits (fit_LGI, fit_LGIO)
+#' @returns Named list organized by GAM fits (fit_LGI, fit_LGIO)
 #'    and the smooth plots (plot).
-.fit_plot_gams_long <- function(df, tract, scalar_name) {
+.fit_plot_long_tract <- function(df, tract, scalar_name) {
   # Validate user args, get tract/scalar names
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
   }
-  print(scalar_name)
+  # print(scalar_name)
   h_tract <- fit_gams$switch_tract(tract)
   scalar <- strsplit(scalar_name, "_")[[1]][2]
-  
+
   # Get (and make/save if needed) LGI model.
+  analysis_dir <- .analysis_dir()
   rds_lgi <- paste0(
-    getwd(), "/rda_objects/fit_LGI_", h_tract, "_", scalar, ".Rda"
+    analysis_dir, "/stats_gams/rda_objects/LGI_tract/fit_LGI_",
+    h_tract, "_", scalar, ".Rda"
   )
   if (!file.exists(rds_lgi)) {
     h_gam <- fit_gams$mod_lgi(df, scalar_name)
@@ -391,13 +447,16 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
     rm(h_gam)
   }
   fit_LGI <- readRDS(rds_lgi)
-  gam.check(fit_LGI)
-  summary(fit_LGI)
-  plot(fit_LGI)
-  
+  sum_lgi <- paste0(
+    analysis_dir, "/stats_gams/gam_summaries/LGI_tract/fit_LGI_",
+    h_tract, "_", scalar, ".txt"
+  )
+  fit_gams$write_gam_stats(fit_LGI, sum_lgi)
+
   # Get (and make/save if needed) LGIO model, write summary stats to disk.
   rds_lgio <- paste0(
-    getwd(), "/rda_objects/fit_LGIO_", h_tract, "_", scalar, ".Rda"
+    analysis_dir, "/stats_gams/rda_objects/LGIO_tract/fit_LGIO_",
+    h_tract, "_", scalar, ".Rda"
   )
   if (!file.exists(rds_lgio)) {
     h_gam <- fit_gams$mod_lgio(df, scalar_name)
@@ -406,7 +465,8 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
   }
   fit_LGIO <- readRDS(rds_lgio)
   sum_lgio <- paste0(
-    getwd(), "/gam_summaries/fit_LGIO_", h_tract, "_", scalar, ".txt"
+    analysis_dir, "/stats_gams/gam_summaries/LGIO_tract/fit_LGIO_",
+    h_tract, "_", scalar, ".txt"
   )
   fit_gams$write_gam_stats(fit_LGIO, sum_lgio)
   # gam.check(fit_LGIO)
@@ -414,16 +474,22 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
   # plot(fit_LGIO)
 
   # Coordinate drawing of smooths
-  plots <- draw_plots$draw_long_ordered_grid(fit_LGIO, tract, toupper(scalar))
+  plots_LGI <- draw_plots$draw_long_grid(
+    fit_LGI, tract, toupper(scalar)
+  )
+  plots_LGIO <- draw_plots$draw_long_ordered_grid(
+    fit_LGIO, tract, toupper(scalar)
+  )
   return(list(
     "fit_LGI" = fit_LGI,
     "fit_LGIO" = fit_LGIO,
-    "plots" = plots
+    "plots_LGIO" = plots_LGIO,
+    "plots_LGI" = plots_LGI
   ))
 }
 
 
-#' Fit DWI scalars with longitudinal HGAMs.
+#' Fit DWI scalars with longitudinal HGAMs for single tract.
 #'
 #' Fit DWI data (FA, RD, AD, MD) with longitudinal hierarchical
 #' GAMS using both global and group smooths (and group wiggliness).
@@ -432,29 +498,48 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
 #' @param df_afq Dataframe output of clean_afq().
 #' @param tract String, name of AFQ tract (corresponds to df_afq$tract_name).
 #' @returns Nested named with FA, AD, RD, MD objects for GAM fit (gam_LGI),
-#'    ordered GAM fit (gam_LGIO), and plots (gam_plots).
-export("gams_long")
-gams_long <- function(df_afq, tract) {
+#'    ordered GAM fit (gam_LGIO), and LGIO plots (gam_plots).
+export("gams_long_tract")
+gams_long_tract <- function(df_afq, tract) {
   # Subset dataframe by tract
   df <- df_afq[which(df_afq$tract_name == tract), ]
 
   # Get GAMs and plots for each scalar
-  obj_FA <- .fit_plot_gams_long(df, tract, "dti_fa")
-  obj_MD <- .fit_plot_gams_long(df, tract, "dti_md")
-  obj_RD <- .fit_plot_gams_long(df, tract, "dti_rd")
-  obj_AD <- .fit_plot_gams_long(df, tract, "dti_ad")
+  obj_FA <- .fit_plot_long_tract(df, tract, "dti_fa")
+  obj_MD <- .fit_plot_long_tract(df, tract, "dti_md")
+  obj_RD <- .fit_plot_long_tract(df, tract, "dti_rd")
+  obj_AD <- .fit_plot_long_tract(df, tract, "dti_ad")
 
-  # Assemble and write plots
+  # Assemble and write LGIO plots
   h_tract <- fit_gams$switch_tract(tract)
   grDevices::png(
-    filename = paste0(getwd(), "/plots/fit_LGIO_", h_tract, ".png"),
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/LGIO_tract/fit_LGIO_", h_tract, ".png"
+    ),
     units = "in",
     height = 10,
     width = 8,
     res = 600
   )
   draw_plots$draw_scalar_grid(
-    obj_FA$plots, obj_MD$plots, obj_AD$plots, obj_RD$plots
+    obj_FA$plots_LGIO, obj_MD$plots_LGIO, 
+    obj_AD$plots_LGIO, obj_RD$plots_LGIO
+  )
+  grDevices::dev.off()
+  
+  # Assemble and write LGI plots
+  grDevices::png(
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/LGI_tract/fit_LGI_", h_tract, ".png"
+    ),
+    units = "in",
+    height = 10,
+    width = 8,
+    res = 600
+  )
+  draw_plots$draw_scalar_grid(
+    obj_FA$plots_LGI, obj_MD$plots_LGI, 
+    obj_AD$plots_LGI, obj_RD$plots_LGI
   )
   grDevices::dev.off()
 
@@ -468,8 +553,8 @@ gams_long <- function(df_afq, tract) {
       "AD" = obj_AD$fit_LGIO, "MD" = obj_MD$fit_LGIO
     ),
     gam_plots = list(
-      "FA" = obj_FA$plots, "RD" = obj_RD$plots,
-      "AD" = obj_AD$plots, "MD" = obj_MD$plots
+      "FA" = obj_FA$plots_LGIO, "RD" = obj_RD$plots_LGIO,
+      "AD" = obj_AD$plots_LGIO, "MD" = obj_MD$plots_LGIO
     )
   ))
 }

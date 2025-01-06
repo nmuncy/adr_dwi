@@ -33,10 +33,14 @@ draw_plots$draw_impact_pairs(imp_clust$df_sik, c(7:10), 3)
 # TODO longitudinal GAMs of ordered factors (base, post, rtp) for scalars
 # TODO GAMs of scalars for post by k-means group
 # TODO above, with impact interactions
+
+# Fit all differences between scan times for all tracts
+fit_LDI <- workflows$gam_delta_long_all(df_afq)
+
+# Fit individual tracts for FA, MD, RD, AD scalars
 tract_list <- unique(df_afq$tract_name)
 for(tract in tract_list){
-  print(tract)
-  tract_gams <- workflows$gams_long(df_afq, tract)
+  tract_gams <- workflows$gams_long_tract(df_afq, tract)
 }
 # summary(tract_gams$gam_LGIO$FA)
 # grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$FA)

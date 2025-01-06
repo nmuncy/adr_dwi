@@ -156,6 +156,48 @@ compare_base_post <- function(col_name, df, low = FALSE) {
 }
 
 
+#' Calculate FA post-base and rtp-base.
+#' 
+#' @param df_afq Dataframe containing AFQ data.
+#' @returns Dataframe with new columns comp_scan (comparison of scan names)
+#'  and delta (A-B FA value).
+export("calc_fa_delta")
+calc_fa_delta <- function(df_afq){
+  # Subset relevant columns, convert to wide for easy A-B calcs
+  df_sub <- subset(
+    df_afq,
+    select = c("subj_id", "scan_name", "tract_name", "node_id", "dti_fa")
+  )
+  df_wide <- reshape(
+    df_sub,
+    idvar = c("subj_id", "node_id", "tract_name"), timevar = "scan_name",
+    direction = "wide"
+  )
+  df_wide$delta.post_base <- df_wide$dti_fa.post - df_wide$dti_fa.base
+  df_wide$delta.rtp_base <- df_wide$dti_fa.rtp - df_wide$dti_fa.base
+  
+  # Return to long form
+  df_wide <- subset(
+    df_wide,
+    select = c(
+      "subj_id", "tract_name", "node_id", "delta.post_base", "delta.rtp_base"
+    )
+  )
+  df <- reshape(
+    df_wide,
+    direction = "long",
+    varying = c("delta.post_base", "delta.rtp_base"),
+    times = c("post_base", "rtp_base"),
+    idvar = c("subj_id", "tract_name", "node_id")
+  )
+  colnames(df)[4] <- c("comp_scan") # A-B column, comparison of scan names
+  rownames(df) <- NULL
+  df$comp_scan <- factor(df$comp_scan)
+  rm(df_wide, df_sub)
+  return(df)
+}
+
+
 # Deprecated
 # TODO remove
 .long_wide <- function(df) {

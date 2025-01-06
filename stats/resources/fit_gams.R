@@ -56,7 +56,6 @@ switch_tract <- function(tract_name) {
 #' and ordered group smooths.
 #'
 #' @param df TODO
-export("gam_spar")
 .gam_spar <- function(df) {
   #
   # fit_S <- bam(
@@ -108,7 +107,6 @@ export("gam_spar")
 #' Deprecated, use for testing.
 #' TODO remove
 #'
-export("gam_rand")
 .gam_rand <- function(df, seed) {
   # Identify subjs with base and post
   subj_list <- unique(df[which(df$scan_name == "post"), ]$subj_id)
@@ -136,7 +134,6 @@ export("gam_rand")
 #' Deprecated, used for testing.
 #' TODO remove
 #'
-export("gam_intx")
 .gam_intx <- function(df) {
   fit_intx <- bam(
     dti_fa ~ s(subj_id, scan_name, bs = "re") +
@@ -176,6 +173,7 @@ export("gam_intx")
 #'
 #' @param gam_obj GAM object returned by mgcv.
 #' @param out_file String path to output file.
+#' @param re_test Optional, use re.test arg of summary.
 export("write_gam_stats")
 write_gam_stats <- function(gam_obj, out_file) {
   utils::capture.output(
@@ -453,12 +451,42 @@ mod_lgio <- function(df, scalar_name, k_max = 40) {
 }
 
 
+#' Fit longitudinal HGAM for all tracts of FA differences.
+#' 
+#' Manually calculate the interaction of factors tract_name and comp_scan,
+#' then model all tract differences with group wiggliness. No global smooth
+#' is used, so this is equivalent to the Pedersen 2019 model I. This 
+#' effectively pools subject variance across both tract_name and scan_name,
+#' while simplifying the nested factors. Differences are used to reduce the
+#' requested number of smooths, reduce runtime, and maintain sufficient dof.
+#' 
+#' @param df Dataframe of AFQ with comp_scan and delta columns (output by 
+#'  transform_data$calc_fa_delta).
+#' @returns mgcv::bam fit object.
+export("mod_ldi")
+mod_ldi <- function(df) {
+  df$tract_scan <- interaction(df$tract_name, df$comp_scan)
+  fit_LDI <- bam(
+    delta ~ s(subj_id, by = tract_scan, bs = "re") +
+      s(node_id, by = tract_scan, bs = "tp", k = 40) +
+      tract_name + comp_scan + tract_scan,
+    data = df,
+    family = gaussian(),
+    method = "fREML",
+    discrete = T,
+    nthreads = 12
+  )
+  return(fit_LDI)
+}
+
 #' Fit longitudinal HGAM with global, group, and
 #' interaction with Impact item smooths.
 #'
 #' TODO finalize specification.
 export("gam_lgsi_intx")
-gam_lgsi_intx <- function(df, scalar_name, impact_meas, ks_max = 40, ki_max = 50) {
+gam_lgsi_intx <- function(
+    df, scalar_name, impact_meas, ks_max = 40, ki_max = 50
+) {
   # Validate user args
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")

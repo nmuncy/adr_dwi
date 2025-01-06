@@ -250,8 +250,51 @@ draw_group_smooth <- function(plot_obj, attr_num, tract) {
 }
 
 
+
 export("draw_group_smooth_diff")
 draw_group_smooth_diff <- function(plot_obj, grp_num, attr_num, tract) {
+  #
+  
+  # Determine ymin/max from group smooth
+  p <- plot(sm(plot_obj, grp_num))
+  p_data <- as.data.frame(p$data$fit)
+  colnames(p_data) <- c("nodeID", "est", "ty", "se")
+  gy_min <- min(p_data$est)
+  gy_max <- max(p_data$est)
+  
+  # unpack difference smooth data
+  p <- plot(sm(plot_obj, attr_num)) +
+    geom_hline(yintercept = 0)
+  p_data <- as.data.frame(p$data$fit)
+  colnames(p_data) <- c("nodeID", "est", "ty", "se")
+  p_data$lb <- as.numeric(p_data$est - (1.96 * p_data$se))
+  p_data$ub <- as.numeric(p_data$est + (1.96 * p_data$se))
+  
+  # Determine highest/lowest max/min across global and group smooths
+  GY_max <- pmax(gy_max, max(p_data$est))
+  GY_min <- pmin(gy_min, min(p_data$est))
+
+  # Draw
+  pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
+    geom_hline(yintercept = 0) +
+    geom_line() +
+    geom_ribbon(
+      aes(ymin = .data$lb, ymax = .data$ub),
+      alpha = 0.2
+    ) +
+    scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
+    coord_cartesian(ylim=c(GY_min,GY_max)) +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      axis.title.y = element_blank(),
+      axis.title.x = element_blank()
+    )
+  return(list("diff" = pp))
+}
+  
+
+export("draw_group_smooth_diff_sig")
+draw_group_smooth_diff_sig <- function(plot_obj, grp_num, attr_num, tract) {
   # Draw difference of group smooths of AFQ tract.
   #
   # Plot an A-B difference smooth from an GAM using an ordered factor for group,
@@ -461,9 +504,9 @@ export("draw_one_four")
 draw_one_four <- function(plot_list, name_list, tract) {
   # unpack, organize plots
   r1A <- plot_list$global$global
-  r2A <- plot_list$group$group
-  r3A <- plot_list$diffa$diff
-  r4A <- plot_list$diffb$diff
+  r2A <- plot_list$Ia$diff
+  r3A <- plot_list$Ib$diff
+  r4A <- plot_list$Ic$diff
 
   # make col titles, y axis, x axis, and row names
   col1_name <- text_grob(name_list$col1, size = 12, family = "Times New Roman")
@@ -588,18 +631,53 @@ draw_two_three <- function(plot_list, name_list, tract, beh_short, out_name) {
 
 
 
-#' Draw smooth grid.
+#' Draw smooth grid for LGI models.
+#'
+#' TODO
+export("draw_long_grid")
+draw_long_grid <- function(
+    fit_LGI, tract, scalar_name, num_G = 2, num_Ia = 3, num_Ib = 4, num_Ic = 5
+) {
+  
+  # Generate plots objs from smooths
+  plot_GI <- getViz(fit_LGI)
+  pGlobal <- draw_global_smooth(plot_GI, num_G, tract)
+  pIa <- draw_group_smooth_diff(plot_GI, num_G, num_Ia, tract)
+  pIb <- draw_group_smooth_diff(plot_GI, num_G, num_Ib, tract)
+  pIc <- draw_group_smooth_diff(plot_GI, num_G, num_Ic, tract)
+
+  # draw grid
+  plot_list <- list(
+    "global" = pGlobal,
+    "Ia" = pIa,
+    "Ib" = pIb,
+    "Ic" = pIc
+  )
+  name_list <- list(
+    "col1" = paste(tract, scalar_name, "Smooths"),
+    "rowL1" = "Est. Global Fit",
+    "rowL2" = "Est. Base Fit",
+    "rowL3" = "Est. Post Fit",
+    "rowL4" = "Est. RTP Fit",
+    "bot1" = "Tract Node"
+  )
+  plot_grid <- draw_one_four(plot_list, name_list, tract)
+  return(plot_grid)
+}
+
+
+#' Draw smooth grid for LGIO models.
 #'
 #' TODO
 export("draw_long_ordered_grid")
 draw_long_ordered_grid <- function(
-    fit_LGSIO, tract, scalar_name, num_G = 2, num_GOa = 3, num_GOb = 4) {
+    fit_LGIO, tract, scalar_name, num_G = 2, num_GOa = 3, num_GOb = 4) {
   
   # Generate plots objs from smooths
-  plot_GO <- getViz(fit_LGSIO)
+  plot_GO <- getViz(fit_LGIO)
   pGlobal <- draw_global_smooth(plot_GO, num_G, tract)
-  pDiffa <- draw_group_smooth_diff(plot_GO, num_G, num_GOa, tract)
-  pDiffb <- draw_group_smooth_diff(plot_GO, num_G, num_GOb, tract)
+  pDiffa <- draw_group_smooth_diff_sig(plot_GO, num_G, num_GOa, tract)
+  pDiffb <- draw_group_smooth_diff_sig(plot_GO, num_G, num_GOb, tract)
 
   # draw grid
   plot_list <- list(
@@ -642,39 +720,3 @@ draw_scalar_grid <- function(plot_FA, plot_MD, plot_AD, plot_RD) {
 }
 
 
-#' Draw smooth grid.
-#'
-#' TODO
-export("draw_long_grid")
-draw_long_grid <- function(
-    fit_LGSI, fit_LGSIO, tract, scalar_name,
-    num_G = 2, num_GS = 3, num_GOa = 3, num_GOb = 4) {
-  # Generate plots objs from smooths
-  plot_G <- getViz(fit_LGSI)
-  pGlobal <- draw_global_smooth(plot_G, num_G, tract)
-  pGroup <- draw_group_smooth(plot_G, num_GS, tract)
-
-  plot_GO <- getViz(fit_LGSIO)
-  pDiffa <- draw_group_smooth_diff(plot_GO, num_GOa, tract)
-  pDiffb <- draw_group_smooth_diff(plot_GO, num_GOb, tract)
-
-  # draw grid
-  plot_list <- list(
-    "global" = pGlobal,
-    "group" = pGroup,
-    "diffa" = pDiffa,
-    "diffb" = pDiffb
-  )
-  name_list <- list(
-    "col1" = paste(tract, "Smooths"),
-    "rowL1" = paste("Est.", scalar_name, "Fit"),
-    "rowL2" = paste("Est.", scalar_name, "Diff"),
-    "rowR1" = "Global",
-    "rowR2" = "Group",
-    "rowR3" = "Post-Base",
-    "rowR4" = "RTP-Base",
-    "bot1" = "Tract Node"
-  )
-  plot_grid <- draw_one_four(plot_list, name_list, tract)
-  return(plot_grid)
-}

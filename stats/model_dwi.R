@@ -1,6 +1,6 @@
 # Get resources ----
 library("modules")
-library("gridExtra")
+# library("gridExtra")
 
 workflows <- modules::use("workflows.R")
 draw_plots <- modules::use("resources/draw_plots.R")
@@ -12,6 +12,7 @@ df_scan_imp <- workflows$get_scan_impact()
 
 
 # Check Impact measures ----
+# TODO add impact smooths
 workflows$impact_better_worse(df_scan_imp)
 
 # scan_name <- "post"

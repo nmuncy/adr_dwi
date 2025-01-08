@@ -2,6 +2,7 @@ import(grDevices)
 import(dplyr)
 import(lubridate)
 import("stats", "complete.cases")
+import(mgcViz)
 
 pull_data <- use("resources/pull_data.R")
 transform_data <- use("resources/transform_data.R")
@@ -286,7 +287,7 @@ impact_cluster <- function(df_scan_imp, scan_name) {
 
   # Conduct PCA and make plots
   stats_pc <- quick_stats$run_pca(df, col_list)
-  plot_pc <- draw_plots$draw_pc(stats_pc)
+  plot_pc <- draw_plots$draw_pca(stats_pc)
 
   # Conduct K-means and make plots
   stats_km <- quick_stats$run_kmeans(df, col_list, num_k)
@@ -380,15 +381,90 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
 }
 
 
+#' Make plots for delta_long_all.
+#' 
+#' Identify max deflections from zero for each tract of
+#' post-base and rtp-base. Then draw grids for each tract.
+#' 
+#' @param fit_LDI mgcv::gam object.
+#' @param make_plots Logical, whether to draw all tract grids.
+.plot_delta_long_all <- function(fit_LDI, make_plots){
+  # Identify Post, RTP smooth indices and smooth names
+  node_smooths <- name_smooths <- c()
+  for(num in 1:length(fit_LDI$smooth)){
+    if(fit_LDI[["smooth"]][[num]][["term"]] == "node_id"){
+      node_smooths <- c(node_smooths, num)
+      label <- fit_LDI[["smooth"]][[num]][["label"]]
+      h <- strsplit(label, "tract_scan")[[1]][2]
+      name_smooths <- c(name_smooths, strsplit(h, "\\.")[[1]][1])
+    }
+  }
+  half <- length(node_smooths)/2
+  post_smooths <- utils::head(node_smooths, half)
+  rtp_smooths <- utils::tail(node_smooths, half)
+  name_smooths <- utils::head(name_smooths, half) # Names appear twice
+  
+  # Identify max deflections from zero
+  t_name <- c_name <- n_name <- m_val <- c()
+  p <- getViz(fit_LDI)
+  for(num in node_smooths){
+    
+    # Get plotting data and info
+    p_info <- plot(sm(p, num))
+    p_data <- as.data.frame(p_info$data$fit)
+    max_y <- max(abs(p_data$y))
+    
+    # Get tract, comparison names
+    row_name <- p_info$ggObj$labels$y
+    h_str <- strsplit(row_name, split = ":")
+    row_info <- strsplit(h_str[[1]][2], split = "\\.")
+    
+    # Update vecs for df building
+    t_name <- c(t_name, row_info[[1]][1])
+    c_name <- c(c_name, row_info[[1]][2])
+    n_name <- c(n_name, p_data[which(abs(p_data$y) == max_y), ]$x)
+    m_val <- c(m_val, max_y)
+  }
+  df_max <- data.frame(t_name, c_name, n_name, m_val)
+  colnames(df_max) <- c("tract", "comp", "node", "max")
+  out_csv <- paste0(
+    .analysis_dir(), "/stats_gams/gam_summaries/fit_LDI_fa_max.csv"
+  )
+  utils::write.csv(df_max, out_csv, row.names = F)
+  
+  # Generate grids of post-base and rtp-base.
+  stopifnot(make_plots)
+  c <- 1
+  while(c < length(name_smooths)){
+    h_tract <- fit_gams$switch_tract(name_smooths[c])
+    grDevices::png(
+      filename = paste0(
+        .analysis_dir(), "/stats_gams/plots/LDI_all/fit_LDI_", h_tract, ".png"
+      ),
+      units = "in",
+      height = 8,
+      width = 6,
+      res = 600
+    )
+    draw_plots$grid_ldi(
+      fit_LDI, name_smooths[c], "FA", post_smooths[c], rtp_smooths[c]
+    )
+    grDevices::dev.off()
+    c <- c+1
+  }
+}
+
+
 #' Model all tracts for post-base and rtp-base differences (delta).
 #'
 #' Conduct longitudinal HGAM with all tracts and scan times so subject variance
 #' is pooled across tracts and scans.
 #'
 #' @param df_afq Dataframe containing AFQ data.
+#' @param make_plots Logical, whether to draw all tract grids.
 #' @returns mgcv::bam fit object.
 export("gam_delta_long_all")
-gam_delta_long_all <- function(df_afq) {
+gam_delta_long_all <- function(df_afq, make_plots=T) {
   analysis_dir <- .analysis_dir()
   
   # Calculate delta and run model
@@ -407,8 +483,8 @@ gam_delta_long_all <- function(df_afq) {
     fit_gams$write_gam_stats(fit_LDI, sum_ldi)
   }
   
-  # Generate plots
-  
+  # Generate plots and max node df
+  .plot_delta_long_all(fit_LDI, make_plots)
   return(fit_LDI)
 }
 
@@ -474,10 +550,10 @@ gam_delta_long_all <- function(df_afq) {
   # plot(fit_LGIO)
 
   # Coordinate drawing of smooths
-  plots_LGI <- draw_plots$draw_long_grid(
+  plots_LGI <- draw_plots$grid_lgi(
     fit_LGI, tract, toupper(scalar)
   )
-  plots_LGIO <- draw_plots$draw_long_ordered_grid(
+  plots_LGIO <- draw_plots$grid_lgio(
     fit_LGIO, tract, toupper(scalar)
   )
   return(list(

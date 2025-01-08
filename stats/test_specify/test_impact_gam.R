@@ -1,22 +1,3 @@
-# Get Data ----
-data_dir <- "/Users/nmuncy2/Projects/data/"
-data_afq <- paste0(data_dir, "df_afq.csv")
-data_imp <- paste0(data_dir, "df_scan_imp.csv")
-
-# out_afq <- write.csv(df_afq, file = paste0(data_dir, "df_afq.csv"), row.names=F)
-# out_imp <- write.csv(df_scan_imp, file = paste0(data_dir, "df_scan_imp.csv"), row.names=F)
-
-df_afq <- read.csv(data_afq)
-df_afq$subj_id <- factor(df_afq$subj_id)
-df_afq$scan_name <- factor(df_afq$scan_name)
-df_afq$tract_name <- factor(df_afq$tract_name)
-
-df_scan_imp <- read.csv(data_imp)
-df_scan_imp$subj_id <- factor(df_scan_imp$subj_id)
-df_scan_imp$scan_name <- factor(df_scan_imp$scan_name)
-df_scan_imp$impact_name <- factor(df_scan_imp$impact_name)
-
-
 # PCA: Post Impact ----
 library("factoextra")
 library("ggbiplot")
@@ -211,13 +192,19 @@ merf <- MERF(
 )
 
 
-# GAM: Impact mem_vis ----
+# GAM: Impact values ----
+#
+# Model as HGAM, using only group smooths and wiggliness, i.e.
+# no global and similar to mod_I.
 library(mgcv)
 library(mgcViz)
 library(viridis)
 library(rgl)
+library(visreg)
+library("reshape2")
 
-df <- subset(
+# Get relevant columns
+df_wide <- subset(
   df_scan_imp,
   select = c(
     "subj_id", "scan_name", "mem_ver", "mem_vis",
@@ -225,153 +212,56 @@ df <- subset(
   )
 )
 
+# Convert to long
+df <- melt(
+  df_wide,
+  id.vars = c("subj_id", "scan_name"),
+  variable.name = "impact",
+  value.name = "value"
+)
+df$impact <- factor(df$impact)
+
+# Make continuous x
 df$scan_time <- 1
 df[which(df$scan_name == "post"), ]$scan_time <- 2
 df[which(df$scan_name == "rtp"), ]$scan_time <- 3
 
-
-# descdist(df$mem_vis)
-# hist(df$mem_vis)
-fit_mem <- gam(
-  mem_vis ~ s(scan_time, bs = "tp", k = 3) + s(subj_id, bs = "re"),
+# Specify HGAM with only group smooths and wiggliness, not ideal because
+# impact values have different distributions
+fit_I <- bam(
+  value ~ s(subj_id, bs = "re") +
+    s(scan_time, by = impact, k = 3, bs = "tp") +
+    s(impact, bs = "re", k = 6),
   data = df,
-  family = gaussian(),
-  method = "REML"
-)
-plot(fit_mem)
-
-
-
-# GAM: Tract by Scan ----
-tract <- "Callosum Temporal"
-df <- df_afq[which(df_afq$tract_name == tract), ]
-
-# Global fit + group smooths
-fit_GS <- bam(
-  dti_fa ~ s(subj_id, scan_name, bs = "re") +
-    s(node_id, bs = "tp", k = 40) +
-    s(node_id, scan_name, bs = "fs", k = 40),
-  data = df,
-  family = betar(link = "logit"),
+  family = nb(),
   method = "fREML",
   discrete = T
 )
-gam.check(fit_GS)
-summary(fit_GS)
-plot(fit_GS)
+gam.check(fit_I)
+plot(fit_I)
+visreg(fit_I, xvar = "scan_time", by = "impact", data = df, method = "fREML")
 
-p <- getViz(fit_GS)
-plot(p)
+# Deal with diff distributions
+impact_list <- unique(df$impact)
+for(imp in impact_list){
+  hist(df[which(df$impact == imp), ]$value, main = imp)
+}
+# right skewed: imp_ctrl, rx_time, tot_symp 
+# left skewed: mem_ver, mem_vis, vis_mot
 
-# Global fit + ordered group smooths (ref = base)
-df$scanOF <- factor(df$scan_name, ordered = T)
-
-fit_GSO <- bam(
-  dti_fa ~ s(subj_id, scan_name, bs = "re") +
-    s(node_id, bs = "tp", k = 40) +
-    s(node_id, by = scanOF, bs = "fs", k = 40),
-  data = df,
-  family = betar(link = "logit"),
-  method = "fREML",
-  discrete = T
-)
-gam.check(fit_GSO)
-summary(fit_GSO)
-plot(fit_GSO)
-
-p <- getViz(fit_GSO)
-plot(p)
-
-
-# GAM: Tract Post-Base, RTP-Base differences ----
-tract <- "Left Anterior Thalamic"
-df <- df_afq[which(df_afq$tract_name == tract), ]
-# df <- df_afq[which(df$scan_name != "rtp"), ]
-
-# Convert wide for delta calc
-df <- subset(
-  df,
-  select = c("subj_id", "scan_name", "tract_name", "node_id", "dti_fa")
-)
-df_wide <- reshape(
-  df,
-  idvar = c("subj_id", "node_id"), timevar = "scan_name",
-  direction = "wide"
-)
-
-# # Fit delta fa
-# df_wide$delta.fa <- df_wide$dti_fa.post - df_wide$dti_fa.base
-# fit_DG <- bam(
-#   delta.fa ~ s(subj_id, bs = "re") +
-#     s(node_id, bs = "tp", k = 40),
-#   data = df_wide,
-#   family = gaussian(),
-#   method = "fREML",
-#   discrete = T
-# )
-# gam.check(fit_DG)
-# summary(fit_DG)
-# plot(fit_DG)
-#
-# p <- getViz(fit_DG)
-# plot(p)
-
-df_wide$delta.post_base <- df_wide$dti_fa.post - df_wide$dti_fa.base
-df_wide$delta.rtp_base <- df_wide$dti_fa.rtp - df_wide$dti_fa.base
-df_wide <- na.omit(df_wide)
-hist(df_wide$delta.rtp_base)
-
-# Reshape to long
-df_wide <- subset(
-  df_wide,
-  select = c(
-    "subj_id", "node_id", "tract_name.base",
-    "delta.post_base", "delta.rtp_base"
-  )
-)
-df_long <- reshape(
-  df_wide,
-  direction = "long",
-  varying = c("delta.post_base", "delta.rtp_base"),
-  times = c("post_base", "rtp_base"),
-  idvar = c("subj_id", "node_id")
-)
-colnames(df_long)[3:4] <- c("tract_name", "comp_scan")
-rownames(df_long) <- NULL
-df_long$comp_scan <- factor(df_long$comp_scan)
-
-
-# Fit delta FA for groups post-base, rtp-base.
-#
-# Same diff splines as LGIO, smaller dev explained (15.4%)
-fit_LDI <- bam(
-  delta ~ s(subj_id, comp_scan, bs = "re") +
-    s(node_id, by = comp_scan, bs = "tp", k = 50),
-  data = df_long,
-  family = gaussian(),
-  method = "fREML",
-  discrete = T
-)
-gam.check(fit_LDI)
-summary(fit_LDI)
-plot(fit_LDI)
-
-
-rds_lgio <- paste0(
-  getwd(), "/rda_objects/fit_LGIO_laThal_fa.Rda"
-)
-fit_LGIO <- readRDS(rds_lgio)
-gam.check(fit_LGIO)
-summary(fit_LGIO)
-plot(fit_LGIO)
-
+ggplot(data = df, aes(x = scan_time, y = value)) +
+  facet_wrap(vars(impact), ncol = 3, scales = "free") +
+  # geom_smooth(method = "gam", formula = y ~ s(x, bs = "tp", k = 3)) +
+  geom_smooth() +
+  # geom_point() +
+  scale_x_continuous(breaks = 1:3)
 
 
 # GAM: WB Post-Base, RTP-Base differences ----
 #
-# The GAM: Tract difference splines (above) produced the same smooths
-# as the LGSIO model, so it might be possible to fit all data at once
-# using the same difference approach.
+# https://stackoverflow.com/questions/68956080/how-to-specify-a-hierarchical-gam-hgam-model-with-two-categorical-a-continuo
+# https://stackoverflow.com/questions/47934100/how-to-specify-the-non-linear-interaction-of-two-factor-variables-in-generalised?rq=3
+# https://stackoverflow.com/questions/63023080/interactions-between-categorical-terms-in-gam-mgcv?rq=3
 
 # Convert wide for delta calc
 df <- subset(
@@ -406,18 +296,6 @@ rownames(df_long) <- NULL
 df_long$comp_scan <- factor(df_long$comp_scan)
 rm(df_wide, df)
 
-
-# #
-# fit_LDI <- bam(
-#   delta ~ s(subj_id, by = interaction(tract_name, comp_scan), bs = "re") +
-#     s(node_id, by = interaction(tract_name, comp_scan), bs = "tp", k = 40) +
-#     interaction(tract_name, comp_scan),
-#   data = df_long,
-#   family = gaussian(),
-#   method = "fREML",
-#   discrete = T
-# )
-
 # Manually calc interactions
 df_long$tract_scan <- interaction(df_long$tract_name, df_long$comp_scan)
 
@@ -430,7 +308,7 @@ fit_LDI <- bam(
   method = "fREML",
   discrete = T
 )
-rds_ldi <- paste0(getwd(), "/rda_objects/fit_LDI_2_fa.Rda")
+rds_ldi <- paste0(getwd(), "/rda_objects/fit_LDI_fa.Rda")
 saveRDS(fit_LDI, file = rds_ldi)
 
 fit_LDI <- readRDS(rds_ldi)
@@ -438,14 +316,57 @@ gam.check(fit_LDI)
 summary(fit_LDI)
 plot(fit_LDI)
 
+# Plot smooths, individually
 p <- getViz(fit_LDI)
 plot(p)
+plot(sm(p, 57))
+plot(sm(p, 112))
+
+for(num in c(57:112)){
+  print(plot(sm(p, num)))
+}
+
+# Build plot obj
+library("gratia")
+draw(fit_LDI, select = c(57:64), scales = "fixed") # Post CC
+draw(fit_LDI, select = c(65:74), scales = "fixed") # Post LH
+draw(fit_LDI, select = c(75:84), scales = "fixed") # Post RH
+
+# Plot post and rtp together
+num_smooths <- length(fit_LDI$smooth)
+node_smooths <- c()
+name_smooths <- c()
+for(num in 1:num_smooths){
+  if(fit_LDI[["smooth"]][[num]][["term"]] == "node_id"){
+    node_smooths <- c(node_smooths, num)
+    label <- fit_LDI[["smooth"]][[num]][["label"]]
+    h <- strsplit(label, "tract_scan")[[1]][2]
+    name_smooths <- c(name_smooths, strsplit(h, "\\.")[[1]][1])
+  }
+}
+half <- length(node_smooths)/2
+post_smooths <- head(node_smooths, half)
+rtp_smooths <- tail(node_smooths, half)
+name_smooths <- head(name_smooths, half) # Names appear twice
+
+p <- getViz(fit_LDI)
+c <- 1
+pp <- plot(sm(p, post_smooths[c]))
+pr <- plot(sm(p, rtp_smooths[c]))
+
+# Identify max diff nodes
+p_info <- plot(sm(p, 58))
+p_data <- as.data.frame(p_info$data$fit)
+max_y <- max(abs(p_data$y))
+node <- p_data[which(abs(p_data$y) == max_y), ]$x
 
 
 # GAM: WB Longitudinal ----
 #
 # As GAM: WB diff is working, use long model to avoid
 # dropping data in diff calc.
+#
+# Runs in ~30 hours, seems like need more data for this model.
 df <- subset(
   df_afq,
   select = c("subj_id", "scan_name", "tract_name", "node_id", "dti_fa")
@@ -474,29 +395,6 @@ plot(fit_LGI)
 p <- getViz(fit_LGI)
 plot(p)
 
-
-# # Reduce to only CC tracts
-# library("data.table")
-# df_r <- subset(
-#   df_afq,
-#   select = c("subj_id", "scan_name", "tract_name", "node_id", "dti_fa")
-# )
-# df_r <- df_r[df_r$tract_name %like% "Callosum", ]
-# df_r$tract_scan <- interaction(df_r$tract_name, df_r$scan_name)
-# 
-# fit_LGI_cc <- bam(
-#   dti_fa ~ s(subj_id, by = tract_scan, bs = "re") +
-#     s(node_id, by = tract_name, bs = "tp", k = 40) +
-#     s(node_id, by = tract_scan, bs = "tp", k = 40) +
-#     tract_name + scan_name + tract_scan,
-#   data = df_r,
-#   family = betar(link = "logit"),
-#   method = "fREML",
-#   discrete = T,
-#   nthreads = 12
-# )
-# rds_lgi_cc <- paste0(getwd(), "/rda_objects/fit_LGI_cc_fa.Rda")
-# saveRDS(fit_LGI_cc, file = rds_lgi_cc)
 
 
 # GAM: Post tract by K-group 1 vs 2, 3 ----
@@ -659,51 +557,71 @@ p <- getViz(fit_GSO)
 plot(p)
 
 
-# GAM: All tracts for Post ----
-df <- df_afq[which(df_afq$scan_name == "post"), ]
+# GAM: Single Subj WB delta ----
+subj <- "142" # From K-means cluster
+df <- df_afq[which(df_afq$subj_id == subj), ]
+df_sub <- df[which(df$node_id == 10),]
+table(df_sub$tract_name)
 
-fit_I <- bam(
-  dti_fa ~ s(subj_id, tract_name, bs = "re") +
-    s(node_id, by = tract_name, bs = "tp", k = 40),
-  data = df,
-  family = betar(link = "logit"),
+#!pArc, vOcc
+df <- subset(
+  df,
+  select = c("subj_id", "scan_name", "tract_name", "node_id", "dti_fa")
+)
+df_wide <- reshape(
+  df,
+  idvar = c("subj_id", "node_id", "tract_name"), timevar = "scan_name",
+  direction = "wide"
+)
+df_wide$delta.post_base <- df_wide$dti_fa.post - df_wide$dti_fa.base
+df_wide$delta.rtp_base <- df_wide$dti_fa.rtp - df_wide$dti_fa.base
+
+df_wide <- subset(
+  df_wide,
+  select = c(
+    "subj_id", "tract_name", "node_id", "delta.post_base", "delta.rtp_base"
+  )
+)
+df_long <- reshape(
+  df_wide,
+  direction = "long",
+  varying = c("delta.post_base", "delta.rtp_base"),
+  times = c("post_base", "rtp_base"),
+  idvar = c("subj_id", "tract_name", "node_id")
+)
+colnames(df_long)[4] <- c("comp_scan")
+rownames(df_long) <- NULL
+df_long$comp_scan <- factor(df_long$comp_scan)
+rm(df_wide, df)
+
+# Manually calc interactions
+df_long$tract_scan <- interaction(df_long$tract_name, df_long$comp_scan)
+
+# LDI model
+fit_LDI <- bam(
+  delta ~ s(node_id, by = tract_scan, bs = "tp", k = 40) +
+    tract_name + comp_scan + tract_scan,
+  data = df_long,
+  family = gaussian(),
   method = "fREML",
-  discrete = T,
+  discrete = T, 
   nthreads = 12
 )
-rds_i <- paste0(getwd(), "/rda_objects/fit_I_fa.Rda")
-saveRDS(fit_I, file = rds_i)
-# summary(fit_I)
-# plot(fit_I)
+gam.check(fit_LDI)
 
-fit_I <- readRDS(rds_i)
-gam.check(fit_I)
-summary(fit_I)
-plot(fit_I)
+# Plot smooths, individually
+p <- getViz(fit_LDI)
+plot(p)
+# plot(sm(p, 57))
+# plot(sm(p, 112))
+# 
+# for(num in c(57:112)){
+#   print(plot(sm(p, num)))
+# }
 
-
-
-# GAM: All tracts longitudinal ----
-# https://stackoverflow.com/questions/68956080/how-to-specify-a-hierarchical-gam-hgam-model-with-two-categorical-a-continuo
-# https://stackoverflow.com/questions/47934100/how-to-specify-the-non-linear-interaction-of-two-factor-variables-in-generalised?rq=3
-# https://stackoverflow.com/questions/63023080/interactions-between-categorical-terms-in-gam-mgcv?rq=3
-df <- df_afq[which(df_afq$scan_name != "rtp"), ]
-
-fit_LI <- bam(
-  dti_fa ~ s(subj_id, by = interaction(tract_name, scan_name), bs = "re") +
-    s(node_id, by = interaction(tract_name, scan_name), bs = "tp", k = 40) +
-    interaction(tract_name, scan_name),
-  data = df,
-  family = betar(link = "logit"),
-  method = "fREML",
-  discrete = T,
-  nthreads = 12
-)
-saveRDS(fit_LI, file = paste0(getwd(), "/rda_objects/fit_LI_fa.Rda"))
-plot(fit_LI)
-
-
-
+draw(fit_LDI, select = c(1:8), scales = "fixed") # Post CC
+draw(fit_LDI, select = c(9:18), scales = "fixed") # Post LH
+draw(fit_LDI, select = c(19:28), scales = "fixed") # Post RH
 
 
 # GAM: Tract by Scan with Behavior ----

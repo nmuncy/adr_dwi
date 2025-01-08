@@ -12,8 +12,12 @@ import(psych)
 
 quick_stats <- use("resources/quick_stats.R")
 
+
+#' Provide switch for Impact measure names.
+#'
+#' @param meas String impact column name.
+#' @returns String reduced impact name.
 .meas_names <- function(meas) {
-  # Switch variable name for something more readable.
   out_name <- switch(meas,
     "userMemoryCompositeScoreVerbal" = "Vebal Memory Comp",
     "userMemoryCompositeScoreVisual" = "Visual Memory Comp",
@@ -26,8 +30,10 @@ quick_stats <- use("resources/quick_stats.R")
 }
 
 
-#' PCA eigenvector
-#' TODO
+#' Draw PCA eigenvector, biplots.
+#'
+#' @param stats_pc Object returned by stats::prcomp.
+#' @returns Named list "plot_eig" = eigen plot, "plot_biplot = biplot.
 export("draw_pca")
 draw_pca <- function(stats_pc) {
   plot_eig <- fviz_eig(stats_pc, addlabels = T)
@@ -36,8 +42,11 @@ draw_pca <- function(stats_pc) {
 }
 
 
-#' K-means cluster
-#' TODO
+#' Draw K-means cluster.
+#'
+#' @param data_norm Dataframe of normalized data, from quick_stats$run_kmeans.
+#' @param clust_km Object returned by stats::kmean.
+#' @returns fviz_clister plot.
 export("draw_kmeans")
 draw_kmeans <- function(data_norm, clust_km) {
   plot_kmean <- fviz_cluster(list(data = data_norm, cluster = clust_km))
@@ -45,8 +54,11 @@ draw_kmeans <- function(data_norm, clust_km) {
 }
 
 
-#' Impact pairs
-#' TODO
+#' Draw Impact pairs accounting for kmeans clusters.
+#'
+#' @param df Dataframe with clustering info, workflows$impact_cluster$df_sik.
+#' @param col_list List of relevant columns in df.
+#' @param num_k Number of clusters.
 export("draw_impact_pairs")
 draw_impact_pairs <- function(df, col_list, num_k) {
   if (num_k == 3) {
@@ -62,6 +74,7 @@ draw_impact_pairs <- function(df, col_list, num_k) {
   )
   # return(plot_pairs)
 }
+
 
 #' Make XYplot tracking participants by visit.
 #'
@@ -105,12 +118,13 @@ visit_track <- function(col_name, df) {
 }
 
 
+#' Plot subjects with better fu1 vs base impact measures.
+#'
+#' Deprecated.
+#'
+#' TODO remove
 export("visit_box")
 visit_box <- function(col_name, df) {
-  # Identify subjects who get better from base to fu1
-  #
-  # Arguments:
-  #
   stats_b <- quick_stats$wc_ranksum(col_name, df, "base")
   stats_f <- quick_stats$wc_ranksum(col_name, df, "fu1")
 
@@ -129,32 +143,42 @@ visit_box <- function(col_name, df) {
 }
 
 
-export("draw_global_smooth")
-draw_global_smooth <- function(plot_obj, attr_num, tract) {
-  # Draw global smooth of AFQ tract.
-  #
-  # Draw global smooth resulting from GS model. Use plot(sm(obj, int))
-  # to extract values, calculate confidence intervals, and ggplot
-  # on a scaled X-axis.
-  #
-  # Arguments:
-  #   plot_obj (list) = Plotable object returned by getViz
-  #   attr_num (int) = List/attribute number of plot_obj that contains
-  #     global smooth
-  #   tract (str) = AFQ tract name
-
-  # use plot to extract attribute of interest
-  p <- plot(sm(plot_obj, attr_num))
+#' Extract data fit from plotable, add LB, UB for CIs.
+#'
+#' @param p getViz plotable object from plot(sm(p, x)).
+#' @col_names Optional, list of desired column names.
+#' @returns Dataframe with added lb, ub columns.
+.add_lb_ub <- function(p, col_names = c("nodeID", "est", "ty", "se")) {
   p_data <- as.data.frame(p$data$fit)
-  colnames(p_data) <- c("nodeID", "est", "ty", "se")
-  p_data$lb <- as.numeric(p_data$est - (2 * p_data$se))
-  p_data$ub <- as.numeric(p_data$est + (2 * p_data$se))
+  colnames(p_data) <- col_names
+  p_data$lb <- as.numeric(p_data$est - (1.96 * p_data$se))
+  p_data$ub <- as.numeric(p_data$est + (1.96 * p_data$se))
+  return(p_data)
+}
+
+
+#' Draw global smooth with confidence intervals.
+#'
+#' @param plot_obj Plotable object returned by getViz.
+#' @param g_num Attribute number of plot_obj containing desired smooth.
+#' @param x_min Optional, x-axis range LB.
+#' @param x_max Optional, x-axis range UB.
+#' @returns Named list, "global" = ggplot object.
+export("draw_gs")
+draw_gs <- function(plot_obj, g_num, x_min = 10, x_max = 89) {
+  # use plot to extract attribute of interest
+  p <- plot(sm(plot_obj, g_num))
+  p_data <- .add_lb_ub(p)
+  # p_data <- as.data.frame(p$data$fit)
+  # colnames(p_data) <- c("nodeID", "est", "ty", "se")
+  # p_data$lb <- as.numeric(p_data$est - (2 * p_data$se))
+  # p_data$ub <- as.numeric(p_data$est + (2 * p_data$se))
 
   # make, save ggplot
   pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
     geom_line() +
     geom_ribbon(aes(ymin = .data$lb, ymax = .data$ub), alpha = 0.2) +
-    scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
+    scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
     theme(
       text = element_text(family = "Times New Roman"),
       axis.title.y = element_blank(),
@@ -165,23 +189,20 @@ draw_global_smooth <- function(plot_obj, attr_num, tract) {
 }
 
 
-export("draw_group_smooth")
-draw_group_smooth <- function(plot_obj, attr_num, tract) {
-  # Draw group smooths of AFQ tract.
-  #
-  # Draw group smooths resulting from a GS model. Use plot(sm(obj, int))
-  # to extract values and ggplot on a scaled Y- and X-axis.
-  #
-  # Arguments:
-  #   plot_obj (list) = Plotable object returned by getViz
-  #   attr_num (int) = List/attribute number of plot_obj that contains
-  #     group smooths
-  #   tract (str) = AFQ tract name
-
+#' Draw group smooths with confidence intervals.
+#'
+#' @param plot_obj Plotable object returned by getViz.
+#' @param i_num Attribute number of plot_obj containing desired smooth.
+#' @param x_min Optional, x-axis range LB.
+#' @param x_max Optional, x-axis range UB.
+#' @returns Named list, "group" = ggplot object.
+export("draw_is")
+draw_is <- function(plot_obj, i_num, x_min = 10, x_max = 89) {
   # use plot to extract attribute of interest
-  p <- plot(sm(plot_obj, attr_num))
-  p_data <- as.data.frame(p$data$fit)
-  colnames(p_data) <- c("nodeID", "est", "ty", "Group")
+  p <- plot(sm(plot_obj, i_num))
+  p_data <- .add_lb_ub(p, col_names = c("nodeID", "est", "ty", "Group"))
+  # p_data <- as.data.frame(p$data$fit)
+  # colnames(p_data) <- c("nodeID", "est", "ty", "Group")
 
   # make, save ggplot
   # limits = c(-0.2, 0.2)
@@ -191,7 +212,7 @@ draw_group_smooth <- function(plot_obj, attr_num, tract) {
   ) +
     geom_line(aes(color = .data$Group)) +
     scale_y_continuous() +
-    scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
+    scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
     scale_color_discrete(name = "") +
     theme(
       text = element_text(family = "Times New Roman"),
@@ -205,23 +226,98 @@ draw_group_smooth <- function(plot_obj, attr_num, tract) {
 }
 
 
-.find_sig_nodes <- function(p_data, sig_dir="less"){
-  # find sig nodes
-  if(sig_dir == "less"){
+#' Draw group difference smooths in y-range of global smooth.
+#'
+#' @param plot_obj Plotable object returned by getViz.
+#' @param g_num Attribute number of plot_obj containing global smooth.
+#' @param i_num Attribute number of plot_obj containing group smooth.
+#' @param x_min Optional, x-axis range LB.
+#' @param x_max Optional, x-axis range UB.
+#' @returns Named list, "diff" = ggplot object.
+export("draw_gios_diff")
+draw_gios_diff <- function(plot_obj, g_num, i_num, x_min = 10, x_max = 89) {
+  # Determine ymin/max from group smooth
+  p <- plot(sm(plot_obj, g_num))
+  p_data <- .add_lb_ub(p)
+  # p_data <- as.data.frame(p$data$fit)
+  # colnames(p_data) <- c("nodeID", "est", "ty", "se")
+  gy_min <- min(p_data$est)
+  gy_max <- max(p_data$est)
+
+  # unpack difference smooth data
+  p <- plot(sm(plot_obj, i_num)) +
+    geom_hline(yintercept = 0)
+  p_data <- .add_lb_ub(p)
+  # p_data <- as.data.frame(p$data$fit)
+  # colnames(p_data) <- c("nodeID", "est", "ty", "se")
+  # p_data$lb <- as.numeric(p_data$est - (1.96 * p_data$se))
+  # p_data$ub <- as.numeric(p_data$est + (1.96 * p_data$se))
+
+  # Determine highest/lowest max/min across global and group smooths
+  GY_max <- pmax(gy_max, max(p_data$est))
+  GY_min <- pmin(gy_min, min(p_data$est))
+
+  # Draw
+  pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
+    geom_hline(yintercept = 0) +
+    geom_line() +
+    geom_ribbon(
+      aes(ymin = .data$lb, ymax = .data$ub),
+      alpha = 0.2
+    ) +
+    scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
+    coord_cartesian(ylim = c(GY_min, GY_max)) +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      axis.title.y = element_blank(),
+      axis.title.x = element_blank()
+    )
+  return(list("diff" = pp))
+}
+
+
+#' Determine which nodes differ from zero.
+#'
+#' @param p_data Dataframe from plotable$fit.
+#' @param sig_dir String, "less" or "more".
+#' @param returns NULL or dataframe containing dims for rect drawing.
+.find_sig_nodes <- function(p_data, sig_dir = "less") {
+  # Find sig rows
+  if (sig_dir == "less") {
     sig_rows <- which(p_data$est < 0 & p_data$ub < 0)
     y_start <- min(p_data$lb)
     y_end <- 0
-  }else if(sig_dir == "more"){
+  } else if (sig_dir == "more") {
     sig_rows <- which(p_data$est > 0 & p_data$lb > 0)
     y_start <- 0
     y_end <- max(p_data$ub)
   }
-  sig_nodes <- p_data[sig_rows, ]$nodeID
-  
-  if(length(sig_nodes) == 0){
+  if (length(sig_rows) == 0) {
     return(NULL)
   }
-  
+
+  # Remove single rows - where a single node is identified as significant.
+  rm_rows <- c()
+  c <- 1
+  while (c < length(sig_rows)) {
+    row <- sig_rows[c]
+    if (c == 1 && sig_rows[c + 1] > row + 1) { # First row is single
+      rm_rows <- c(rm_rows, row)
+    } else if (c == length(sig_rows) && sig_rows[c - 1] < row - 1) { # Final row is single
+      rm_rows <- c(rm_rows, row)
+    } else if (c > 1 && sig_rows[c - 1] < row - 1 && sig_rows[c + 1] > row + 1) { # Middle row is single
+      rm_rows <- c(rm_rows, row)
+    }
+    c <- c + 1
+  }
+  sig_rows <- sig_rows[!sig_rows %in% rm_rows]
+
+  # Identify significant nodes
+  sig_nodes <- p_data[sig_rows, ]$nodeID
+  if (length(sig_nodes) == 0) {
+    return(NULL)
+  }
+
   # find start, end points of sig regions
   vec_start <- sig_nodes[1]
   vec_end <- vector()
@@ -236,7 +332,7 @@ draw_group_smooth <- function(plot_obj, attr_num, tract) {
     c <- cc
   }
   vec_end <- append(vec_end, sig_nodes[num_nodes])
-  
+
   # make df for drawing rectangles
   d_rect <- data.frame(
     x_start = vec_start,
@@ -250,92 +346,24 @@ draw_group_smooth <- function(plot_obj, attr_num, tract) {
 }
 
 
-
-export("draw_group_smooth_diff")
-draw_group_smooth_diff <- function(plot_obj, grp_num, attr_num, tract) {
-  #
-  
-  # Determine ymin/max from group smooth
-  p <- plot(sm(plot_obj, grp_num))
-  p_data <- as.data.frame(p$data$fit)
-  colnames(p_data) <- c("nodeID", "est", "ty", "se")
-  gy_min <- min(p_data$est)
-  gy_max <- max(p_data$est)
-  
-  # unpack difference smooth data
-  p <- plot(sm(plot_obj, attr_num)) +
-    geom_hline(yintercept = 0)
-  p_data <- as.data.frame(p$data$fit)
-  colnames(p_data) <- c("nodeID", "est", "ty", "se")
-  p_data$lb <- as.numeric(p_data$est - (1.96 * p_data$se))
-  p_data$ub <- as.numeric(p_data$est + (1.96 * p_data$se))
-  
-  # Determine highest/lowest max/min across global and group smooths
-  GY_max <- pmax(gy_max, max(p_data$est))
-  GY_min <- pmin(gy_min, min(p_data$est))
-
-  # Draw
-  pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
-    geom_hline(yintercept = 0) +
-    geom_line() +
-    geom_ribbon(
-      aes(ymin = .data$lb, ymax = .data$ub),
-      alpha = 0.2
-    ) +
-    scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
-    coord_cartesian(ylim=c(GY_min,GY_max)) +
-    theme(
-      text = element_text(family = "Times New Roman"),
-      axis.title.y = element_blank(),
-      axis.title.x = element_blank()
-    )
-  return(list("diff" = pp))
-}
-  
-
-export("draw_group_smooth_diff_sig")
-draw_group_smooth_diff_sig <- function(plot_obj, grp_num, attr_num, tract) {
-  # Draw difference of group smooths of AFQ tract.
-  #
-  # Plot an A-B difference smooth from an GAM using an ordered factor for group,
-  # identify nodes which sig differ from 0, draw polygons to ID.
-  #
-  # Arguments:
-  #   plot_obj (list) = Plotable object returned by getViz
-  #   attr_num (int) = List/attribute number of plot_obj that contains group
-  #     difference smooth
-  #   tract (str) = AFQ tract name
-  
-  # Determine ymin/max from group smooth
-  p <- plot(sm(plot_obj, grp_num))
-  p_data <- as.data.frame(p$data$fit)
-  colnames(p_data) <- c("nodeID", "est", "ty", "se")
-  gy_min <- min(p_data$est)
-  gy_max <- max(p_data$est)
-
-  # unpack difference smooth data
-  p <- plot(sm(plot_obj, attr_num)) +
-    geom_hline(yintercept = 0)
-  p_data <- as.data.frame(p$data$fit)
-  colnames(p_data) <- c("nodeID", "est", "ty", "se")
-  p_data$lb <- as.numeric(p_data$est - (1.96 * p_data$se))
-  p_data$ub <- as.numeric(p_data$est + (1.96 * p_data$se))
-  
-  # Determine highest/lowest max/min across global and group smooths
-  GY_max <- pmax(gy_max, max(p_data$est))
-  GY_min <- pmin(gy_min, min(p_data$est))
-  
-  # Find nodes that differ
-  rect_less <- .find_sig_nodes(p_data, sig_dir="less")
-  rect_more <- .find_sig_nodes(p_data, sig_dir="more")
-  
-  if(is.data.frame(rect_less) & is.data.frame(rect_more)){
+#' Draw smooth and account for sig rects.
+#'
+#' @param p_data Dataframe from plotable$fit.
+#' @param rect_less Dataframe containing info for <0 rect.
+#' @param rect_more Dataframe containing info for >0 rect.
+#' @param x_min x-axis range LB.
+#' @param x_max x-axis range UB.
+#' @param y_min y-axis range LB.
+#' @param y_max y-axis range UB.
+.draw_smooth_rects <- function(
+    p_data, rect_less, rect_more, x_min, x_max, y_min, y_max) {
+  if (is.data.frame(rect_less) & is.data.frame(rect_more)) { # up and down rects
     d_rect <- rbind(rect_less, rect_more)
-  }else if(is.data.frame(rect_less)){
+  } else if (is.data.frame(rect_less)) { # down rects
     d_rect <- rect_less
-  }else if(is.data.frame(rect_more)){
+  } else if (is.data.frame(rect_more)) { # up rects
     d_rect <- rect_more
-  }else{
+  } else { # no rects
     pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
       geom_hline(yintercept = 0) +
       geom_line() +
@@ -343,70 +371,17 @@ draw_group_smooth_diff_sig <- function(plot_obj, grp_num, attr_num, tract) {
         aes(ymin = .data$lb, ymax = .data$ub),
         alpha = 0.2
       ) +
-      scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
-      coord_cartesian(ylim=c(GY_min,GY_max)) +
+      scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
+      coord_cartesian(ylim = c(y_min, y_max)) +
       theme(
         text = element_text(family = "Times New Roman"),
         axis.title.y = element_blank(),
         axis.title.x = element_blank()
       )
-    return(list("diff" = pp))
+    return(pp)
   }
-  
 
-  # # find sig nodes
-  # sig_rows <- which(
-  #   (p_data$est < 0 & p_data$ub < 0) |
-  #     (p_data$est > 0 & p_data$lb > 0)
-  # )
-  # sig_nodes <- p_data[sig_rows, ]$nodeID
-  
-  # # Account for lag of significance
-  # if(dim(d_rect)[1] == 0){
-  #   pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
-  #     geom_hline(yintercept = 0) +
-  #     geom_line() +
-  #     geom_ribbon(
-  #       aes(ymin = .data$lb, ymax = .data$ub),
-  #       alpha = 0.2
-  #     ) +
-  #     scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
-  #     coord_cartesian(ylim=c(GY_min,GY_max)) +
-  #     theme(
-  #       text = element_text(family = "Times New Roman"),
-  #       axis.title.y = element_blank(),
-  #       axis.title.x = element_blank()
-  #     )
-  #   return(list("diff" = pp))
-  # }
-
-  # # find start, end points of sig regions
-  # vec_start <- sig_nodes[1]
-  # vec_end <- vector()
-  # y_min <- min(p_data$lb)
-  # num_nodes <- length(sig_nodes)
-  # c <- 2
-  # while (c < num_nodes) {
-  #   cc <- c + 1
-  #   if (sig_nodes[cc] > sig_nodes[c] + 1) {
-  #     vec_end <- append(vec_end, sig_nodes[c])
-  #     vec_start <- append(vec_start, sig_nodes[cc])
-  #   }
-  #   c <- cc
-  # }
-  # vec_end <- append(vec_end, sig_nodes[num_nodes])
-  # 
-  # # make df for drawing rectangles
-  # d_rect <- data.frame(
-  #   x_start = vec_start,
-  #   x_end = vec_end,
-  #   y_start = rep(y_min, length(vec_start)),
-  #   y_end = rep(0, length(vec_start))
-  # )
-  # d_rect$x_start <- d_rect$x_start
-  # d_rect$x_end <- d_rect$x_end
-
-  # draw
+  # Draw with rects
   pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
     geom_hline(yintercept = 0) +
     geom_line() +
@@ -423,29 +398,189 @@ draw_group_smooth_diff_sig <- function(plot_obj, grp_num, attr_num, tract) {
       alpha = 0.2,
       fill = "red"
     ) +
-    scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
-    coord_cartesian(ylim=c(GY_min,GY_max)) +
+    scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
+    coord_cartesian(ylim = c(y_min, y_max)) +
     theme(
       text = element_text(family = "Times New Roman"),
       axis.title.y = element_blank(),
       axis.title.x = element_blank()
     )
+  return(pp)
+}
+
+
+#' Draw group difference smooths in y-range of global smooth with significance.
+#'
+#' @param plot_obj Plotable object returned by getViz.
+#' @param g_num Attribute number of plot_obj containing global smooth.
+#' @param i_num Attribute number of plot_obj containing group smooth.
+#' @param x_min Optional, x-axis range LB.
+#' @param x_max Optional, x-axis range UB.
+#' @returns Named list, "diff" = ggplot object.
+export("draw_gios_diff_sig")
+draw_gios_diff_sig <- function(plot_obj, g_num, i_num, x_min = 10, x_max = 89) {
+  # Determine ymin/max from group smooth
+  p <- plot(sm(plot_obj, g_num))
+  p_data <- .add_lb_ub(p)
+  # p_data <- as.data.frame(p$data$fit)
+  # colnames(p_data) <- c("nodeID", "est", "ty", "se")
+  gy_min <- min(p_data$est)
+  gy_max <- max(p_data$est)
+
+  # unpack difference smooth data
+  p <- plot(sm(plot_obj, i_num)) +
+    geom_hline(yintercept = 0)
+  p_data <- .add_lb_ub(p)
+  # p_data <- as.data.frame(p$data$fit)
+  # colnames(p_data) <- c("nodeID", "est", "ty", "se")
+  # p_data$lb <- as.numeric(p_data$est - (1.96 * p_data$se))
+  # p_data$ub <- as.numeric(p_data$est + (1.96 * p_data$se))
+
+  # Determine highest/lowest max/min across global and group smooths
+  GY_max <- pmax(gy_max, max(p_data$est))
+  GY_min <- pmin(gy_min, min(p_data$est))
+
+  # Find nodes that differ, draw
+  rect_less <- .find_sig_nodes(p_data, sig_dir = "less")
+  rect_more <- .find_sig_nodes(p_data, sig_dir = "more")
+
+  pp <- .draw_smooth_rects(
+    p_data, rect_less, rect_more, x_min, x_max, GY_min, GY_max
+  )
+
+  # if (is.data.frame(rect_less) & is.data.frame(rect_more)) { # up and down rects
+  #   d_rect <- rbind(rect_less, rect_more)
+  # } else if (is.data.frame(rect_less)) { # down rects
+  #   d_rect <- rect_less
+  # } else if (is.data.frame(rect_more)) { # up rects
+  #   d_rect <- rect_more
+  # } else { # no rects
+  #   pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
+  #     geom_hline(yintercept = 0) +
+  #     geom_line() +
+  #     geom_ribbon(
+  #       aes(ymin = .data$lb, ymax = .data$ub),
+  #       alpha = 0.2
+  #     ) +
+  #     scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
+  #     coord_cartesian(ylim = c(GY_min, GY_max)) +
+  #     theme(
+  #       text = element_text(family = "Times New Roman"),
+  #       axis.title.y = element_blank(),
+  #       axis.title.x = element_blank()
+  #     )
+  #   return(list("diff" = pp))
+  # }
+  #
+  # # Draw with rects
+  # pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
+  #   geom_hline(yintercept = 0) +
+  #   geom_line() +
+  #   geom_ribbon(
+  #     aes(ymin = .data$lb, ymax = .data$ub),
+  #     alpha = 0.2
+  #   ) +
+  #   annotate(
+  #     "rect",
+  #     xmin = c(d_rect$x_start),
+  #     xmax = c(d_rect$x_end),
+  #     ymin = c(d_rect$y_start),
+  #     ymax = c(d_rect$y_end),
+  #     alpha = 0.2,
+  #     fill = "red"
+  #   ) +
+  #   scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
+  #   coord_cartesian(ylim = c(GY_min, GY_max)) +
+  #   theme(
+  #     text = element_text(family = "Times New Roman"),
+  #     axis.title.y = element_blank(),
+  #     axis.title.x = element_blank()
+  #   )
   # print(pp)
   return(list("diff" = pp))
 }
 
 
-export("draw_one_three")
-draw_one_three <- function(plot_list, name_list, tract) {
-  # Assemble a 1x3 grid of plots.
-  #
-  # For plotting tract global, group, difference smooths.
-  #
-  # Arguments:
-  #   plot_list (list) = contains $global, $group, and $diff
-  #   name_list (list) = contains column, left, right, and bottom names
-  #   tract (str) = AFQ tract name
+#' Draw group difference smooths with significance.
+#'
+#' @param plot_obj Plotable object returned by getViz.
+#' @param i_num Attribute number of plot_obj containing group smooth.
+#' @param x_min Optional, x-axis range LB.
+#' @param x_max Optional, x-axis range UB.
+#' @returns Named list, "diff" = ggplot object.
+export("draw_ios_diff_sig")
+draw_ios_diff_sig <- function(plot_obj, i_num, x_min = 10, x_max = 89) {
+  # Unpack difference smooth data
+  p <- plot(sm(plot_obj, i_num)) +
+    geom_hline(yintercept = 0)
+  p_data <- .add_lb_ub(p)
 
+  # Find nodes that differ
+  rect_less <- .find_sig_nodes(p_data, sig_dir = "less")
+  rect_more <- .find_sig_nodes(p_data, sig_dir = "more")
+
+  # Account for SE in ymin/max
+  max_y <- max(p_data$est)
+  max_node <- which(p_data$est == max_y)
+  GY_max <- max_y + p_data[max_node, ]$ub
+  
+  min_y <- min(p_data$est)
+  min_node <- which(p_data$est == min_y)
+  GY_min <- min_y + p_data[min_node, ]$lb
+  
+  # Draw
+  pp <- .draw_smooth_rects(
+    p_data, rect_less, rect_more, x_min, x_max, GY_min, GY_max
+  )
+  return(list("diff" = pp))
+}
+
+
+#' Assemble a 1x2 grid of plots.
+#'
+#' @param plot_list Named list with diffa, and diffb attrs, containing
+#'    plotable objects.
+#' @param name_list Named list with col1, bot1, and rowL1:2 attrs, containing
+#'    column, bottom, and left row strings.
+#' @returns Object returned by grid.arrange.
+.arr_one_two <- function(plot_list, name_list) {
+  # unpack, organize plots
+  r1A <- plot_list$Ia$diff
+  r2A <- plot_list$Ib$diff
+  
+  # make col titles, y axis, x axis, and row names
+  col1_name <- text_grob(name_list$col1, size = 12, family = "Times New Roman")
+  bot1_name <- text_grob(name_list$bot1, size = 10, family = "Times New Roman")
+  
+  l1_name <-
+    text_grob(name_list$rowL1, size = 12, family = "Times New Roman", rot = 90)
+  l2_name <-
+    text_grob(name_list$rowL2, size = 12, family = "Times New Roman", rot = 90)
+  
+  # r1_name <- r2_name <- text_grob(
+  #   "", size = 12, family = "Times New Roman", rot = 270
+  # )
+  
+  pOut <- grid.arrange(
+    arrangeGrob(r1A, top = col1_name, left = l1_name),
+    arrangeGrob(r2A, bottom = bot1_name, left = l2_name),
+    nrow = 2,
+    ncol = 1,
+    widths = 1,
+    heights = c(1, 1)
+  )
+  return(pOut)
+}
+
+
+#' Assemble a 1x3 grid of plots.
+#'
+#' @param plot_list Named list with global, diffa, and diffb attrs, containing
+#'    plotable objects.
+#' @param name_list Named list with col1, bot1, rowL1:3 and rowR1:3 attrs,
+#'    containing column, bottom, and left/right row strings.
+#' @returns Object returned by grid.arrange.
+.arr_one_three <- function(plot_list, name_list) {
   # unpack, organize plots
   r1A <- plot_list$global$global
   r2A <- plot_list$diffa$diff
@@ -484,24 +619,18 @@ draw_one_three <- function(plot_list, name_list, tract) {
     widths = 1,
     heights = c(1, 1, 1)
   )
-  # print(pOut)
-
-  # ggsave(
-  #   paste0(out_dir, "/Plot_", tract, "_smooths.png"),
-  #   plot = pOut,
-  #   units = "in",
-  #   height = 6,
-  #   width = 3,
-  #   dpi = 600,
-  #   device = "png"
-  # )
   return(pOut)
 }
 
 
-
-export("draw_one_four")
-draw_one_four <- function(plot_list, name_list, tract) {
+#' Assemble a 1x4 grid of plots.
+#'
+#' @param plot_list Named list with global, Ia, Ib, and Ic attrs, containing
+#'    plotable objects.
+#' @param name_list Named list with col1, bot1, rowL1:4 and rowR1:4 attrs,
+#'    containing column, bottom, and left/right row strings.
+#' @returns Object returned by grid.arrange.
+.arr_one_four <- function(plot_list, name_list) {
   # unpack, organize plots
   r1A <- plot_list$global$global
   r2A <- plot_list$Ia$diff
@@ -512,10 +641,14 @@ draw_one_four <- function(plot_list, name_list, tract) {
   col1_name <- text_grob(name_list$col1, size = 12, family = "Times New Roman")
   bot1_name <- text_grob(name_list$bot1, size = 10, family = "Times New Roman")
 
-  l1_name <- l2_name <-
+  l1_name <-
     text_grob(name_list$rowL1, size = 12, family = "Times New Roman", rot = 90)
-  l3_name <- l4_name <-
+  l2_name <-
     text_grob(name_list$rowL2, size = 12, family = "Times New Roman", rot = 90)
+  l3_name <-
+    text_grob(name_list$rowL3, size = 12, family = "Times New Roman", rot = 90)
+  l4_name <-
+    text_grob(name_list$rowL4, size = 12, family = "Times New Roman", rot = 90)
 
   r1_name <- text_grob(
     name_list$rowR1,
@@ -544,34 +677,19 @@ draw_one_four <- function(plot_list, name_list, tract) {
     widths = 1,
     heights = c(1, 1, 1, 1)
   )
-  # print(pOut)
-
-  # ggsave(
-  #   paste0(out_dir, "/Plot_", tract, "_smooths.png"),
-  #   plot = pOut,
-  #   units = "in",
-  #   height = 6,
-  #   width = 3,
-  #   dpi = 600,
-  #   device = "png"
-  # )
   return(pOut)
 }
 
-export("draw_two_three")
-draw_two_three <- function(plot_list, name_list, tract, beh_short, out_name) {
-  # Assemble a 2x3 grid of plots.
-  #
-  # For plotting covariate and interaction smooths for control, experimental,
-  # and difference.
-  #
-  # Arguments:
-  #   plot_list (list) = contains $global, $group, and $diff
-  #   name_list (list) = contains column, left, right, and bottom names
-  #   tract (str) = AFQ tract name
-  #   beh_short (str) =  identifier for specific covariate
-  #   out_name (str) = type of analysis (LGI/ROI/PPI)
 
+#' Assemble a 2x3 grid of plots.
+#' 
+#' Deprecated.
+#'
+#' @param plot_list Named list with beh, intx, and intx_diff attrs, containing
+#'    plotable objects.
+#' @param name_list Named list with col1:2, bot1:2, rowL and rowR1:3 attrs,
+#'    containing column, bottom, and left/right row strings.
+.arr_two_three <- function(plot_list, name_list) {
   # unpack, organize plots
   r1A <- plot_list$beh$con
   r1B <- plot_list$intx$con
@@ -617,34 +735,58 @@ draw_two_three <- function(plot_list, name_list, tract, beh_short, out_name) {
     heights = c(1, 0.8, 1)
   )
   print(pOut)
-
-  # ggsave(
-  #   paste0(out_dir, "/Plot_", tract, "_", out_name, "_", beh_short, ".png"),
-  #   plot = pOut,
-  #   units = "in",
-  #   height = 6,
-  #   width = 6,
-  #   dpi = 600,
-  #   device = "png"
-  # )
 }
 
 
-
-#' Draw smooth grid for LGI models.
+#' Draw smooth grid for LDI models.
 #'
-#' TODO
-export("draw_long_grid")
-draw_long_grid <- function(
-    fit_LGI, tract, scalar_name, num_G = 2, num_Ia = 3, num_Ib = 4, num_Ic = 5
-) {
-  
+#' @param fit_LDI mgcv::gam object.
+#' @param tract String tract name for title.
+#' @param scalar_name String dwi metric for title.
+#' @param num_Ia Number attribute of fit_LDI holding group A smooth.
+#' @param num_Ib Number attribute of fit_LDI holding group B smooth.
+#' @returns Object returned by grid.arrange.
+export("grid_ldi")
+grid_ldi <- function(fit_LDI, tract, scalar_name, num_Ia, num_Ib) {
+  # Generate plots objs from smooths
+  p <- getViz(fit_LDI)
+  pIa <- draw_ios_diff_sig(p, num_Ia)
+  pIb <- draw_ios_diff_sig(p, num_Ib)
+
+  # draw grid
+  plot_list <- list(
+    "Ia" = pIa,
+    "Ib" = pIb
+  )
+  name_list <- list(
+    "col1" = paste("LDI:", tract, scalar_name, "Smooths"),
+    "rowL1" = "Diff: Post-Base",
+    "rowL2" = "Diff: RTP-Base",
+    "bot1" = "Tract Node"
+  )
+  .arr_one_two(plot_list, name_list)
+}
+
+
+#' Draw smooth grid for LGI models, containing global and group smooths.
+#'
+#' @param fit_LGI mgcv::gam object.
+#' @param tract String tract name for title.
+#' @param scalar_name String dwi metric for title.
+#' @param num_G Number attribute of fit_LGI holding global smooth.
+#' @param num_Ia Number attribute of fit_LGI holding group A smooth.
+#' @param num_Ib Number attribute of fit_LGI holding group B smooth.
+#' @param num_Ic Number attribute of fit_LGI holding group C smooth.
+#' @returns Object returned by grid.arrange.
+export("grid_lgi")
+grid_lgi <- function(
+    fit_LGI, tract, scalar_name, num_G = 2, num_Ia = 3, num_Ib = 4, num_Ic = 5) {
   # Generate plots objs from smooths
   plot_GI <- getViz(fit_LGI)
-  pGlobal <- draw_global_smooth(plot_GI, num_G, tract)
-  pIa <- draw_group_smooth_diff(plot_GI, num_G, num_Ia, tract)
-  pIb <- draw_group_smooth_diff(plot_GI, num_G, num_Ib, tract)
-  pIc <- draw_group_smooth_diff(plot_GI, num_G, num_Ic, tract)
+  pGlobal <- draw_gs(plot_GI, num_G)
+  pIa <- draw_gios_diff(plot_GI, num_G, num_Ia)
+  pIb <- draw_gios_diff(plot_GI, num_G, num_Ib)
+  pIc <- draw_gios_diff(plot_GI, num_G, num_Ic)
 
   # draw grid
   plot_list <- list(
@@ -654,30 +796,35 @@ draw_long_grid <- function(
     "Ic" = pIc
   )
   name_list <- list(
-    "col1" = paste(tract, scalar_name, "Smooths"),
+    "col1" = paste("LGI:", tract, scalar_name, "Smooths"),
     "rowL1" = "Est. Global Fit",
     "rowL2" = "Est. Base Fit",
     "rowL3" = "Est. Post Fit",
     "rowL4" = "Est. RTP Fit",
     "bot1" = "Tract Node"
   )
-  plot_grid <- draw_one_four(plot_list, name_list, tract)
+  plot_grid <- .arr_one_four(plot_list, name_list)
   return(plot_grid)
 }
 
 
-#' Draw smooth grid for LGIO models.
+#' Draw smooth grid for LGIO models, containing global and difference smooths.
 #'
-#' TODO
-export("draw_long_ordered_grid")
-draw_long_ordered_grid <- function(
-    fit_LGIO, tract, scalar_name, num_G = 2, num_GOa = 3, num_GOb = 4) {
-  
+#' @param fit_LGIO mgcv::gam object.
+#' @param tract String tract name for title.
+#' @param scalar_name String dwi metric for title.
+#' @param num_G Number attribute of fit_LGIO holding global smooth.
+#' @param num_Ia Number attribute of fit_LGIO holding group A smooth.
+#' @param num_Ib Number attribute of fit_LGIO holding group B smooth.
+#' @returns Object returned by grid.arrange.
+export("grid_lgio")
+grid_lgio <- function(
+    fit_LGIO, tract, scalar_name, num_G = 2, num_Ia = 3, num_Ib = 4) {
   # Generate plots objs from smooths
   plot_GO <- getViz(fit_LGIO)
-  pGlobal <- draw_global_smooth(plot_GO, num_G, tract)
-  pDiffa <- draw_group_smooth_diff_sig(plot_GO, num_G, num_GOa, tract)
-  pDiffb <- draw_group_smooth_diff_sig(plot_GO, num_G, num_GOb, tract)
+  pGlobal <- draw_gs(plot_GO, num_G)
+  pDiffa <- draw_gios_diff_sig(plot_GO, num_G, num_Ia)
+  pDiffb <- draw_gios_diff_sig(plot_GO, num_G, num_Ib)
 
   # draw grid
   plot_list <- list(
@@ -686,18 +833,19 @@ draw_long_ordered_grid <- function(
     "diffb" = pDiffb
   )
   name_list <- list(
-    "col1" = paste(tract, scalar_name, "Smooths"),
+    "col1" = paste("LGIO:", tract, scalar_name, "Smooths"),
     "rowL1" = "Est. Global Fit",
     "rowL2" = "Diff: Post-Base",
     "rowL3" = "Diff: RTP-Base",
     "bot1" = "Tract Node"
   )
-  plot_grid <- draw_one_three(plot_list, name_list, tract)
+  plot_grid <- .arr_one_three(plot_list, name_list)
   return(plot_grid)
 }
 
+
 #' Draw 2x2 grid of scalar smooths.
-#' 
+#'
 #' Assemble output of draw_long_ordered_grid() for FA, MD,
 #' AD, and RD into a 2x2 plot.
 #'
@@ -718,5 +866,3 @@ draw_scalar_grid <- function(plot_FA, plot_MD, plot_AD, plot_RD) {
     heights = c(1, 1)
   )
 }
-
-

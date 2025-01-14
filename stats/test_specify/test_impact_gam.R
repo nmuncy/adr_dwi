@@ -603,11 +603,10 @@ df <- merge(
 fit_LGI_intx <- bam(
   dti_fa ~ s(subj_id, scan_name, bs = "re") +
     s(node_id, bs = "tp", k = 40, m = 2) +
+    s(mem_vis, by = scan_name, bs = "tp", k = 5) +
     ti(
-      node_id, mem_vis,
-      by = scan_name,
-      bs = c("tp", "tp"), k = c(50, 5),
-      m = 1
+      node_id, mem_vis, by = scan_name,
+      bs = c("tp", "tp"), k = c(50, 5), m = 1
     ),
   data = df,
   family = betar(link = "logit"),
@@ -617,7 +616,7 @@ fit_LGI_intx <- bam(
 )
 gam.check(fit_LGI_intx)
 summary(fit_LGI_intx)
-plot(fit_LGI_intx)
+plot(fit_LGI_intx, pages=1)
 
 p <- getViz(fit_LGI_intx)
 plot(p)
@@ -634,277 +633,174 @@ plotRGL(sm(p, 5), xlab = "mem_vis", ylab = "node_id", main = "rtp", residuals = 
 length(which(df$scan_name == "post" & df$node_id == 10))
 length(which(df$scan_name == "rtp" & df$node_id == 10))
 
-# Predict
-node_list <- unique(df$node_id)
-num_node <- length(node_list)
+# Organize Plots
+plot_obj <- getViz(fit_LGI_intx)
+p <- plot(sm(plot_obj, 6))
+p_data <- as.data.frame(p$data$fit)
+colnames(p_data) <- c("fit", "tfit", "mem_vis", "node_id", "se")
 
-df_base <- df[which(df$scan_name == "base"), ]
-df_base <- na.omit(df_base)
-df_base_cov <- df_base[which(df_base$node_id == node_list[1]), ]
-subj_base <- as.character(df_base_cov$subj_id)
-num_base <- length(subj_base)
-seq_base_cov <- seq(
-  min(df_base_cov[, "mem_vis"]),
-  max(df_base_cov[, "mem_vis"]),
-  length = num_base
-)
-
-df_post <- df[which(df$scan_name == "post"), ]
-df_post <- na.omit(df_post)
-df_post_cov <- df_post[which(df_post$node_id == node_list[1]), ]
-subj_post <- as.character(df_post_cov$subj_id)
-num_post <- length(subj_post)
-seq_post_cov <- seq(
-  min(df_post_cov[, "mem_vis"]),
-  max(df_post_cov[, "mem_vis"]),
-  length = num_post
-)
-
-df_rtp <- df[which(df$scan_name == "rtp"), ]
-df_rtp <- na.omit(df_rtp)
-df_rtp_cov <- df_rtp[which(df_rtp$node_id == node_list[1]), ]
-subj_rtp <- as.character(df_rtp_cov$subj_id)
-num_rtp <- length(subj_rtp)
-seq_rtp_cov <- seq(
-  min(df_rtp_cov[, "mem_vis"]),
-  max(df_rtp_cov[, "mem_vis"]),
-  length = num_rtp
-)
-
-df_pred_base_intx <- data.frame(
-  subj_id = rep(subj_base[1], each = num_node, num_base),
-  scan_name = df_base$scan_name,
-  node_id = df_base$node_id,
-  mem_vis = rep(seq_base_cov, each = num_node)
-)
-pred_base_fit <- predict(fit_LGI_intx, df_pred_base_intx)
-ind_excl <- exclude.too.far(
-  df_pred_base_intx$node_id, df_pred_base_intx$mem_vis,
-  df_base$node_id, df_base[, "mem_vis"],
-  dist = 0.1
-)
-pred_base_fit[ind_excl] <- NA
-df_pred_base_intx <- cbind(df_pred_base_intx, fit = pred_base_fit)
-
-z_min <- min(c(df_pred_base_intx$fit, df_pred_base_intx$fit), na.rm = T)
-z_max <- max(c(df_pred_base_intx$fit, df_pred_base_intx$fit), na.rm = T)
-
-ggplot(
-  df_pred_base_intx,
-  aes(x = node_id, y = mem_vis, z = fit)
-) +
+ggplot(p_data, aes(x = node_id, y = mem_vis, z = fit)) +
   geom_tile(aes(fill = fit)) +
   geom_contour(colour = "black") +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
   scale_fill_viridis(
-    option = "D",
-    name = "Est. FA Fit",
-    limits = c(z_min, z_max)
+    option = "D", 
+    name = "Est. FA Fit"
+  ) +
+  labs(
+    title = paste("Base: IMPACT Comp by", tract),
+    x = "Tract Node"
   ) +
   theme(
     text = element_text(family = "Times New Roman"),
     plot.title = element_text(size = 12),
-    legend.text = element_text(size = 10),
-    axis.title.y = element_blank(),
-    axis.title.x = element_blank()
+    legend.text=element_text(size = 10),
   )
 
 
+p <- plot(sm(plot_obj, 7))
+p_data <- as.data.frame(p$data$fit)
+colnames(p_data) <- c("fit", "tfit", "mem_vis", "node_id", "se")
 
-df_pred_post_intx <- data.frame(
-  subj_id = rep(subj_post[1], each = num_node, num_post),
-  scan_name = df_post$scan_name,
-  node_id = df_post$node_id,
-  mem_vis = rep(seq_post_cov, each = num_node)
-)
-pred_post_fit <- predict(fit_LGI_intx, df_pred_post_intx)
-ind_excl <- exclude.too.far(
-  df_pred_post_intx$node_id, df_pred_post_intx$mem_vis,
-  df_post$node_id, df_post[, "mem_vis"],
-  dist = 0.1
-)
-pred_post_fit[ind_excl] <- NA
-df_pred_post_intx <- cbind(df_pred_post_intx, fit = pred_post_fit)
-
-ggplot(
-  df_pred_post_intx,
-  aes(x = node_id, y = mem_vis, z = fit)
-) +
+ggplot(p_data, aes(x = node_id, y = mem_vis, z = fit)) +
   geom_tile(aes(fill = fit)) +
   geom_contour(colour = "black") +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
   scale_fill_viridis(
-    option = "D",
-    name = "Est. FA Fit",
-    limits = c(z_min, z_max)
+    option = "D", 
+    name = "Est. FA Fit"
+  ) +
+  labs(
+    title = paste("Post: IMPACT Comp by", tract),
+    x = "Tract Node"
   ) +
   theme(
     text = element_text(family = "Times New Roman"),
     plot.title = element_text(size = 12),
-    legend.text = element_text(size = 10),
-    axis.title.y = element_blank(),
-    axis.title.x = element_blank()
+    legend.text=element_text(size = 10),
   )
 
 
+p <- plot(sm(plot_obj, 8))
+p_data <- as.data.frame(p$data$fit)
+colnames(p_data) <- c("fit", "tfit", "mem_vis", "node_id", "se")
 
-df_pred_rtp_intx <- data.frame(
-  subj_id = rep(subj_rtp[1], each = num_node, num_rtp),
-  scan_name = df_rtp$scan_name,
-  node_id = df_rtp$node_id,
-  mem_vis = rep(seq_rtp_cov, each = num_node)
-)
-pred_rtp_fit <- predict(fit_LGI_intx, df_pred_rtp_intx)
-ind_excl <- exclude.too.far(
-  df_pred_rtp_intx$node_id, df_pred_rtp_intx$mem_vis,
-  df_rtp$node_id, df_rtp[, "mem_vis"],
-  dist = 0.1
-)
-pred_rtp_fit[ind_excl] <- NA
-df_pred_rtp_intx <- cbind(df_pred_rtp_intx, fit = pred_rtp_fit)
-
-ggplot(
-  df_pred_rtp_intx,
-  aes(x = node_id, y = mem_vis, z = fit)
-) +
+ggplot(p_data, aes(x = node_id, y = mem_vis, z = fit)) +
   geom_tile(aes(fill = fit)) +
   geom_contour(colour = "black") +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
   scale_fill_viridis(
-    option = "D",
-    name = "Est. FA Fit",
-    limits = c(z_min, z_max)
+    option = "D", 
+    name = "Est. FA Fit"
+  ) +
+  labs(
+    title = paste("RTP: IMPACT Comp by", tract),
+    x = "Tract Node"
   ) +
   theme(
     text = element_text(family = "Times New Roman"),
     plot.title = element_text(size = 12),
-    legend.text = element_text(size = 10),
-    axis.title.y = element_blank(),
-    axis.title.x = element_blank()
+    legend.text=element_text(size = 10),
   )
-
 
 
 # GAM: Tract by Ordered Scan with Behavior ----
-fit_GSO_intx <- bam(
+df$scanOF <- factor(df$scan_name, ordered = T)
+fit_LGIO_intx <- bam(
   dti_fa ~ s(subj_id, scan_name, bs = "re") +
-    s(node_id, bs = "tp", k = 40) +
+    s(node_id, bs = "tp", k = 40, m = 2) +
+    s(mem_vis, by = scan_name, bs = "tp", k = 5) +
+    ti(node_id, mem_vis, bs = c("tp", "tp"), k = c(50, 5), m = 1) +
     ti(
-      node_id, mem_vis,
-      by = scanOF,
-      bs = c("tp", "tp"), k = c(50, 5)
+      node_id, mem_vis, by = scanOF, 
+      bs = c("tp", "tp"), k = c(50, 5), m = 1
     ),
   data = df,
   family = betar(link = "logit"),
   method = "fREML",
-  discrete = T
+  discrete = T,
+  nthreads = 12
 )
-gam.check(fit_GSO_intx)
-summary(fit_GSO_intx)
-plot(fit_GSO_intx)
+gam.check(fit_LGIO_intx)
+summary(fit_LGIO_intx)
+plot(fit_LGIO_intx, pages=1)
+plot(fit_LGIO_intx, scheme=2)
 
-p <- getViz(fit_GSO_intx)
-plot(p)
+plot_obj <- getViz(fit_LGIO_intx)
+plot(plot_obj)
 
-saveRDS(fit_GSO_intx, file = file_gso_intx)
 
 #
 open3d()
 mfrow3d(1, 2)
-plotRGL(sm(p, 3), xlab = "mem_vis", ylab = "node_id", main = "post-base")
+plotRGL(
+  sm(plot_obj, 7), xlab = "mem_vis", ylab = "node_id", 
+  main = "post-base", residuals = T, se = F
+)
 next3d()
-plotRGL(sm(p, 4), xlab = "mem_vis", ylab = "node_id", main = "rtp-base")
-
-
-
-node_list <- unique(df$node_id)
-num_node <- length(node_list)
-
-df_post <- df[which(df$scan_name == "post"), ]
-df_post <- na.omit(df_post)
-df_post_cov <- df_post[which(df_post$node_id == node_list[1]), ]
-subj_post <- as.character(df_post_cov$subj_id)
-num_post <- length(subj_post)
-seq_post_cov <- seq(
-  min(df_post_cov[, "mem_vis"]),
-  max(df_post_cov[, "mem_vis"]),
-  length = num_post
+plotRGL(
+  sm(plot_obj, 8), xlab = "mem_vis", ylab = "node_id", 
+  main = "rtp-base", residuals = T, se = F
 )
+aspect3d(1, 2, 1)
 
-df_pred_post_intx <- data.frame(
-  subj_id = rep(subj_post[1], each = num_node, num_post),
-  scan_name = df_post$scan_name,
-  scanOF = df_post$scanOF,
-  node_id = df_post$node_id,
-  mem_vis = rep(seq_post_cov, each = num_node)
-)
-pred_intx_diff <- as.data.frame(predict.gam(
-  fit_GSO_intx, df_pred_post_intx,
-  type = "terms"
-))
-colnames(pred_intx_diff) <- c("subj.scan", "node", "fit.post", "fit.rtp")
-pred_intx_diff <- cbind(df_pred_post_intx, fit = pred_intx_diff$fit.post)
 
-ggplot(
-  pred_intx_diff,
-  aes(x = node_id, y = mem_vis, z = fit)
-) +
+# Organize Plots
+plot_obj <- getViz(fit_LGIO_intx)
+
+p <- plot(sm(plot_obj, 7))
+p_data <- as.data.frame(p$data$fit)
+colnames(p_data) <- c("fit", "tfit", "mem_vis", "node_id", "se")
+ggplot(p_data, aes(x = node_id, y = mem_vis, z = fit)) +
   geom_tile(aes(fill = fit)) +
   geom_contour(colour = "black") +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
-  scale_fill_viridis(option = "D", name = "Est. FA Fit") +
-  labs(x = "Tract Node") +
+  scale_fill_viridis(
+    option = "D", 
+    name = "Est. FA Fit"
+  ) +
+  labs(
+    title = paste("Post-Base: IMPACT Comp by", tract),
+    x = "Tract Node"
+  ) +
   theme(
     text = element_text(family = "Times New Roman"),
     plot.title = element_text(size = 12),
-    legend.text = element_text(size = 10),
-    axis.title.y = element_blank(),
-    axis.title.x = element_blank()
+    legend.text=element_text(size = 10),
   )
 
 
-df_rtp <- df[which(df$scan_name == "rtp"), ]
-df_rtp <- na.omit(df_rtp)
-df_rtp_cov <- df_rtp[which(df_rtp$node_id == node_list[1]), ]
-subj_rtp <- as.character(df_rtp_cov$subj_id)
-num_rtp <- length(subj_rtp)
-seq_rtp_cov <- seq(
-  min(df_rtp_cov[, "mem_vis"]),
-  max(df_rtp_cov[, "mem_vis"]),
-  length = num_rtp
-)
-
-df_pred_rtp_intx <- data.frame(
-  subj_id = rep(subj_rtp[1], each = num_node, num_rtp),
-  scan_name = df_rtp$scan_name,
-  scanOF = df_rtp$scanOF,
-  node_id = df_rtp$node_id,
-  mem_vis = rep(seq_rtp_cov, each = num_node)
-)
-pred_intx_diff <- as.data.frame(predict.gam(
-  fit_GSO_intx, df_pred_rtp_intx,
-  type = "terms"
-))
-colnames(pred_intx_diff) <- c("subj.scan", "node", "fit.post", "fit.rtp")
-pred_intx_diff <- cbind(df_pred_rtp_intx, fit = pred_intx_diff$fit.rtp)
-
-ggplot(
-  pred_intx_diff,
-  aes(x = node_id, y = mem_vis, z = fit)
-) +
+p <- plot(sm(plot_obj, 8))
+p_data <- as.data.frame(p$data$fit)
+colnames(p_data) <- c("fit", "tfit", "mem_vis", "node_id", "se")
+ggplot(p_data, aes(x = node_id, y = mem_vis, z = fit)) +
   geom_tile(aes(fill = fit)) +
   geom_contour(colour = "black") +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
-  scale_fill_viridis(option = "D", name = "Est. FA Fit") +
-  labs(x = "Tract Node") +
+  scale_fill_viridis(
+    option = "D", 
+    name = "Est. FA Fit"
+  ) +
+  labs(
+    title = paste("RTP-Base: IMPACT Comp by", tract),
+    x = "Tract Node"
+  ) +
   theme(
     text = element_text(family = "Times New Roman"),
     plot.title = element_text(size = 12),
-    legend.text = element_text(size = 10),
-    axis.title.y = element_blank(),
-    axis.title.x = element_blank()
+    legend.text=element_text(size = 10),
   )
 
+
+# Check data density
+df_imp_post <- df_scan_imp[which(df_scan_imp$scan_name == "post"), ]
+plot(df_imp_post$mem_vis)
+df_imp <- df[which(df$node_id == 53), ]
+ggplot(
+  data = df_imp,
+  aes(y = mem_vis, x = dti_fa, color = scan_name)
+) +
+  geom_point()
 
 
 # GAM: Tract by Scan for K-Groups 2, 3 ----
@@ -949,231 +845,3 @@ p <- getViz(fit_GSO)
 plot(p)
 
 
-# Slide Figures ----
-library("gratia")
-library(visreg)
-library(gridExtra)
-library("ggpubr")
-draw_plots <- use("resources/draw_plots.R")
-
-tract <- "Callosum Orbital"
-df <- df_afq[which(df_afq$tract_name == tract), ]
-
-# Non-linear data
-# plot(df$node_id, df$dti_fa)
-ggplot(data = df, aes(x = node_id, y = dti_fa)) +
-  geom_point(alpha = 0.05) +
-  ggtitle(paste(tract, "FA Profile")) +
-  ylab("FA Value") +
-  xlab("Node ID") +
-  theme(text = element_text(
-    family = "Times New Roman", size = 14
-  ))
-
-ggplot(
-  data = df, 
-  aes(x = node_id, y = dti_fa)
-) +
-  geom_point(alpha = 0.05) +
-  geom_smooth(method = "lm") +
-  ggtitle(paste("Y~X:", tract, "FA Profile")) +
-  ylab("FA Value") +
-  xlab("Node ID") +
-  theme(text = element_text(
-    family = "Times New Roman", size = 14
-  ))
-
-
-# Gams
-ggplot(
-  data = df, 
-  aes(x = node_id, y = dti_fa)
-) +
-  geom_point(alpha = 0.05) +
-  geom_smooth(method = "gam", formula = y ~ s(x, bs = "tp", k = 15)) +
-  ggtitle(paste("GAM:", tract, "FA Profile")) +
-  ylab("FA Value") +
-  xlab("Node ID") +
-  theme(text = element_text(
-    family = "Times New Roman", size = 14
-  ))
-
-fit_G <- gam(
-  dti_fa ~ s(node_id, bs = "tp", k = 15),
-  data = df,
-  family = betar(link = "logit"),
-  method = "fREML"
-)
-p <- draw(basis(fit_G))
-p +
-  ggtitle(paste("GAM:", tract, "Basis Functions")) +
-  ylab("Weight") +
-  xlab("Node ID") +
-  theme(text = element_text(
-    family = "Times New Roman", size = 14
-  ))
-
-
-
-# Multiple groups in data
-ggplot(
-  data = df, 
-  aes(x = node_id, y = dti_fa, color = scan_name)
-) +
-  geom_point(alpha = 0.05) +
-  geom_smooth(method = "gam", formula = y ~ s(x, bs = "tp", k = 40),se=F) +
-  ggtitle(paste("GAM:", tract, "FA Visit Profiles")) +
-  ylab("FA Value") +
-  xlab("Node ID") +
-  theme(text = element_text(
-    family = "Times New Roman", size = 14
-  )) + 
-  theme(
-    legend.position = c(0.85, 0.85),
-    legend.text = element_text(size = 8)
-  ) 
-  
-
-# Smooth by group
-fit_GI <- gam(
-  dti_fa ~ s(subj_id, bs = "re") + 
-    s(node_id, by = scan_name, bs = "tp", k = 40),
-  data = df,
-  family = betar(link = "logit"),
-  method = "fREML"
-)
-# gam.check(fit_GI)
-# summary(fit_GI)
-# plot(fit_GI)
-
-df_pred <- predict.bam(
-  fit_GI,
-  exclude_terms = c("subj_id"),
-  se.fit = T,
-  type = "response"
-)
-df_pred <- data.frame(
-  scan_name = df$scan_name,
-  subj_id = df$subj_id,
-  node_id = df$node_id,
-  fit = df_pred$fit,
-  se.fit = df_pred$se.fit
-)
-ggplot(data = df_pred) +
-  geom_smooth(mapping = aes(x = node_id, y = fit, color = scan_name)) +
-  ggtitle(paste("GAM:", tract, "by Visit")) +
-  ylab("Est. FA Fit") +
-  xlab("Tract Node") +
-  theme(text = element_text(
-    family = "Times New Roman", size = 14
-  ))+
-  theme(
-    legend.position = c(0.85, 0.85),
-    legend.text = element_text(size = 8)
-  ) 
-
-
-# Global, group smooths
-fit_GS <- bam(
-  dti_fa ~ s(subj_id, scan_name, bs = "re") + 
-    s(node_id, bs = "tp", k = 40) +
-    s(node_id, by = scan_name, bs = "tp", k = 40),
-  data = df,
-  family = betar(link = "logit"),
-  method = "fREML"
-)
-plot_GS <- getViz(fit_GS)
-
-# 
-p <- plot(sm(plot_GS, 2))
-p_data <- p$data$fit
-colnames(p_data) <- c("nodeID", "est", "ty", "se")
-p_data$lb <- as.numeric(p_data$est - (1.96 * p_data$se))
-p_data$ub <- as.numeric(p_data$est + (1.96 * p_data$se))
-p_G <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = .data$lb, ymax = .data$ub), alpha = 0.2) +
-  scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
-  theme(
-    text = element_text(family = "Times New Roman"),
-    axis.title.y = element_blank(),
-    axis.title.x = element_blank()
-  )
-
-#
-p <- plot(sm(plot_GS, 3))
-p_data <- p$data$fit
-p_data$group <- "base"
-
-p <- plot(sm(plot_GS, 4))
-h_data <- p$data$fit
-h_data$group <- "post"
-p_data <- rbind(p_data, h_data)
-
-p <- plot(sm(plot_GS, 5))
-h_data <- p$data$fit
-h_data$group <- "rtp"
-p_data <- rbind(p_data, h_data)
-# p_data$lb <- as.numeric(p_data$x - (1.96 * p_data$se))
-# p_data$ub <- as.numeric(p_data$x + (1.96 * p_data$se))
-colnames(p_data) <- c("nodeID", "est", "ty", "se", "group")
-p_data$CI <- as.numeric(1.96 * p_data$se)
-
-p_S <- ggplot(data = p_data, aes(.data$nodeID)) +
-  geom_line(aes(y = .data$est, color = .data$group)) +
-  geom_ribbon(
-    aes(
-      ymin = .data$est - .data$CI, 
-      ymax = .data$est + .data$CI, 
-      fill = group), 
-    alpha = 0.2,
-    show.legend = F) +
-  scale_y_continuous() +
-  scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
-  scale_color_discrete(name = "") + 
-  theme(
-    text = element_text(family = "Times New Roman"),
-    legend.position = c(0.88, 0.85),
-    legend.text = element_text(size = 8),
-    axis.title.y = element_blank(),
-    axis.title.x = element_blank()
-  )
-
-
-top <- text_grob(paste(tract, "FA Smooths"), size = 12, family = "Times New Roman")
-l1 <- text_grob("Est. Global Fit", size = 12, family = "Times New Roman", rot = 90)
-l2 <- text_grob("Est. Group Fit", size = 12, family = "Times New Roman", rot = 90)
-bot <- text_grob("Node ID", size = 10, family = "Times New Roman")
-grid.arrange(
-  arrangeGrob(p_G, top = top, left = l1),
-  arrangeGrob(p_S, left = l2, bottom = bot),
-  nrow = 2,
-  ncol = 1
-)
-
-
-# Global, group difference smooths
-df$scanOF <- factor(df$scan_name, ordered = T)
-fit_GSO <- bam(
-  dti_fa ~ s(subj_id, scan_name, bs = "re") + 
-    s(node_id, bs = "tp", k = 40) +
-    s(node_id, by = scanOF, bs = "tp", k = 40),
-  data = df,
-  family = betar(link = "logit"),
-  method = "fREML"
-)
-plot_GSO <- getViz(fit_GSO)
-p_Da <- draw_plots$draw_gios_diff_sig(plot_GSO, 2, 3)
-p_Db <- draw_plots$draw_gios_diff_sig(plot_GSO, 2, 4)
-top <- text_grob(paste(tract, "FA Smooths"), size = 12, family = "Times New Roman")
-l1 <- text_grob("Est. Global Fit", size = 12, family = "Times New Roman", rot = 90)
-l2 <- text_grob("Diff: Post-Base", size = 12, family = "Times New Roman", rot = 90)
-l3 <- text_grob("Diff: RTP-Base", size = 12, family = "Times New Roman", rot = 90)
-bot <- text_grob("Node ID", size = 10, family = "Times New Roman")
-grid.arrange(
-  arrangeGrob(p_G, top = top, left = l1),
-  arrangeGrob(p_Da$diff, left = l2),
-  arrangeGrob(p_Db$diff, left = l3, bottom = bot),
-  nrow = 3,
-  ncol = 1
-)

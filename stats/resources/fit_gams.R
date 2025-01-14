@@ -456,7 +456,7 @@ mod_lgio <- function(df, scalar_name, k_max = 40) {
 #' 
 #' Manually calculate the interaction of factors tract_name and comp_scan,
 #' then model all tract differences with group wiggliness. No global smooth
-#' is used, so this is equivalent to the Pedersen 2019 model I. This 
+#' is used, so this is similar to the Pedersen 2019 model 'I'. This 
 #' effectively pools subject variance across both tract_name and scan_name,
 #' while simplifying the nested factors. Differences are used to reduce the
 #' requested number of smooths, reduce runtime, and maintain sufficient dof.
@@ -480,14 +480,19 @@ mod_ldi <- function(df) {
   return(fit_LDI)
 }
 
-#' Fit longitudinal HGAM with global, group, and
-#' interaction with Impact item smooths.
-#'
-#' TODO finalize specification.
+#' Fit longitudinal HGAM with global, group smooths and wiggliness, 
+#' and scalar-Impact interaction smooths.
+#' 
+#' @param df Dataframe of AFQ data for single tract.
+#' @param impact_meas IMPACT metric: mem_ver, mem_vis, vis_mot, rx_time, 
+#'  imp_ctl, or tot_symp.
+#' @param scalar_name Optional, DWI metric: dti_fa, dti_rd, dti_md, or dti_ad.
+#' @param ks_max Optional, max k-value for group smooths.
+#' @param ki_max Optional, mak k-value for group interaction smooths.
+#' @returns mgcv::bam fit object.
 export("mod_lgi_intx")
 mod_lgi_intx <- function(
-    df, impact_meas, 
-    scalar_name = "dti_fa", ks_max = 40, ki_max = 50
+    df, impact_meas, scalar_name = "dti_fa", ks_max = 40, ki_max = 50
 ) {
   # Validate user args
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
@@ -499,21 +504,19 @@ mod_lgi_intx <- function(
     stop("Unexpected impact_name")
   }
 
-  #
+  # Find family, set column  names, and make ordered factor
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
   names(df)[names(df) == impact_meas] <- "imp_meas"
 
-  #
+  # Fit and return model
   fit_LGI_intx <- bam(
     dti_scalar ~ s(subj_id, scan_name, bs = "re") +
       s(node_id, bs = "tp", k = ks_max, m = 2) +
       s(imp_meas, by = scan_name, bs = "tp", k = 5) +
       ti(
-        node_id, imp_meas,
-        by = scan_name,
-        bs = c("tp", "tp"), k = c(ki_max, 5),
-        m = 1
+        node_id, imp_meas, by = scan_name,
+        bs = c("tp", "tp"), k = c(ki_max, 5), m = 1
       ),
     data = df,
     family = fam_scalar,
@@ -521,21 +524,23 @@ mod_lgi_intx <- function(
     discrete = T,
     nthreads = 12
   )
-  return(fit_LGSI_intx)
+  return(fit_LGI_intx)
 }
 
 
-#' Fit longitudinal HGAM with global, group, and
-#' interaction with Impact item smooths.
-#'
-#' TODO finalize specification.
+#' Fit longitudinal HGAM with global, group (ordered) smooths and wiggliness, 
+#' and scalar-Impact interaction smooths.
+#' 
+#' @param df Dataframe of AFQ data for single tract.
+#' @param impact_meas IMPACT metric: mem_ver, mem_vis, vis_mot, rx_time, 
+#'  imp_ctl, or tot_symp.
+#' @param scalar_name Optional, DWI metric: dti_fa, dti_rd, dti_md, or dti_ad.
+#' @param ks_max Optional, max k-value for group smooths.
+#' @param ki_max Optional, mak k-value for group interaction smooths.
+#' @returns mgcv::bam fit object.
 export("mod_lgio_intx")
 mod_lgio_intx <- function(
-    df, 
-    impact_meas, 
-    scalar_name = "dti_fa", 
-    ks_max = 40, 
-    ki_max = 50
+    df, impact_meas, scalar_name = "dti_fa", ks_max = 40, ki_max = 50
 ) {
   # Validate user args
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
@@ -547,21 +552,21 @@ mod_lgio_intx <- function(
     stop("Unexpected impact_name")
   }
 
-  #
+  # Find family, set column  names, and make ordered factor
   fam_scalar <- .switch_family(scalar_name)
   names(df)[names(df) == scalar_name] <- "dti_scalar"
   names(df)[names(df) == impact_meas] <- "imp_meas"
   df$scanOF <- factor(df$scan_name, ordered = T)
 
-  #
+  # Fit and return model
   fit_LGIO_intx <- bam(
     dti_scalar ~ s(subj_id, scan_name, bs = "re") +
       s(node_id, bs = "tp", k = ks_max, m = 2) +
       s(imp_meas, by = scan_name, bs = "tp", k = 5) +
       ti(node_id, imp_meas, bs = c("tp", "tp"), k = c(ki_max, 5), m = 1) +
       ti(
-        node_id, imp_meas,
-        by = scanOF, bs = c("tp", "tp"), k = c(ki_max, 5), m = 1
+        node_id, imp_meas, by = scanOF, 
+        bs = c("tp", "tp"), k = c(ki_max, 5), m = 1
       ),
     data = df,
     family = fam_scalar,
@@ -569,6 +574,5 @@ mod_lgio_intx <- function(
     discrete = T,
     nthreads = 12
   )
-  
   return(fit_LGIO_intx)
 }

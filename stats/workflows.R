@@ -583,9 +583,16 @@ gams_long_tract <- function(df_afq, tract) {
 #' TODO
 export("gams_long_tract_intx")
 gams_long_tract_intx <- function(
-    df_afq, df_scan_imp, tract, impact_meas = "mem_vis") {
+    df_afq, df_scan_imp, tract, impact_meas = "mem_vis"
+) {
+  # Validate user args
+  if (!impact_meas %in%
+      c("mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl", "tot_symp")
+  ) {
+    stop("Unexpected impact_meas")
+  }
 
-  #
+  #  Subset tract data and add impact measure
   df <- df_afq[which(df_afq$tract_name == tract), ]
   df <- merge(
     x = df,
@@ -593,22 +600,55 @@ gams_long_tract_intx <- function(
     by = c("subj_id", "scan_name"),
     all.x = T
   )
+  
+  # Set up for writing objects
+  h_tract <- fit_gams$switch_tract(tract)
+  scalar <- strsplit("dti_fa", "_")[[1]][2]
+  analysis_dir <- .analysis_dir()
+  
+  # Get (and make/save if needed) LGI_intx model.
+  rds_lgi <- paste0(
+    analysis_dir, "/stats_gams/rda_objects/LGI_intx_tract/fit_LGI_intx_",
+    h_tract, "_", scalar, ".txt"
+  )
+  if (!file.exists(rds_lgi)) {
+    h_gam <- fit_gams$mod_lgi_intx(df, impact_meas)
+    saveRDS(h_gam, file = rds_lgi)
+    rm(h_gam)
+  }
+  fit_LGI_intx <- readRDS(rds_lgi)
+  
+  # Write LGI_intx summary
+  sum_lgi <- paste0(
+    analysis_dir, "/stats_gams/gam_summaries/LGI_intx_tract/fit_LGI_intx_",
+    h_tract, "_", scalar, ".txt"
+  )
+  fit_gams$write_gam_stats(fit_LGI_intx, sum_lgi)
+  
+  # Make LGI_intx plots
+  grDevices::png(
+    filename = paste0(
+      analysis_dir, "/stats_gams/plots/LGI_intx_tract/fit_LGI_intx_",
+      h_tract, ".png"
+    ),
+    units = "in",
+    height = 8,
+    width = 6,
+    res = 600
+  )
+  draw_plots$grid_lgi_intx(fit_LGI_intx, tract, toupper(scalar), impact_meas)
+  grDevices::dev.off()
+
+  
 
   #
-  # fit_FA <- fit_gams$gam_lgi_intx(df, "dti_fa", impact_meas)
-  fit_FAO <- fit_gams$mod_lgio_intx(df, impact_meas)
+  # fit_LGI_intx <- fit_gams$mod_lgi_intx(df, impact_meas)
+  # fit_LGIO_intx <- fit_gams$mod_lgio_intx(df, impact_meas)
 
 
   return(list(
-    gam_GS_intx = list(
-      "FA" = fit_FA,
-    ),
-    gam_GSO_intx = list(
-      "FA" = fit_FAO,
-    ),
-    gam_plots = list(
-      "FA" = plot_FA,
-    )
+    gam_LGI_intx = fit_LGI_intx,
+    gam_LGIO_intx = fit_LGIO_intx
   ))
 }
 

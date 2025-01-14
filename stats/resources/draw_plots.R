@@ -30,6 +30,22 @@ quick_stats <- use("resources/quick_stats.R")
   return(out_name)
 }
 
+#' Provide switch for shortened Impact measure names.
+#'
+#' @param meas String impact column name.
+#' @returns String reduced impact name.
+.meas_short_names <- function(meas) {
+  out_name <- switch(meas,
+       "mem_ver" = "Vebal Memory",
+       "mem_vis" = "Visual Memory",
+       "vis_mot" = "Visual Motor",
+       "rx_time" = "Rx Time",
+       "imp_ctl" = "Impulse Ctl",
+       "tot_symp" = "Total Symptom",
+  )
+  return(out_name)
+}
+
 
 #' Draw smooths of Impact measures by scan time.
 #'
@@ -61,9 +77,7 @@ draw_impact_smooths <- function(df_scan_imp){
   # Draw and return
   p <- ggplot(data = df, aes(x = scan_time, y = value)) +
     facet_wrap(vars(impact), ncol = 3, scales = "free") +
-    # geom_smooth(method = "gam", formula = y ~ s(x, bs = "tp", k = 3)) +
     geom_smooth() +
-    # geom_point() +
     scale_x_continuous(breaks = 1:3) +
     ggtitle("IMPACT Composite and Symptom Scores") +
     xlab("Scan Session") +
@@ -212,10 +226,6 @@ draw_gs <- function(plot_obj, g_num, x_min = 10, x_max = 89) {
   # use plot to extract attribute of interest
   p <- plot(sm(plot_obj, g_num))
   p_data <- .add_lb_ub(p)
-  # p_data <- as.data.frame(p$data$fit)
-  # colnames(p_data) <- c("nodeID", "est", "ty", "se")
-  # p_data$lb <- as.numeric(p_data$est - (2 * p_data$se))
-  # p_data$ub <- as.numeric(p_data$est + (2 * p_data$se))
 
   # make, save ggplot
   pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
@@ -227,7 +237,6 @@ draw_gs <- function(plot_obj, g_num, x_min = 10, x_max = 89) {
       axis.title.y = element_blank(),
       axis.title.x = element_blank()
     )
-  # print(pp)
   return(list("global" = pp))
 }
 
@@ -244,11 +253,8 @@ draw_is <- function(plot_obj, i_num, x_min = 10, x_max = 89) {
   # use plot to extract attribute of interest
   p <- plot(sm(plot_obj, i_num))
   p_data <- .add_lb_ub(p, col_names = c("nodeID", "est", "ty", "Group"))
-  # p_data <- as.data.frame(p$data$fit)
-  # colnames(p_data) <- c("nodeID", "est", "ty", "Group")
 
   # make, save ggplot
-  # limits = c(-0.2, 0.2)
   pp <- ggplot(
     data = p_data,
     aes(x = .data$nodeID, y = .data$est, group = .data$Group)
@@ -264,7 +270,6 @@ draw_is <- function(plot_obj, i_num, x_min = 10, x_max = 89) {
       axis.title.y = element_blank(),
       axis.title.x = element_blank()
     )
-  # print(pp)
   return(list("group" = pp))
 }
 
@@ -282,8 +287,6 @@ draw_gios_diff <- function(plot_obj, g_num, i_num, x_min = 10, x_max = 89) {
   # Determine ymin/max from group smooth
   p <- plot(sm(plot_obj, g_num))
   p_data <- .add_lb_ub(p)
-  # p_data <- as.data.frame(p$data$fit)
-  # colnames(p_data) <- c("nodeID", "est", "ty", "se")
   gy_min <- min(p_data$est)
   gy_max <- max(p_data$est)
 
@@ -291,10 +294,6 @@ draw_gios_diff <- function(plot_obj, g_num, i_num, x_min = 10, x_max = 89) {
   p <- plot(sm(plot_obj, i_num)) +
     geom_hline(yintercept = 0)
   p_data <- .add_lb_ub(p)
-  # p_data <- as.data.frame(p$data$fit)
-  # colnames(p_data) <- c("nodeID", "est", "ty", "se")
-  # p_data$lb <- as.numeric(p_data$est - (1.96 * p_data$se))
-  # p_data$ub <- as.numeric(p_data$est + (1.96 * p_data$se))
 
   # Determine highest/lowest max/min across global and group smooths
   GY_max <- pmax(gy_max, max(p_data$est))
@@ -465,8 +464,6 @@ draw_gios_diff_sig <- function(plot_obj, g_num, i_num, x_min = 10, x_max = 89) {
   # Determine ymin/max from group smooth
   p <- plot(sm(plot_obj, g_num))
   p_data <- .add_lb_ub(p)
-  # p_data <- as.data.frame(p$data$fit)
-  # colnames(p_data) <- c("nodeID", "est", "ty", "se")
   gy_min <- min(p_data$est)
   gy_max <- max(p_data$est)
 
@@ -474,10 +471,6 @@ draw_gios_diff_sig <- function(plot_obj, g_num, i_num, x_min = 10, x_max = 89) {
   p <- plot(sm(plot_obj, i_num)) +
     geom_hline(yintercept = 0)
   p_data <- .add_lb_ub(p)
-  # p_data <- as.data.frame(p$data$fit)
-  # colnames(p_data) <- c("nodeID", "est", "ty", "se")
-  # p_data$lb <- as.numeric(p_data$est - (1.96 * p_data$se))
-  # p_data$ub <- as.numeric(p_data$est + (1.96 * p_data$se))
 
   # Determine highest/lowest max/min across global and group smooths
   GY_max <- pmax(gy_max, max(p_data$est))
@@ -490,56 +483,6 @@ draw_gios_diff_sig <- function(plot_obj, g_num, i_num, x_min = 10, x_max = 89) {
   pp <- .draw_smooth_rects(
     p_data, rect_less, rect_more, x_min, x_max, GY_min, GY_max
   )
-
-  # if (is.data.frame(rect_less) & is.data.frame(rect_more)) { # up and down rects
-  #   d_rect <- rbind(rect_less, rect_more)
-  # } else if (is.data.frame(rect_less)) { # down rects
-  #   d_rect <- rect_less
-  # } else if (is.data.frame(rect_more)) { # up rects
-  #   d_rect <- rect_more
-  # } else { # no rects
-  #   pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
-  #     geom_hline(yintercept = 0) +
-  #     geom_line() +
-  #     geom_ribbon(
-  #       aes(ymin = .data$lb, ymax = .data$ub),
-  #       alpha = 0.2
-  #     ) +
-  #     scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
-  #     coord_cartesian(ylim = c(GY_min, GY_max)) +
-  #     theme(
-  #       text = element_text(family = "Times New Roman"),
-  #       axis.title.y = element_blank(),
-  #       axis.title.x = element_blank()
-  #     )
-  #   return(list("diff" = pp))
-  # }
-  #
-  # # Draw with rects
-  # pp <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
-  #   geom_hline(yintercept = 0) +
-  #   geom_line() +
-  #   geom_ribbon(
-  #     aes(ymin = .data$lb, ymax = .data$ub),
-  #     alpha = 0.2
-  #   ) +
-  #   annotate(
-  #     "rect",
-  #     xmin = c(d_rect$x_start),
-  #     xmax = c(d_rect$x_end),
-  #     ymin = c(d_rect$y_start),
-  #     ymax = c(d_rect$y_end),
-  #     alpha = 0.2,
-  #     fill = "red"
-  #   ) +
-  #   scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
-  #   coord_cartesian(ylim = c(GY_min, GY_max)) +
-  #   theme(
-  #     text = element_text(family = "Times New Roman"),
-  #     axis.title.y = element_blank(),
-  #     axis.title.x = element_blank()
-  #   )
-  # print(pp)
   return(list("diff" = pp))
 }
 
@@ -577,6 +520,54 @@ draw_ios_diff_sig <- function(plot_obj, i_num, x_min = 10, x_max = 89) {
   )
   return(list("diff" = pp))
 }
+
+
+#' Draw group interaction smooths.
+#'
+#' @param plot_obj Plotable object returned by getViz.
+#' @param i_num Attribute number of plot_obj containing desired smooth.
+#' @param i_name Name of group for title.
+#' @param imp_name Name of impact measure for y-axis label.
+#' @param zmin_zmax Named list holding min, max Z-values.
+#' @param x_min Optional, x-axis range LB.
+#' @param x_max Optional, x-axis range UB.
+#' @returns Named list, "group" = ggplot object.
+export("draw_is_intx")
+draw_is_intx <- function(
+    plot_obj, i_num, i_name, imp_name, zmin_zmax,
+    x_min = 10, x_max = 89
+) {
+  # use plot to extract attribute of interest
+  p <- plot(sm(plot_obj, i_num))
+  p_data <- as.data.frame(p$data$fit)
+  colnames(p_data) <- c("fit", "tfit", "mem_vis", "nodeID", "se")
+  
+  # make, save ggplot
+  pp <- ggplot(
+    data = p_data, 
+    aes(x = .data$nodeID, y = .data$mem_vis, z = .data$fit)
+  ) +
+    geom_tile(aes(fill = fit)) +
+    geom_contour(colour = "black") +
+    scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
+    scale_fill_viridis(
+      option = "D", 
+      name = "Est. FA Fit",
+      limits = c(zmin_zmax$zmin, zmin_zmax$zmax)
+    ) +
+    labs(
+      title = paste("Visit:", i_name),
+      y = imp_name,
+    ) +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      legend.text=element_text(size = 8),
+      plot.title = element_text(hjust = 0.5),
+      axis.title.x = element_blank()
+    )
+  return(list("group" = pp))
+}
+
 
 
 #' Assemble a 1x2 grid of plots.
@@ -850,6 +841,63 @@ grid_lgi <- function(
   return(plot_grid)
 }
 
+
+
+#' Identify Z-min and Z-max across multiple plots.
+#' 
+#' @param plot_obj Plotable object returned by getViz.
+#' @param num_Ia Number attribute of plot_obj holding group A smooth.
+#' @param num_Ib Number attribute of plot_obj holding group B smooth.
+#' @param num_Ic Number attribute of plot_obj holding group C smooth.
+.get_zmin_zmax <- function(plot_obj, num_Ia = 6, num_Ib = 7, num_Ic = 8){
+  z_min_all <- z_max_all <- c()
+  for(num in c(num_Ia, num_Ib, num_Ic)){
+    p <- plot(sm(plot_obj, num))
+    p_data <- as.data.frame(p$data$fit)
+    colnames(p_data) <- c("fit", "tfit", "cov", "nodeID", "se")
+    z_min_all <- c(z_min_all, min(c(p_data$fit, p_data$fit), na.rm = T))
+    z_max_all <- c(z_max_all, max(c(p_data$fit, p_data$fit), na.rm = T))
+  }
+  return(list(zmin = min(z_min_all), zmax = max(z_max_all)))
+}
+
+
+#' Draw smooth grid for LGI_intx models.
+#'
+#' @param fit_LGI mgcv::gam object.
+#' @param tract String tract name for title.
+#' @param scalar_name String dwi metric for title.
+#' @param num_Ia Number attribute of fit_LGI holding group A smooth.
+#' @param num_Ib Number attribute of fit_LGI holding group B smooth.
+#' @param num_Ic Number attribute of fit_LGI holding group C smooth.
+#' @returns Object returned by grid.arrange.
+export("grid_lgi_intx")
+grid_lgi_intx <- function(
+    fit_LGI_intx, tract, scalar_name, impact_meas, 
+    num_Ia = 6, num_Ib = 7, num_Ic = 8
+) {
+  # Generate plots objs from group interaction smooths
+  plot_obj <- getViz(fit_LGI_intx)
+  imp_name <- .meas_short_names(impact_meas)
+  zmin_zmax <- .get_zmin_zmax(plot_obj)
+  plot_base <- draw_is_intx(plot_obj, num_Ia, "Base", imp_name, zmin_zmax)
+  plot_post <- draw_is_intx(plot_obj, num_Ib, "Post", imp_name, zmin_zmax)
+  plot_rtp <- draw_is_intx(plot_obj, num_Ic, "RTP", imp_name, zmin_zmax)
+  
+  # draw grid
+  col1_name <- text_grob(paste("IMPACT by", tract, scalar_name), size = 12, family = "Times New Roman")
+  bot1_name <- text_grob("Tract Node", size = 12, family = "Times New Roman")
+  plot_grid <- grid.arrange(
+    arrangeGrob(plot_base$group, top = col1_name),
+    arrangeGrob(plot_post$group),
+    arrangeGrob(plot_rtp$group, bottom = bot1_name),
+    nrow = 3,
+    ncol = 1,
+    widths = 1,
+    heights = c(1, 1, 1)
+  )
+  return(plot_grid)
+}
 
 #' Draw smooth grid for LGIO models, containing global and difference smooths.
 #'

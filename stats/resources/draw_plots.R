@@ -9,6 +9,7 @@ import(latticeExtra)
 import(directlabels)
 import(factoextra)
 import(psych)
+import(reshape2)
 
 quick_stats <- use("resources/quick_stats.R")
 
@@ -27,6 +28,48 @@ quick_stats <- use("resources/quick_stats.R")
     "userTotalSymptomScore" = "Total Symptom",
   )
   return(out_name)
+}
+
+
+#' Draw smooths of Impact measures by scan time.
+#'
+#' @param df_scan_imp Dataframe, returned by workflows$get_scan_impact.
+#' @return Plot object.
+export("draw_impact_smooths")
+draw_impact_smooths <- function(df_scan_imp){
+  # Get relevant columns, convert to long
+  df_wide <- subset(
+    df_scan_imp,
+    select = c(
+      "subj_id", "scan_name", "mem_ver", "mem_vis",
+      "vis_mot", "rx_time", "imp_ctl", "tot_symp"
+    )
+  )
+  df <- reshape2::melt(
+    df_wide,
+    id.vars = c("subj_id", "scan_name"),
+    variable.name = "impact",
+    value.name = "value"
+  )
+  df$impact <- factor(df$impact)
+  
+  # Make continuous x
+  df$scan_time <- 1
+  df[which(df$scan_name == "post"), ]$scan_time <- 2
+  df[which(df$scan_name == "rtp"), ]$scan_time <- 3
+  
+  # Draw and return
+  p <- ggplot(data = df, aes(x = scan_time, y = value)) +
+    facet_wrap(vars(impact), ncol = 3, scales = "free") +
+    # geom_smooth(method = "gam", formula = y ~ s(x, bs = "tp", k = 3)) +
+    geom_smooth() +
+    # geom_point() +
+    scale_x_continuous(breaks = 1:3) +
+    ggtitle("IMPACT Composite and Symptom Scores") +
+    xlab("Scan Session") +
+    ylab("Response Value") +
+    theme(text = element_text(family = "Times New Roman"))
+  return(p)
 }
 
 

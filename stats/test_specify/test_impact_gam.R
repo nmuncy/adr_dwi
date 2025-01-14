@@ -515,47 +515,6 @@ plotRGL(sm(p, 3), xlab = "mem_vis", ylab = "node_id", main = "base", residuals =
 
 
 
-# GAM: Tract by Scan for K-Groups 2, 3 ----
-k_keep <- df_post_grp[which(df_post_grp$km_grp != 1), ]$subj_id
-df_k <- df[which(df$subj_id %in% k_keep), ]
-
-# Global fit + group smooths
-fit_GS <- bam(
-  dti_fa ~ s(subj_id, scan_name, bs = "re") +
-    s(node_id, bs = "tp", k = 40) +
-    s(node_id, scan_name, bs = "fs", k = 40),
-  data = df_k,
-  family = betar(link = "logit"),
-  method = "fREML",
-  discrete = T
-)
-gam.check(fit_GS)
-summary(fit_GS)
-plot(fit_GS)
-
-p <- getViz(fit_GS)
-plot(p)
-
-
-# Global fit + ordered group smooths (ref = base)
-df_k$scanOF <- factor(df_k$scan_name, ordered = T)
-
-fit_GSO <- bam(
-  dti_fa ~ s(subj_id, scan_name, bs = "re") +
-    s(node_id, bs = "tp", k = 40) +
-    s(node_id, by = scanOF, bs = "fs", k = 40),
-  data = df_k,
-  family = betar(link = "logit"),
-  method = "fREML",
-  discrete = T
-)
-gam.check(fit_GSO)
-summary(fit_GSO)
-plot(fit_GSO)
-
-p <- getViz(fit_GSO)
-plot(p)
-
 
 # GAM: Single Subj WB delta ----
 subj <- "142" # From K-means cluster
@@ -626,7 +585,8 @@ draw(fit_LDI, select = c(19:28), scales = "fixed") # Post RH
 
 # GAM: Tract by Scan with Behavior ----
 # s(mem_vis, by=scan_name, bs = "tp") +
-df <- df_k
+tract <- "Left Inferior Fronto-occipital"
+df <- df_afq[which(df_afq$tract_name == tract), ]
 
 impact_meas <- "mem_vis"
 df <- merge(
@@ -640,25 +600,26 @@ df <- merge(
 
 # s(node_id, scan_name, bs = "fs", k = 40) +
 # s(mem_vis, by = scan_name, bs = "tp", k = 5) +
-fit_GS_intx <- bam(
+fit_LGI_intx <- bam(
   dti_fa ~ s(subj_id, scan_name, bs = "re") +
-    s(node_id, bs = "tp", k = 40) +
+    s(node_id, bs = "tp", k = 40, m = 2) +
     ti(
       node_id, mem_vis,
       by = scan_name,
-      bs = c("tp", "tp"), k = c(50, 5)
+      bs = c("tp", "tp"), k = c(50, 5),
+      m = 1
     ),
   data = df,
   family = betar(link = "logit"),
   method = "fREML",
   discrete = T,
-  nthreads = 4
+  nthreads = 12
 )
-gam.check(fit_GS_intx)
-summary(fit_GS_intx)
-plot(fit_GS_intx)
+gam.check(fit_LGI_intx)
+summary(fit_LGI_intx)
+plot(fit_LGI_intx)
 
-p <- getViz(fit_GS_intx)
+p <- getViz(fit_LGI_intx)
 plot(p)
 
 #
@@ -670,8 +631,8 @@ plotRGL(sm(p, 4), xlab = "mem_vis", ylab = "node_id", main = "post", residuals =
 next3d()
 plotRGL(sm(p, 5), xlab = "mem_vis", ylab = "node_id", main = "rtp", residuals = T)
 
-length(which(df_k$scan_name == "post" & df_k$node_id == 10))
-length(which(df_k$scan_name == "rtp" & df_k$node_id == 10))
+length(which(df$scan_name == "post" & df$node_id == 10))
+length(which(df$scan_name == "rtp" & df$node_id == 10))
 
 # Predict
 node_list <- unique(df$node_id)
@@ -716,7 +677,7 @@ df_pred_base_intx <- data.frame(
   node_id = df_base$node_id,
   mem_vis = rep(seq_base_cov, each = num_node)
 )
-pred_base_fit <- predict(fit_GS_intx, df_pred_base_intx)
+pred_base_fit <- predict(fit_LGI_intx, df_pred_base_intx)
 ind_excl <- exclude.too.far(
   df_pred_base_intx$node_id, df_pred_base_intx$mem_vis,
   df_base$node_id, df_base[, "mem_vis"],
@@ -756,7 +717,7 @@ df_pred_post_intx <- data.frame(
   node_id = df_post$node_id,
   mem_vis = rep(seq_post_cov, each = num_node)
 )
-pred_post_fit <- predict(fit_GS_intx, df_pred_post_intx)
+pred_post_fit <- predict(fit_LGI_intx, df_pred_post_intx)
 ind_excl <- exclude.too.far(
   df_pred_post_intx$node_id, df_pred_post_intx$mem_vis,
   df_post$node_id, df_post[, "mem_vis"],
@@ -793,7 +754,7 @@ df_pred_rtp_intx <- data.frame(
   node_id = df_rtp$node_id,
   mem_vis = rep(seq_rtp_cov, each = num_node)
 )
-pred_rtp_fit <- predict(fit_GS_intx, df_pred_rtp_intx)
+pred_rtp_fit <- predict(fit_LGI_intx, df_pred_rtp_intx)
 ind_excl <- exclude.too.far(
   df_pred_rtp_intx$node_id, df_pred_rtp_intx$mem_vis,
   df_rtp$node_id, df_rtp[, "mem_vis"],
@@ -944,3 +905,275 @@ ggplot(
     axis.title.x = element_blank()
   )
 
+
+
+# GAM: Tract by Scan for K-Groups 2, 3 ----
+k_keep <- df_post_grp[which(df_post_grp$km_grp != 1), ]$subj_id
+df_k <- df[which(df$subj_id %in% k_keep), ]
+
+# Global fit + group smooths
+fit_GS <- bam(
+  dti_fa ~ s(subj_id, scan_name, bs = "re") +
+    s(node_id, bs = "tp", k = 40) +
+    s(node_id, scan_name, bs = "fs", k = 40),
+  data = df_k,
+  family = betar(link = "logit"),
+  method = "fREML",
+  discrete = T
+)
+gam.check(fit_GS)
+summary(fit_GS)
+plot(fit_GS)
+
+p <- getViz(fit_GS)
+plot(p)
+
+
+# Global fit + ordered group smooths (ref = base)
+df_k$scanOF <- factor(df_k$scan_name, ordered = T)
+
+fit_GSO <- bam(
+  dti_fa ~ s(subj_id, scan_name, bs = "re") +
+    s(node_id, bs = "tp", k = 40) +
+    s(node_id, by = scanOF, bs = "fs", k = 40),
+  data = df_k,
+  family = betar(link = "logit"),
+  method = "fREML",
+  discrete = T
+)
+gam.check(fit_GSO)
+summary(fit_GSO)
+plot(fit_GSO)
+
+p <- getViz(fit_GSO)
+plot(p)
+
+
+# Slide Figures ----
+library("gratia")
+library(visreg)
+library(gridExtra)
+library("ggpubr")
+draw_plots <- use("resources/draw_plots.R")
+
+tract <- "Callosum Orbital"
+df <- df_afq[which(df_afq$tract_name == tract), ]
+
+# Non-linear data
+# plot(df$node_id, df$dti_fa)
+ggplot(data = df, aes(x = node_id, y = dti_fa)) +
+  geom_point(alpha = 0.05) +
+  ggtitle(paste(tract, "FA Profile")) +
+  ylab("FA Value") +
+  xlab("Node ID") +
+  theme(text = element_text(
+    family = "Times New Roman", size = 14
+  ))
+
+ggplot(
+  data = df, 
+  aes(x = node_id, y = dti_fa)
+) +
+  geom_point(alpha = 0.05) +
+  geom_smooth(method = "lm") +
+  ggtitle(paste("Y~X:", tract, "FA Profile")) +
+  ylab("FA Value") +
+  xlab("Node ID") +
+  theme(text = element_text(
+    family = "Times New Roman", size = 14
+  ))
+
+
+# Gams
+ggplot(
+  data = df, 
+  aes(x = node_id, y = dti_fa)
+) +
+  geom_point(alpha = 0.05) +
+  geom_smooth(method = "gam", formula = y ~ s(x, bs = "tp", k = 15)) +
+  ggtitle(paste("GAM:", tract, "FA Profile")) +
+  ylab("FA Value") +
+  xlab("Node ID") +
+  theme(text = element_text(
+    family = "Times New Roman", size = 14
+  ))
+
+fit_G <- gam(
+  dti_fa ~ s(node_id, bs = "tp", k = 15),
+  data = df,
+  family = betar(link = "logit"),
+  method = "fREML"
+)
+p <- draw(basis(fit_G))
+p +
+  ggtitle(paste("GAM:", tract, "Basis Functions")) +
+  ylab("Weight") +
+  xlab("Node ID") +
+  theme(text = element_text(
+    family = "Times New Roman", size = 14
+  ))
+
+
+
+# Multiple groups in data
+ggplot(
+  data = df, 
+  aes(x = node_id, y = dti_fa, color = scan_name)
+) +
+  geom_point(alpha = 0.05) +
+  geom_smooth(method = "gam", formula = y ~ s(x, bs = "tp", k = 40),se=F) +
+  ggtitle(paste("GAM:", tract, "FA Visit Profiles")) +
+  ylab("FA Value") +
+  xlab("Node ID") +
+  theme(text = element_text(
+    family = "Times New Roman", size = 14
+  )) + 
+  theme(
+    legend.position = c(0.85, 0.85),
+    legend.text = element_text(size = 8)
+  ) 
+  
+
+# Smooth by group
+fit_GI <- gam(
+  dti_fa ~ s(subj_id, bs = "re") + 
+    s(node_id, by = scan_name, bs = "tp", k = 40),
+  data = df,
+  family = betar(link = "logit"),
+  method = "fREML"
+)
+# gam.check(fit_GI)
+# summary(fit_GI)
+# plot(fit_GI)
+
+df_pred <- predict.bam(
+  fit_GI,
+  exclude_terms = c("subj_id"),
+  se.fit = T,
+  type = "response"
+)
+df_pred <- data.frame(
+  scan_name = df$scan_name,
+  subj_id = df$subj_id,
+  node_id = df$node_id,
+  fit = df_pred$fit,
+  se.fit = df_pred$se.fit
+)
+ggplot(data = df_pred) +
+  geom_smooth(mapping = aes(x = node_id, y = fit, color = scan_name)) +
+  ggtitle(paste("GAM:", tract, "by Visit")) +
+  ylab("Est. FA Fit") +
+  xlab("Tract Node") +
+  theme(text = element_text(
+    family = "Times New Roman", size = 14
+  ))+
+  theme(
+    legend.position = c(0.85, 0.85),
+    legend.text = element_text(size = 8)
+  ) 
+
+
+# Global, group smooths
+fit_GS <- bam(
+  dti_fa ~ s(subj_id, scan_name, bs = "re") + 
+    s(node_id, bs = "tp", k = 40) +
+    s(node_id, by = scan_name, bs = "tp", k = 40),
+  data = df,
+  family = betar(link = "logit"),
+  method = "fREML"
+)
+plot_GS <- getViz(fit_GS)
+
+# 
+p <- plot(sm(plot_GS, 2))
+p_data <- p$data$fit
+colnames(p_data) <- c("nodeID", "est", "ty", "se")
+p_data$lb <- as.numeric(p_data$est - (1.96 * p_data$se))
+p_data$ub <- as.numeric(p_data$est + (1.96 * p_data$se))
+p_G <- ggplot(data = p_data, aes(x = .data$nodeID, y = .data$est)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = .data$lb, ymax = .data$ub), alpha = 0.2) +
+  scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
+  theme(
+    text = element_text(family = "Times New Roman"),
+    axis.title.y = element_blank(),
+    axis.title.x = element_blank()
+  )
+
+#
+p <- plot(sm(plot_GS, 3))
+p_data <- p$data$fit
+p_data$group <- "base"
+
+p <- plot(sm(plot_GS, 4))
+h_data <- p$data$fit
+h_data$group <- "post"
+p_data <- rbind(p_data, h_data)
+
+p <- plot(sm(plot_GS, 5))
+h_data <- p$data$fit
+h_data$group <- "rtp"
+p_data <- rbind(p_data, h_data)
+# p_data$lb <- as.numeric(p_data$x - (1.96 * p_data$se))
+# p_data$ub <- as.numeric(p_data$x + (1.96 * p_data$se))
+colnames(p_data) <- c("nodeID", "est", "ty", "se", "group")
+p_data$CI <- as.numeric(1.96 * p_data$se)
+
+p_S <- ggplot(data = p_data, aes(.data$nodeID)) +
+  geom_line(aes(y = .data$est, color = .data$group)) +
+  geom_ribbon(
+    aes(
+      ymin = .data$est - .data$CI, 
+      ymax = .data$est + .data$CI, 
+      fill = group), 
+    alpha = 0.2,
+    show.legend = F) +
+  scale_y_continuous() +
+  scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
+  scale_color_discrete(name = "") + 
+  theme(
+    text = element_text(family = "Times New Roman"),
+    legend.position = c(0.88, 0.85),
+    legend.text = element_text(size = 8),
+    axis.title.y = element_blank(),
+    axis.title.x = element_blank()
+  )
+
+
+top <- text_grob(paste(tract, "FA Smooths"), size = 12, family = "Times New Roman")
+l1 <- text_grob("Est. Global Fit", size = 12, family = "Times New Roman", rot = 90)
+l2 <- text_grob("Est. Group Fit", size = 12, family = "Times New Roman", rot = 90)
+bot <- text_grob("Node ID", size = 10, family = "Times New Roman")
+grid.arrange(
+  arrangeGrob(p_G, top = top, left = l1),
+  arrangeGrob(p_S, left = l2, bottom = bot),
+  nrow = 2,
+  ncol = 1
+)
+
+
+# Global, group difference smooths
+df$scanOF <- factor(df$scan_name, ordered = T)
+fit_GSO <- bam(
+  dti_fa ~ s(subj_id, scan_name, bs = "re") + 
+    s(node_id, bs = "tp", k = 40) +
+    s(node_id, by = scanOF, bs = "tp", k = 40),
+  data = df,
+  family = betar(link = "logit"),
+  method = "fREML"
+)
+plot_GSO <- getViz(fit_GSO)
+p_Da <- draw_plots$draw_gios_diff_sig(plot_GSO, 2, 3)
+p_Db <- draw_plots$draw_gios_diff_sig(plot_GSO, 2, 4)
+top <- text_grob(paste(tract, "FA Smooths"), size = 12, family = "Times New Roman")
+l1 <- text_grob("Est. Global Fit", size = 12, family = "Times New Roman", rot = 90)
+l2 <- text_grob("Diff: Post-Base", size = 12, family = "Times New Roman", rot = 90)
+l3 <- text_grob("Diff: RTP-Base", size = 12, family = "Times New Roman", rot = 90)
+bot <- text_grob("Node ID", size = 10, family = "Times New Roman")
+grid.arrange(
+  arrangeGrob(p_G, top = top, left = l1),
+  arrangeGrob(p_Da$diff, left = l2),
+  arrangeGrob(p_Db$diff, left = l3, bottom = bot),
+  nrow = 3,
+  ncol = 1
+)

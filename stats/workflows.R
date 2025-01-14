@@ -322,64 +322,6 @@ impact_cluster <- function(df_scan_imp, scan_name) {
 }
 
 
-#' Fit Post DWI scalars with HGAMs, grouped by k-means.
-#'
-#' TODO finalize or remove.
-#'
-#' Investigate scalars from post scans, accounting for k-means grouping
-#' (output of impact_cluster()).
-#'
-#' @param df_afq Dataframe, output of clean_afq().
-#' @param tract String, name of AFQ tract (corresponds to df_afq$tract_name).
-#' @param df_scan_imp Dataframe, output of get_scan_impact().
-#' @param imp_clust Named list, output of impact_cluster().
-export("gams_post_kmeans")
-gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
-  # Callosum Temporal shows kmeans group differences on mem_ver in post,
-  # but minimal differences on vis_mot.
-  # Left Inferior Fronto-occipital was flat across effects.
-
-  #
-  imp_clust <- workflows$impact_cluster(df_scan_imp, "post")
-  subj_exp <- imp_clust$df_sik[which(imp_clust$df_sik$km_grp != 1), ]$subj_id
-
-  tract <- "Callosum Temporal"
-  df <- df_afq[which(df_afq$tract_name == tract & df_afq$scan_name == "post"), ]
-  df$group <- "con"
-  df[which(df$subj_id %in% subj_exp), ]$group <- "exp"
-
-  #
-  fit_GSI <- fit_gams$gam_gsi(df, "dti_rd", "group")
-  fit_GSIO <- fit_gams$gam_gsio(df, "dti_rd", "group")
-
-  #
-  impact_meas <- "mem_vis"
-  df <- merge(
-    x = df,
-    y = df_scan_imp[, c("subj_id", "scan_name", impact_meas)],
-    by = c("subj_id", "scan_name"),
-    all.x = T
-  )
-
-  #
-  fit_G_intx <- fit_gams$mod_g_intx(df, "dti_fa", impact_meas)
-  plot(fit_G_intx)
-  p <- getViz(fit_G_intx)
-  plot(p)
-
-  #
-  fit_GI_intx <- fit_gams$mod_gi_intx(df, "dti_fa", "group", impact_meas)
-  plot(fit_GI_intx)
-  p <- getViz(fit_GI_intx)
-  plot(p)
-
-  fit_GIO_intx <- fit_gams$mod_gio_intx(df, "dti_fa", "group", impact_meas)
-  plot(fit_GIO_intx)
-  p <- getViz(fit_GIO_intx)
-  plot(p)
-  #
-}
-
 
 #' Make plots for delta_long_all.
 #' 
@@ -639,21 +581,12 @@ gams_long_tract <- function(df_afq, tract) {
 #' Fit DWI scalars X Impact with longitudinal HGAMs.
 #'
 #' TODO
-export("gams_long_intx")
-gams_long_intx <- function(df_afq, df_scan_imp, tract, post_sess) {
-  # if(! post_sess %in% c("post", "rtp")){
-  #   stop("Unexpected post_sess")
-  # }
+export("gams_long_tract_intx")
+gams_long_tract_intx <- function(
+    df_afq, df_scan_imp, tract, impact_meas = "mem_vis") {
 
   #
-  # df <- df_afq[which(
-  #   df_afq$tract_name == tract &
-  #     df_afq$scan_name %in% c("base", post_sess)
-  # ), ]
   df <- df_afq[which(df_afq$tract_name == tract), ]
-
-  #
-  impact_meas <- "mem_vis"
   df <- merge(
     x = df,
     y = df_scan_imp[, c("subj_id", "scan_name", impact_meas)],
@@ -662,8 +595,8 @@ gams_long_intx <- function(df_afq, df_scan_imp, tract, post_sess) {
   )
 
   #
-  fit_FA <- fit_gams$gam_gs_intx(df, "dti_fa", impact_meas)
-  fit_FAO <- fit_gams$gam_gso_intx(df, "dti_fa", impact_meas)
+  # fit_FA <- fit_gams$gam_lgi_intx(df, "dti_fa", impact_meas)
+  fit_FAO <- fit_gams$mod_lgio_intx(df, impact_meas)
 
 
   return(list(
@@ -677,6 +610,67 @@ gams_long_intx <- function(df_afq, df_scan_imp, tract, post_sess) {
       "FA" = plot_FA,
     )
   ))
+}
+
+
+
+
+#' Fit Post DWI scalars with HGAMs, grouped by k-means.
+#'
+#' TODO finalize or remove.
+#'
+#' Investigate scalars from post scans, accounting for k-means grouping
+#' (output of impact_cluster()).
+#'
+#' @param df_afq Dataframe, output of clean_afq().
+#' @param tract String, name of AFQ tract (corresponds to df_afq$tract_name).
+#' @param df_scan_imp Dataframe, output of get_scan_impact().
+#' @param imp_clust Named list, output of impact_cluster().
+export("gams_post_kmeans")
+gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
+  # Callosum Temporal shows kmeans group differences on mem_ver in post,
+  # but minimal differences on vis_mot.
+  # Left Inferior Fronto-occipital was flat across effects.
+  
+  #
+  imp_clust <- workflows$impact_cluster(df_scan_imp, "post")
+  subj_exp <- imp_clust$df_sik[which(imp_clust$df_sik$km_grp != 1), ]$subj_id
+  
+  tract <- "Callosum Temporal"
+  df <- df_afq[which(df_afq$tract_name == tract & df_afq$scan_name == "post"), ]
+  df$group <- "con"
+  df[which(df$subj_id %in% subj_exp), ]$group <- "exp"
+  
+  #
+  fit_GSI <- fit_gams$gam_gsi(df, "dti_rd", "group")
+  fit_GSIO <- fit_gams$gam_gsio(df, "dti_rd", "group")
+  
+  #
+  impact_meas <- "mem_vis"
+  df <- merge(
+    x = df,
+    y = df_scan_imp[, c("subj_id", "scan_name", impact_meas)],
+    by = c("subj_id", "scan_name"),
+    all.x = T
+  )
+  
+  #
+  fit_G_intx <- fit_gams$mod_g_intx(df, "dti_fa", impact_meas)
+  plot(fit_G_intx)
+  p <- getViz(fit_G_intx)
+  plot(p)
+  
+  #
+  fit_GI_intx <- fit_gams$mod_gi_intx(df, "dti_fa", "group", impact_meas)
+  plot(fit_GI_intx)
+  p <- getViz(fit_GI_intx)
+  plot(p)
+  
+  fit_GIO_intx <- fit_gams$mod_gio_intx(df, "dti_fa", "group", impact_meas)
+  plot(fit_GIO_intx)
+  p <- getViz(fit_GIO_intx)
+  plot(p)
+  #
 }
 
 

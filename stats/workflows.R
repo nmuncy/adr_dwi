@@ -346,6 +346,19 @@ impact_cluster <- function(df_scan_imp, scan_name) {
   rtp_smooths <- utils::tail(node_smooths, half)
   name_smooths <- utils::head(name_smooths, half) # Names appear twice
   
+  # Draw combined plot
+  grDevices::png(
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/LDI_all/fit_LDI_all.png"
+    ),
+    units = "in",
+    height = 8,
+    width = 12,
+    res = 600
+  )
+  draw_plots$grid_ldi_comb(fit_LDI, post_smooths, rtp_smooths, name_smooths)
+  grDevices::dev.off()
+  
   # Identify max deflections from zero
   t_name <- c_name <- n_name <- m_val <- c()
   p <- getViz(fit_LDI)
@@ -606,7 +619,7 @@ gams_long_tract_intx <- function(
   scalar <- strsplit("dti_fa", "_")[[1]][2]
   analysis_dir <- .analysis_dir()
   
-  # Get (and make/save if needed) LGI_intx model.
+  # Get (and make/save if needed) LGI_intx, LGIO_intx models.
   rds_lgi <- paste0(
     analysis_dir, "/stats_gams/rda_objects/LGI_intx_tract/fit_LGI_intx_",
     h_tract, "_", scalar, ".txt"
@@ -618,14 +631,30 @@ gams_long_tract_intx <- function(
   }
   fit_LGI_intx <- readRDS(rds_lgi)
   
-  # Write LGI_intx summary
+  rds_lgio <- paste0(
+    analysis_dir, "/stats_gams/rda_objects/LGIO_intx_tract/fit_LGIO_intx_",
+    h_tract, "_", scalar, ".txt"
+  )
+  if (!file.exists(rds_lgio)) {
+    h_gam <- fit_gams$mod_lgio_intx(df, impact_meas)
+    saveRDS(h_gam, file = rds_lgio)
+    rm(h_gam)
+  }
+  fit_LGIO_intx <- readRDS(rds_lgio)
+  
+  # Write summaries
   sum_lgi <- paste0(
     analysis_dir, "/stats_gams/gam_summaries/LGI_intx_tract/fit_LGI_intx_",
     h_tract, "_", scalar, ".txt"
   )
   fit_gams$write_gam_stats(fit_LGI_intx, sum_lgi)
+  sum_lgio <- paste0(
+    analysis_dir, "/stats_gams/gam_summaries/LGIO_intx_tract/fit_LGIO_intx_",
+    h_tract, "_", scalar, ".txt"
+  )
+  fit_gams$write_gam_stats(fit_LGIO_intx, sum_lgio)
   
-  # Make LGI_intx plots
+  # Make LGI_intx, LGIO_intx plots
   grDevices::png(
     filename = paste0(
       analysis_dir, "/stats_gams/plots/LGI_intx_tract/fit_LGI_intx_",
@@ -638,13 +667,19 @@ gams_long_tract_intx <- function(
   )
   draw_plots$grid_lgi_intx(fit_LGI_intx, tract, toupper(scalar), impact_meas)
   grDevices::dev.off()
-
   
-
-  #
-  # fit_LGI_intx <- fit_gams$mod_lgi_intx(df, impact_meas)
-  # fit_LGIO_intx <- fit_gams$mod_lgio_intx(df, impact_meas)
-
+  grDevices::png(
+    filename = paste0(
+      analysis_dir, "/stats_gams/plots/LGIO_intx_tract/fit_LGIO_intx_",
+      h_tract, ".png"
+    ),
+    units = "in",
+    height = 8,
+    width = 6,
+    res = 600
+  )
+  draw_plots$grid_lgio_intx(fit_LGIO_intx, tract, toupper(scalar), impact_meas)
+  grDevices::dev.off()
 
   return(list(
     gam_LGI_intx = fit_LGI_intx,

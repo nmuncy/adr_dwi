@@ -7,6 +7,8 @@ draw_plots <- modules::use("resources/draw_plots.R")
 
 
 # Get cleaned data ----
+#
+# TODO drop problematic tracts
 df_afq <- workflows$clean_afq()
 df_scan_imp <- workflows$get_scan_impact()
 
@@ -38,11 +40,11 @@ draw_plots$draw_impact_pairs(imp_clust$df_sik, c(7:10), 3)
 # HGAM of scalars for each tract (LGI, LGIO), and then interactions
 # with impact measures.
 #
-# TODO GAMs of scalars for post by k-means group
-# TODO above, with impact interactions
+# TODO GAMs of scalars for post by k-means group?
 
 # Fit FA differences between scan times for all tracts
 fit_LDI <- workflows$gam_delta_long_all(df_afq)
+
 
 # Fit LGAM (LGI, LGIO) of individual tracts for FA, MD, RD, AD scalars
 tract_list <- unique(df_afq$tract_name)
@@ -51,6 +53,7 @@ for(tract in tract_list){
 }
 # summary(tract_gams$gam_LGIO$FA)
 # grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$FA)
+
 
 # Fit interaction smooths between tract and Impact measures
 tract_roi <- c(

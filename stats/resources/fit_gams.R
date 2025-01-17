@@ -77,7 +77,7 @@ write_gam_stats <- function(gam_obj, out_file) {
 #' @param scalar_name DWI metric, dti_fa, dti_rd, dti_md, or dti_ad.
 #' @returns mgcv::bam fit object.
 export("mod_lgi")
-mod_lgi <- function(df, scalar_name, k_max = 40) {
+mod_lgi <- function(df, scalar_name, k_max = 15) {
   # Validate scalar name
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
@@ -111,7 +111,7 @@ mod_lgi <- function(df, scalar_name, k_max = 40) {
 #' @param scalar_name DWI metric, dti_fa, dti_rd, dti_md, or dti_ad.
 #' @returns mgcv::bam fit object.
 export("mod_lgio")
-mod_lgio <- function(df, scalar_name, k_max = 40) {
+mod_lgio <- function(df, scalar_name, k_max = 15) {
   # Validate scalar name
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
     stop("Unexpected scalar_name")
@@ -154,7 +154,7 @@ mod_ldi <- function(df) {
   df$tract_scan <- interaction(df$tract_name, df$comp_scan)
   fit_LDI <- bam(
     delta ~ s(subj_id, by = tract_scan, bs = "re") +
-      s(node_id, by = tract_scan, bs = "tp", k = 40) +
+      s(node_id, by = tract_scan, bs = "tp", k = 15) +
       tract_name + comp_scan + tract_scan,
     data = df,
     family = gaussian(),
@@ -177,7 +177,7 @@ mod_ldi <- function(df) {
 #' @returns mgcv::bam fit object.
 export("mod_lgi_intx")
 mod_lgi_intx <- function(
-    df, impact_meas, scalar_name = "dti_fa", ks_max = 40, ki_max = 50
+    df, impact_meas, scalar_name = "dti_fa", ks_max = 15, ki_max = 20
 ) {
   # Validate user args
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
@@ -225,7 +225,7 @@ mod_lgi_intx <- function(
 #' @returns mgcv::bam fit object.
 export("mod_lgio_intx")
 mod_lgio_intx <- function(
-    df, impact_meas, scalar_name = "dti_fa", ks_max = 40, ki_max = 50
+    df, impact_meas, scalar_name = "dti_fa", ks_max = 15, ki_max = 20
 ) {
   # Validate user args
   if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {

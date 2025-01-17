@@ -7,8 +7,6 @@ draw_plots <- modules::use("resources/draw_plots.R")
 
 
 # Get cleaned data ----
-#
-# TODO drop problematic tracts
 df_afq <- workflows$clean_afq()
 df_scan_imp <- workflows$get_scan_impact()
 
@@ -48,7 +46,7 @@ fit_LDI <- workflows$gam_delta_long_all(df_afq)
 
 # Fit LGAM (LGI, LGIO) of individual tracts for FA, MD, RD, AD scalars
 tract_list <- unique(df_afq$tract_name)
-for(tract in tract_list){
+for (tract in tract_list) {
   tract_gams <- workflows$gams_long_tract(df_afq, tract)
 }
 # summary(tract_gams$gam_LGIO$FA)
@@ -57,10 +55,10 @@ for(tract in tract_list){
 
 # Fit interaction smooths between tract and Impact measures
 tract_roi <- c(
-  tract_list[1], tract_list[2], tract_list[3], 
-  tract_list[24], tract_list[7], tract_list[16]
+  tract_list[20], tract_list[1], tract_list[7], tract_list[2],
+  tract_list[4], tract_list[12], tract_list[16]
 )
-tract <- tract_roi[5]
+tract <- tract_roi[3]
 fit_intx <- workflows$gams_long_tract_intx(df_afq, df_scan_imp, tract)
 
 
@@ -80,7 +78,3 @@ summary(fit_rand$gamGSO)
 # TODO fit GAM for global, group, covariate intx
 # TODO identify impact subgroups
 # TODO relate impact subgroups to tract changes
-
-
-
-

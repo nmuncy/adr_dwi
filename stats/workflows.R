@@ -98,6 +98,16 @@ clean_afq <- function() {
     rm(df)
   }
   df_afq <- utils::read.csv(afq_path)
+  
+  # Drop specific tracts
+  drop_tracts <- c(
+    "Left Posterior Arcuate", 
+    "Right Posterior Arcuate",
+    "Left Vertical Occipital",
+    "Right Vertical Occipital"
+  )
+  df_afq <- df_afq[-which(df_afq$tract_name %in% drop_tracts), ]
+  row.names(df_afq) <- NULL
 
   # Manage column types, clip tails
   df_afq$subj_id <- factor(df_afq$subj_id)

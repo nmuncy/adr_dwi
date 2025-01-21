@@ -13,10 +13,11 @@ setup(
             "preproc_dwi=adr_dwi.clis.run_preproc_dwi:main",
             "setup_pyafq=adr_dwi.clis.run_setup_pyafq:main",
             "run_pyafq=adr_dwi.clis.run_pyafq:main",
+            "get_nki=adr_dwi.clis.run_pull_nki:main",
         ]
     },
     include_package_data=True,
-    package_data={"": ["bin/config.toml"]},
+    package_data={"": ["bin/*"]},
     install_requires=[
         "mysql_connector_repackaged>=0.3.1",
         "numpy>=2.1.3",

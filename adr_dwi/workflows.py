@@ -26,6 +26,7 @@ from adr_dwi import build_survey
 from adr_dwi import helper
 from adr_dwi import process
 from adr_dwi import submit
+from adr_dwi import pull_data
 
 import importlib.resources as pkg_resources
 from adr_dwi import bin as adr_bin
@@ -507,3 +508,71 @@ def insert_pyafq() -> pd.DataFrame:
 
     df = pd.read_csv(csv_path)
     return database.build_afq(df)
+
+
+def get_nki(
+    age_min: int,
+    age_max: int,
+    dryrun: bool,
+    hand: str,
+    data_dir: PT,
+    scan_list: list,
+    sess: str,
+):
+    """Pull data from the NKI Rockland Archive.
+
+    Args:
+        age_min: Age lower threshold.
+        age_max: Age upper threshold.
+        dryrun: Test the download parameters.
+        hand: Handedness of participants ("L" or "R").
+        data_dir: Project BIDS directory.
+        scan_list:  Scan types to download ("anat", "func", or "dwi").
+        sess: Session, Visit name ("BAS1", "BAS2", or "BAS3").
+
+    Returns:
+       dict: Key = BIDS subject str, Value = List of rawdata file locations.
+
+    Raises:
+        FileNotFoundError: Missing required files
+        ValueError: Unexpected values for parameters
+
+    """
+    log.write.info("Starting get_nki workflow")
+
+    # Validate user input
+    if hand != "None":
+        if hand not in ["L", "R"]:
+            raise ValueError("Unexepected parameter for --hand")
+    if sess not in ["BAS1", "BAS2", "BAS3"]:
+        raise ValueError("Unexepected parameter for --session")
+    for scan in scan_list:
+        if scan not in ["anat", "func", "dwi"]:
+            raise ValueError("Unexepected parameter for --scan-type")
+
+    # Build pull arguments
+    raw_path = os.path.join(data_dir, "rawdata")
+    pull_link = os.path.join(
+        os.path.dirname(adr_bin.__file__), "aws_links.csv"
+    )
+    pull_args = [
+        f"-al {pull_link}",
+        f"-o {raw_path}",
+        f"-v {sess}",
+        f"-t {' '.join(scan_list)}",
+        f"-gt {age_min}",
+        f"-lt {age_max}",
+    ]
+    if dryrun:
+        pull_args.append("-n")
+    if hand != "None":
+        pull_args.append(f"-m {hand}")
+
+    # Download data, clean up files and IDs
+    pull_data.dl_data(raw_path, pull_args, dryrun)
+    if dryrun:
+        log.write.info("Finished get_nki dryrun")
+        return
+    subj_data = pull_data.chg_id(raw_path)
+    log.write.info("Finished get_nki workflow")
+    return subj_data

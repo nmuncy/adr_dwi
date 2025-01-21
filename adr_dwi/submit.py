@@ -314,3 +314,66 @@ def sched_pyafq(
     h_out, h_err = simp_subproc(f"sbatch {py_script}", wait=False)
     log.write.info(h_out.decode("utf-8"))
     return (h_out, h_err)
+
+
+def sched_get_nki(
+    age_min: int,
+    age_max: int,
+    dryrun: bool,
+    hand: str,
+    data_dir: PT,
+    scan_list: str,
+    sess: str,
+    log_dir: PT,
+) -> tuple:
+    """Schedule workflow for downloading NKI data.
+
+    Writes python script to log_dir that wraps the workflow method get_nki,
+    then submits python script to SLURM scheduler.
+
+    Args:
+        age_min: Age lower threshold.
+        age_max: Age upper threshold.
+        dryrun: Test the download parameters.
+        hand: Handedness of participants ("L" or "R").
+        data_dir: BIDS data location.
+        scan_list:  Scan types to download ("anat", "func", or "dwi").
+        sess: Session, Visit name ("BAS1", "BAS2", or "BAS3").
+        log_dir: Location for writing stdout/err.
+
+    Returns:
+        tuple: stdout/err of subprocess.
+
+    """
+    # Write parent python script
+    sbatch_cmd = f"""\
+        #!/bin/env {sys.executable}
+
+        #SBATCH --job-name=dl_NKI
+        #SBATCH --output={log_dir}/dl_NKI.log
+        #SBATCH --time=10:00:00
+        #SBATCH --mem=6G
+
+        from adr_dwi import workflows
+
+        _ = workflows.get_nki(
+            {age_min},
+            {age_max},
+            {dryrun},
+            "{hand}",
+            "{data_dir}",
+            {scan_list},
+            "{sess}",
+        )
+
+    """
+    sbatch_cmd = textwrap.dedent(sbatch_cmd)
+    py_script = f"{log_dir}/run_get_nki.py"
+    with open(py_script, "w") as ps:
+        ps.write(sbatch_cmd)
+    log.write.info(f"Wrote script: {py_script}")
+
+    # Execute script
+    h_out, h_err = simp_subproc(f"sbatch {py_script}", wait=False)
+    log.write.info(h_out.decode("utf-8"))
+    return (h_out, h_err)

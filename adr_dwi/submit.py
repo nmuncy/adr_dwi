@@ -274,6 +274,7 @@ def sched_pyafq(
     data_dir: PT,
     work_dir: PT,
     log_dir: PT,
+    rerun: bool,
 ) -> tuple:
     """Schedule workflow to run pyAFQ.
 
@@ -281,6 +282,7 @@ def sched_pyafq(
         data_dir: BIDS data location.
         work_dir: Location for intermediates.
         log_dir: Location for writing stdout/err.
+        rerun: Keep derivatives separate from regular workflow.
 
     Returns:
         tuple: stdout/err of subprocess.
@@ -301,6 +303,7 @@ def sched_pyafq(
             "{data_dir}",
             "{work_dir}",
             "{log_dir}",
+            {rerun},
         )
 
     """

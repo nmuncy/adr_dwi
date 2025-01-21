@@ -405,7 +405,7 @@ def wrap_setup_pyafq(
     _ = setup_pyafq(subj, sess, data_dir, work_dir)
 
 
-def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
+def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT, rerun: bool) -> PT:
     """Run pyAFQ workflow.
 
     Use preprocessed DWI data to conduct tractography via pyAFQ. Assumes
@@ -419,6 +419,7 @@ def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
         data_dir: Location of BIDS organized directory.
         work_dir: Location for intermediates.
         log_dir: Location for writing stdout/err.
+        rerun: Keep derivatives separate from regular workflow.
 
     Raises:
         KeyError: Missing global variable 'SING_PYAFQ'.
@@ -437,7 +438,13 @@ def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
 
     # Avoid repeating work
     log.write.info("Starting pyAFQ")
-    data_deriv = os.path.join(data_dir, "derivatives")
+    data_deriv = (
+        os.path.join(data_dir, "derivatives_rerun")
+        if rerun
+        else os.path.join(data_dir, "derivatives")
+    )
+    if not os.path.exists(data_deriv):  # Account for rerun output dir
+        os.makedirs(data_deriv)
     out_path = os.path.join(data_deriv, "afq", "tract_profiles.csv")
     if os.path.exists(out_path):
         log.write.info("pyAFQ output found")

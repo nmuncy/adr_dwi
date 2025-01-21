@@ -11,6 +11,7 @@ Requires:
 
 Examples:
     run_pyafq -r
+    run_pyafq -r --rerun
 
 """
 
@@ -38,6 +39,11 @@ def get_args():
             """
         ),
         type=str,
+    )
+    parser.add_argument(
+        "--rerun",
+        action="store_true",
+        help="Rerun analysis and keep derivatives separate.",
     )
     parser.add_argument(
         "--work-dir",
@@ -74,6 +80,7 @@ def main():
     args = get_args().parse_args()
     data_dir = args.data_dir
     work_dir = args.work_dir
+    rerun = args.rerun
     run = args.run
 
     # Validate env
@@ -98,7 +105,7 @@ def main():
         os.makedirs(log_dir)
 
     # Report and submit jobs
-    _, _ = submit.sched_pyafq(data_dir, work_dir, log_dir)
+    _, _ = submit.sched_pyafq(data_dir, work_dir, log_dir, rerun)
 
 
 if __name__ == "__main__":

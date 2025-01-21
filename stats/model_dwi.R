@@ -54,27 +54,24 @@ for (tract in tract_list) {
 
 
 # Fit interaction smooths between tract and Impact measures
+# CCorb, laThal, lCCs, liFO, lArc, raThal, rCCing, riFO, rUnc.
 tract_roi <- c(
-  tract_list[20], tract_list[1], tract_list[7], tract_list[2],
-  tract_list[4], tract_list[12], tract_list[16]
+  tract_list[20], tract_list[1], tract_list[5], tract_list[7], tract_list[13],
+  tract_list[3], tract_list[4], tract_list[8], tract_list[16]
 )
-tract <- tract_roi[3]
-fit_intx <- workflows$gams_long_tract_intx(df_afq, df_scan_imp, tract)
+
+# tract <- tract_roi[6]
+for(tract in tract_roi){
+  fit_intx <- workflows$gams_long_tract_intx(df_afq, df_scan_imp, tract)
+}
 
 
-# Check GAM for over sensitivity ----
+
+# Identify thresholds for GAM sensitivity ----
 #
-# Replace post of group A with base of group B, subsample
-# for group A.
+# Sources of curvature variance are related to (at least) scan-rescan,
+# tractometry, and concussion.
 #
-# Replace groups
-# - seed=1: scanOFpost f=14.19, dev expl=87.9%.
-# - seed=2: scanOFpost f=6.015, dev expl=88.3%.
-fit_rand <- workflows$gam_rand(df, 2)
-workflows$draw_grid(fit_rand$gamGS, fit_rep$gamGSO, 2, 3, 3, tract)
-summary(fit_rand$gamGSO)
-
-# TODO identify impact metrics for visit
-# TODO fit GAM for global, group, covariate intx
-# TODO identify impact subgroups
-# TODO relate impact subgroups to tract changes
+# TODO Scan-rescan - would need another longitudinal dataset.
+# TODO Tractometry - push base data through pyAFQ again, compare.
+# TODO Concussion - split base into two groups, look for group differences.

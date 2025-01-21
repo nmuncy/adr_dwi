@@ -98,10 +98,10 @@ clean_afq <- function() {
     rm(df)
   }
   df_afq <- utils::read.csv(afq_path)
-  
+
   # Drop specific tracts
   drop_tracts <- c(
-    "Left Posterior Arcuate", 
+    "Left Posterior Arcuate",
     "Right Posterior Arcuate",
     "Left Vertical Occipital",
     "Right Vertical Occipital"
@@ -334,28 +334,28 @@ impact_cluster <- function(df_scan_imp, scan_name) {
 
 
 #' Make plots for delta_long_all.
-#' 
+#'
 #' Identify max deflections from zero for each tract of
 #' post-base and rtp-base. Then draw grids for each tract.
-#' 
+#'
 #' @param fit_LDI mgcv::gam object.
 #' @param make_plots Logical, whether to draw all tract grids.
-.plot_delta_long_all <- function(fit_LDI, make_plots){
+.plot_delta_long_all <- function(fit_LDI, make_plots) {
   # Identify Post, RTP smooth indices and smooth names
   node_smooths <- name_smooths <- c()
-  for(num in 1:length(fit_LDI$smooth)){
-    if(fit_LDI[["smooth"]][[num]][["term"]] == "node_id"){
+  for (num in 1:length(fit_LDI$smooth)) {
+    if (fit_LDI[["smooth"]][[num]][["term"]] == "node_id") {
       node_smooths <- c(node_smooths, num)
       label <- fit_LDI[["smooth"]][[num]][["label"]]
       h <- strsplit(label, "tract_scan")[[1]][2]
       name_smooths <- c(name_smooths, strsplit(h, "\\.")[[1]][1])
     }
   }
-  half <- length(node_smooths)/2
+  half <- length(node_smooths) / 2
   post_smooths <- utils::head(node_smooths, half)
   rtp_smooths <- utils::tail(node_smooths, half)
   name_smooths <- utils::head(name_smooths, half) # Names appear twice
-  
+
   # Draw combined plot
   grDevices::png(
     filename = paste0(
@@ -368,22 +368,21 @@ impact_cluster <- function(df_scan_imp, scan_name) {
   )
   draw_plots$grid_ldi_comb(fit_LDI, post_smooths, rtp_smooths, name_smooths)
   grDevices::dev.off()
-  
+
   # Identify max deflections from zero
   t_name <- c_name <- n_name <- m_val <- c()
   p <- getViz(fit_LDI)
-  for(num in node_smooths){
-    
+  for (num in node_smooths) {
     # Get plotting data and info
     p_info <- plot(sm(p, num))
     p_data <- as.data.frame(p_info$data$fit)
     max_y <- max(abs(p_data$y))
-    
+
     # Get tract, comparison names
     row_name <- p_info$ggObj$labels$y
     h_str <- strsplit(row_name, split = ":")
     row_info <- strsplit(h_str[[1]][2], split = "\\.")
-    
+
     # Update vecs for df building
     t_name <- c(t_name, row_info[[1]][1])
     c_name <- c(c_name, row_info[[1]][2])
@@ -396,11 +395,11 @@ impact_cluster <- function(df_scan_imp, scan_name) {
     .analysis_dir(), "/stats_gams/gam_summaries/fit_LDI_fa_max.csv"
   )
   utils::write.csv(df_max, out_csv, row.names = F)
-  
+
   # Generate grids of post-base and rtp-base.
   stopifnot(make_plots)
   c <- 1
-  while(c < length(name_smooths)){
+  while (c < length(name_smooths)) {
     h_tract <- fit_gams$switch_tract(name_smooths[c])
     grDevices::png(
       filename = paste0(
@@ -415,7 +414,7 @@ impact_cluster <- function(df_scan_imp, scan_name) {
       fit_LDI, name_smooths[c], "FA", post_smooths[c], rtp_smooths[c]
     )
     grDevices::dev.off()
-    c <- c+1
+    c <- c + 1
   }
 }
 
@@ -429,9 +428,9 @@ impact_cluster <- function(df_scan_imp, scan_name) {
 #' @param make_plots Logical, whether to draw all tract grids.
 #' @returns mgcv::bam fit object.
 export("gam_delta_long_all")
-gam_delta_long_all <- function(df_afq, make_plots=T) {
+gam_delta_long_all <- function(df_afq, make_plots = T) {
   analysis_dir <- .analysis_dir()
-  
+
   # Calculate delta and run model
   df <- transform_data$calc_fa_delta(df_afq)
   rds_ldi <- paste0(analysis_dir, "/stats_gams/rda_objects/fit_LDI_fa.Rda")
@@ -441,13 +440,13 @@ gam_delta_long_all <- function(df_afq, make_plots=T) {
     rm(h_gam)
   }
   fit_LDI <- readRDS(rds_ldi)
-  
+
   # Mine, print summary stats
   sum_ldi <- paste0(analysis_dir, "/stats_gams/gam_summaries/fit_LDI_fa.txt")
-  if(!file.exists(sum_ldi)){
+  if (!file.exists(sum_ldi)) {
     fit_gams$write_gam_stats(fit_LDI, sum_ldi)
   }
-  
+
   # Generate plots and max node df
   .plot_delta_long_all(fit_LDI, make_plots)
   return(fit_LDI)
@@ -563,11 +562,11 @@ gams_long_tract <- function(df_afq, tract) {
     res = 600
   )
   draw_plots$draw_scalar_grid(
-    obj_FA$plots_LGIO, obj_MD$plots_LGIO, 
+    obj_FA$plots_LGIO, obj_MD$plots_LGIO,
     obj_AD$plots_LGIO, obj_RD$plots_LGIO
   )
   grDevices::dev.off()
-  
+
   # Assemble and write LGI plots
   grDevices::png(
     filename = paste0(
@@ -579,7 +578,7 @@ gams_long_tract <- function(df_afq, tract) {
     res = 600
   )
   draw_plots$draw_scalar_grid(
-    obj_FA$plots_LGI, obj_MD$plots_LGI, 
+    obj_FA$plots_LGI, obj_MD$plots_LGI,
     obj_AD$plots_LGI, obj_RD$plots_LGI
   )
   grDevices::dev.off()
@@ -601,19 +600,38 @@ gams_long_tract <- function(df_afq, tract) {
 }
 
 
+#' Plan specific IMPACT measure for tract interaction analysis.
+#'
+#' @param tract String, name of AFQ tract.
+#' @returns String, name of impact measure.
+.tract_impact <- function(tract) {
+  map_beh <- switch(tract,
+    "Callosum Orbital" = "tot_symp",
+    "Left Anterior Thalamic" = "tot_symp",
+    "Left Arcuate" = "mem_ver",
+    "Left Cingulum Cingulate" = "mem_vis",
+    "Left Corticospinal" = "rx_time",
+    "Left Inferior Fronto-occipital" = "mem_vis",
+    "Right Cingulum Cingulate" = "mem_vis",
+    "Right Inferior Fronto-occipital" = "mem_vis",
+    "Right Uncinate" = "tot_symp"
+  )
+  return(map_beh)
+}
+
+
 #' Fit DWI scalars X Impact with longitudinal HGAMs.
 #'
 #' TODO
 export("gams_long_tract_intx")
-gams_long_tract_intx <- function(
-    df_afq, df_scan_imp, tract, impact_meas = "mem_vis"
-) {
-  # Validate user args
-  if (!impact_meas %in%
-      c("mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl", "tot_symp")
-  ) {
-    stop("Unexpected impact_meas")
-  }
+gams_long_tract_intx <- function(df_afq, df_scan_imp, tract) {
+  # # Validate user args
+  # if (!impact_meas %in%
+  #     c("mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl", "tot_symp")
+  # ) {
+  #   stop("Unexpected impact_meas")
+  # }
+  impact_meas <- .tract_impact(as.character(tract))
 
   #  Subset tract data and add impact measure
   df <- df_afq[which(df_afq$tract_name == tract), ]
@@ -623,16 +641,16 @@ gams_long_tract_intx <- function(
     by = c("subj_id", "scan_name"),
     all.x = T
   )
-  
+
   # Set up for writing objects
   h_tract <- fit_gams$switch_tract(tract)
   scalar <- strsplit("dti_fa", "_")[[1]][2]
   analysis_dir <- .analysis_dir()
-  
+
   # Get (and make/save if needed) LGI_intx, LGIO_intx models.
   rds_lgi <- paste0(
     analysis_dir, "/stats_gams/rda_objects/LGI_intx_tract/fit_LGI_intx_",
-    h_tract, "_", scalar, ".txt"
+    h_tract, "_", scalar, "_", impact_meas, ".txt"
   )
   if (!file.exists(rds_lgi)) {
     h_gam <- fit_gams$mod_lgi_intx(df, impact_meas)
@@ -640,10 +658,10 @@ gams_long_tract_intx <- function(
     rm(h_gam)
   }
   fit_LGI_intx <- readRDS(rds_lgi)
-  
+
   rds_lgio <- paste0(
     analysis_dir, "/stats_gams/rda_objects/LGIO_intx_tract/fit_LGIO_intx_",
-    h_tract, "_", scalar, ".txt"
+    h_tract, "_", scalar, "_", impact_meas, ".txt"
   )
   if (!file.exists(rds_lgio)) {
     h_gam <- fit_gams$mod_lgio_intx(df, impact_meas)
@@ -651,7 +669,7 @@ gams_long_tract_intx <- function(
     rm(h_gam)
   }
   fit_LGIO_intx <- readRDS(rds_lgio)
-  
+
   # Write summaries
   sum_lgi <- paste0(
     analysis_dir, "/stats_gams/gam_summaries/LGI_intx_tract/fit_LGI_intx_",
@@ -660,15 +678,15 @@ gams_long_tract_intx <- function(
   fit_gams$write_gam_stats(fit_LGI_intx, sum_lgi)
   sum_lgio <- paste0(
     analysis_dir, "/stats_gams/gam_summaries/LGIO_intx_tract/fit_LGIO_intx_",
-    h_tract, "_", scalar, ".txt"
+    h_tract, "_", scalar, "_", impact_meas, ".txt"
   )
   fit_gams$write_gam_stats(fit_LGIO_intx, sum_lgio)
-  
+
   # Make LGI_intx, LGIO_intx plots
   grDevices::png(
     filename = paste0(
       analysis_dir, "/stats_gams/plots/LGI_intx_tract/fit_LGI_intx_",
-      h_tract, ".png"
+      h_tract, "_", impact_meas, ".png"
     ),
     units = "in",
     height = 8,
@@ -677,11 +695,11 @@ gams_long_tract_intx <- function(
   )
   draw_plots$grid_lgi_intx(fit_LGI_intx, tract, toupper(scalar), impact_meas)
   grDevices::dev.off()
-  
+
   grDevices::png(
     filename = paste0(
       analysis_dir, "/stats_gams/plots/LGIO_intx_tract/fit_LGIO_intx_",
-      h_tract, ".png"
+      h_tract, "_", impact_meas, ".png"
     ),
     units = "in",
     height = 8,
@@ -716,20 +734,20 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
   # Callosum Temporal shows kmeans group differences on mem_ver in post,
   # but minimal differences on vis_mot.
   # Left Inferior Fronto-occipital was flat across effects.
-  
+
   #
   imp_clust <- workflows$impact_cluster(df_scan_imp, "post")
   subj_exp <- imp_clust$df_sik[which(imp_clust$df_sik$km_grp != 1), ]$subj_id
-  
+
   tract <- "Callosum Temporal"
   df <- df_afq[which(df_afq$tract_name == tract & df_afq$scan_name == "post"), ]
   df$group <- "con"
   df[which(df$subj_id %in% subj_exp), ]$group <- "exp"
-  
+
   #
   fit_GSI <- fit_gams$gam_gsi(df, "dti_rd", "group")
   fit_GSIO <- fit_gams$gam_gsio(df, "dti_rd", "group")
-  
+
   #
   impact_meas <- "mem_vis"
   df <- merge(
@@ -738,19 +756,19 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
     by = c("subj_id", "scan_name"),
     all.x = T
   )
-  
+
   #
   fit_G_intx <- fit_gams$mod_g_intx(df, "dti_fa", impact_meas)
   plot(fit_G_intx)
   p <- getViz(fit_G_intx)
   plot(p)
-  
+
   #
   fit_GI_intx <- fit_gams$mod_gi_intx(df, "dti_fa", "group", impact_meas)
   plot(fit_GI_intx)
   p <- getViz(fit_GI_intx)
   plot(p)
-  
+
   fit_GIO_intx <- fit_gams$mod_gio_intx(df, "dti_fa", "group", impact_meas)
   plot(fit_GIO_intx)
   p <- getViz(fit_GIO_intx)
@@ -759,62 +777,7 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
 }
 
 
-# TODO add methods below to workflow method, and refactor so that
-# common methods are being used for all model fits.
 
-#' #' HGAM of Callosum Superior Parietal.
-#' #'
-#' #' Fit HGAMs with AFQ FA values to generate global, group,
-#' #' and ordered group smooths.
-#' #'
-#' #' @param df TODO
-#' export("gam_spar")
-#' gam_spar <- function(df) {
-#'   #
-#'   # fit_S <- bam(
-#'   #   dti_fa ~ s(node_id, bs="tp", k=40, m=2) +
-#'   #     s(subj_id, bs="re") +
-#'   #     s(node_id, scan_name, bs="fs", k=40, m=2),
-#'   #   data = df,
-#'   #   family = betar(link="logit"),
-#'   #   method = "fREML",
-#'   #   discrete = T
-#'   # )
-#'   # gam.check(fit_S, rep=1000)
-#'   # summary(fit_S)
-#'   # plot(fit_S)
-#'
-#'   #
-#'   fit_S <- bam(
-#'     dti_fa ~ s(subj_id, scan_name, bs = "re") +
-#'       s(node_id, bs = "tp", k = 40) +
-#'       s(node_id, scan_name, bs = "fs", k = 40),
-#'     data = df,
-#'     family = betar(link = "logit"),
-#'     method = "fREML",
-#'     discrete = T
-#'   )
-#'   # gam.check(fit_S)
-#'   # summary(fit_S)
-#'   # plot(fit_S)
-#'
-#'   #
-#'   df$scanOF <- factor(df$scan_name, ordered = T)
-#'   fit_SO <- bam(
-#'     dti_fa ~ s(subj_id, scan_name, bs = "re") +
-#'       s(node_id, bs = "tp", k = 40) +
-#'       s(node_id, by = scanOF, bs = "fs", k = 40),
-#'     data = df,
-#'     family = betar(link = "logit"),
-#'     method = "fREML",
-#'     discrete = T
-#'   )
-#'   # summary(fit_SO)
-#'   # plot(fit_SO)
-#'   return(list(gamGS = fit_S, gamGSO = fit_SO))
-#' }
-#'
-#'
 #' #' Run GAM with randomized sample
 #' #'
 #' export("gam_rand")
@@ -838,40 +801,5 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
 #'   fit_rand <- gam_spar(df)
 #'   return(fit_rand)
 #' }
-#'
-#'
-#' #' Gam interaction
-#' #'
-#' export("gam_intx")
-#' gam_intx <- function(df) {
-#'   fit_intx <- bam(
-#'     dti_fa ~ s(subj_id, scan_name, bs = "re") +
-#'       s(node_id, bs = "tp", k = 40) +
-#'       s(tot_symp, by = scan_name, bs = "tp", k = 5) +
-#'       ti(node_id, tot_symp, by = scan_name, bs = c("tp", "tp"), k = c(50, 5)),
-#'     data = df,
-#'     family = betar(link = "logit"),
-#'     method = "fREML",
-#'     discrete = T
-#'   )
-#'   # gam.check(fit_intx)
-#'   # summary(fit_intx)
-#'   # plot(fit_intx)
-#'
-#'   df$scanOF <- factor(df$scan_name, ordered = T)
-#'   fit_intxOF <- bam(
-#'     dti_fa ~ s(subj_id, scan_name, bs = "re") +
-#'       s(node_id, bs = "tp", k = 40) +
-#'       s(tot_symp, by = scan_name, bs = "tp", k = 5) +
-#'       ti(node_id, tot_symp, bs = c("tp", "tp"), k = c(50, 5)) +
-#'       ti(
-#'         node_id, tot_symp, by = scanOF, bs = c("tp", "tp"), k = c(50, 5), m = 2
-#'       ),
-#'     data = df,
-#'     family = betar(link = "logit"),
-#'     method = "fREML",
-#'     discrete = T
-#'   )
-#'
-#'   return(list(gamIntx = fit_intx, gamIntxOF = fit_intxOF))
-#' }
+
+

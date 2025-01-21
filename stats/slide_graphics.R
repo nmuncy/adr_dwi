@@ -11,6 +11,20 @@ workflows <- modules::use("workflows.R")
 draw_plots <- modules::use("resources/draw_plots.R")
 
 
+#' Return project analysis directory.
+#'
+#' @returns Path to NRDStor project analysis directory for
+#' Gimli (linux) and Frodo (mac) workstations.
+.analysis_dir <- function() {
+  if (Sys.info()["sysname"] == "Linux") {
+    an_dir <- "/run/user/1001/gvfs/smb-share:server=nrdstor.unl.edu,share=nrdstor/muncylab/nmuncy2/ADR/analyses/stats_gams/slides/"
+  } else if (Sys.info()["sysname"] == "Darwin") {
+    an_dir <- "/Volumes/nrdstor/muncylab/nmuncy2/ADR/analyses/stats_gams/slides/"
+  }
+  return(an_dir)
+}
+
+
 # Get Data ----
 df_afq <- workflows$clean_afq()
 tract <- "Callosum Orbital"
@@ -19,7 +33,7 @@ colnames(df)[2] <- "visit"
 
 
 # Non-linear data ----
-ggplot(data = df, aes(x = node_id, y = dti_fa)) +
+p_dist <- ggplot(data = df, aes(x = node_id, y = dti_fa)) +
   geom_point(alpha = 0.05) +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
   ggtitle(paste(tract, "Profile")) +
@@ -29,8 +43,12 @@ ggplot(data = df, aes(x = node_id, y = dti_fa)) +
     text = element_text(family = "Times New Roman", size = 14),
     plot.title = element_text(hjust = 0.5)
   )
+ggsave(
+  paste0(.analysis_dir(), "plot_dist.png"), plot = p_dist, dpi = 600
+)
 
-ggplot(
+
+p_dist_lin <- ggplot(
   data = df, 
   aes(x = node_id, y = dti_fa)
 ) +
@@ -44,10 +62,13 @@ ggplot(
     text = element_text(family = "Times New Roman", size = 14),
     plot.title = element_text(hjust = 0.5)
   )
+ggsave(
+  paste0(.analysis_dir(), "plot_dist_lin.png"), plot = p_dist_lin, dpi = 600
+)
 
 
 # Gams ----
-ggplot(
+p_dist_gam <- ggplot(
   data = df, 
   aes(x = node_id, y = dti_fa)
 ) +
@@ -61,6 +82,10 @@ ggplot(
     text = element_text(family = "Times New Roman", size = 14),
     plot.title = element_text(hjust = 0.5)
   )
+ggsave(
+  paste0(.analysis_dir(), "plot_dist_gam.png"), plot = p_dist_gam, dpi = 600
+)
+
 
 fit_G <- gam(
   dti_fa ~ s(node_id, bs = "tp", k = 15),
@@ -68,8 +93,8 @@ fit_G <- gam(
   family = betar(link = "logit"),
   method = "fREML"
 )
-p <- draw(basis(fit_G))
-p +
+p_gam_basis <- draw(basis(fit_G))
+p_gam_basis +
   ggtitle(paste(tract, "Profile: Basis Functions")) +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
   ylab("Weight") +
@@ -78,10 +103,13 @@ p +
     text = element_text(family = "Times New Roman", size = 14),
     plot.title = element_text(hjust = 0.5)
   )
+ggsave(
+  paste0(.analysis_dir(), "plot_dist_gam_basis.png"), plot = p_gam_basis, dpi = 600
+)
 
 
 # Multiple groups in data ----
-ggplot(
+p_dist_group <- ggplot(
   data = df, 
   aes(x = node_id, y = dti_fa, color = visit)
 ) +
@@ -100,9 +128,11 @@ ggplot(
     legend.text = element_text(size = 10)
   ) + 
   guides(colour = guide_legend(override.aes = list(alpha = 1)))
+ggsave(
+  paste0(.analysis_dir(), "plot_dist_group.png"), plot = p_dist_group, dpi = 600
+)
 
-
-ggplot(
+p_dist_group_smooth <- ggplot(
   data = df, 
   aes(x = node_id, y = dti_fa, color = visit)
 ) +
@@ -121,6 +151,9 @@ ggplot(
     legend.position = c(0.85, 0.85),
     legend.text = element_text(size = 10)
   ) 
+ggsave(
+  paste0(.analysis_dir(), "plot_dist_group_smooth.png"), plot = p_dist_group_smooth, dpi = 600
+)
 
 
 # Smooth by group ----
@@ -148,7 +181,7 @@ df_pred <- data.frame(
   fit = df_pred$fit,
   se.fit = df_pred$se.fit
 )
-ggplot(data = df_pred) +
+p_group_gam <- ggplot(data = df_pred) +
   geom_smooth(mapping = aes(x = node_id, y = fit, color = visit)) +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
   ggtitle(paste(tract, "Profile: Visit Smooths")) +
@@ -160,6 +193,9 @@ ggplot(data = df_pred) +
     legend.position = c(0.85, 0.85),
     legend.text = element_text(size = 10)
   ) 
+ggsave(
+  paste0(.analysis_dir(), "plot_group_gam.png"), plot = p_group_gam, dpi = 600
+)
 
 
 # Global, group smooths ----
@@ -233,12 +269,22 @@ top <- text_grob(paste(tract, "Profile: HGAM Smooths"), size = 12, family = "Tim
 l1 <- text_grob("Est. Global Fit", size = 12, family = "Times New Roman", rot = 90)
 l2 <- text_grob("Est. Visit Fit", size = 12, family = "Times New Roman", rot = 90)
 bot <- text_grob("Node ID", size = 10, family = "Times New Roman")
+
+grDevices::png(
+  filename = paste0(.analysis_dir(), "plot_global_group_smooths.png"),
+  units = "in",
+  height = 8,
+  width = 6,
+  res = 600
+)
 grid.arrange(
   arrangeGrob(p_G, top = top, left = l1),
   arrangeGrob(p_S, left = l2, bottom = bot),
   nrow = 2,
   ncol = 1
 )
+grDevices::dev.off()
+
 
 
 # Global, group difference smooths ----
@@ -259,6 +305,14 @@ l1 <- text_grob("Est. Global Fit", size = 12, family = "Times New Roman", rot = 
 l2 <- text_grob("Visit Diff: Post-Base", size = 12, family = "Times New Roman", rot = 90)
 l3 <- text_grob("Visit Diff: RTP-Base", size = 12, family = "Times New Roman", rot = 90)
 bot <- text_grob("Node ID", size = 10, family = "Times New Roman")
+
+grDevices::png(
+  filename = paste0(.analysis_dir(), "plot_global_groupOF_smooths.png"),
+  units = "in",
+  height = 8,
+  width = 6,
+  res = 600
+)
 grid.arrange(
   arrangeGrob(p_G, top = top, left = l1),
   arrangeGrob(p_Da$diff, left = l2),
@@ -266,3 +320,4 @@ grid.arrange(
   nrow = 3,
   ncol = 1
 )
+grDevices::dev.off()

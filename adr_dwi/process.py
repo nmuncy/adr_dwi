@@ -1,7 +1,7 @@
 """Methods for processing data.
 
 cnt_nvol: Determine number of EPI volumes.
-BidsOrg: Methods for BIDSifying anat, dwi, and fmap shared ADR rawdata.
+BidsAdr: Methods for BIDSifying anat, dwi, and fmap shared ADR rawdata.
 DwiPreproc: Methods for preprocessing DWI data via FSL's topup and eddy.
 
 """
@@ -10,6 +10,7 @@ import os
 import glob
 import json
 import shutil
+import zipfile
 from adr_dwi import submit
 from adr_dwi import helper
 
@@ -68,14 +69,14 @@ class _SetSubjSess:
         self._data_dir = val
 
 
-class _BidsAnat(_SetSubjSess):
-    """BIDSify anat directory.
+class _BidsAdrAnat(_SetSubjSess):
+    """BIDSify ADR anat directory.
 
     Assumes local attic organization of anat containing MEMPRAGE files and
     SWI files removed.
 
     Example:
-        bids_anat = process._BidsAnat()
+        bids_anat = process._BidsAdrAnat()
         bids_anat.subj = "sub-0001"
         bids_anat.sess = "ses-1"
         bids_anat.data_dir = "/path/to/BIDS/dir"
@@ -84,8 +85,8 @@ class _BidsAnat(_SetSubjSess):
     """
 
     def __init__(self):
-        """Initialize _BidsAnat."""
-        log.write.info("Initializing _BidsAnat")
+        """Initialize _BidsAdrAnat."""
+        log.write.info("Initializing _BidsAdrAnat")
         _SetSubjSess.__init__(self)
 
     def _find_anat(self):
@@ -129,14 +130,14 @@ class _BidsAnat(_SetSubjSess):
         return f"{subj}_{sess}_acq-MEMPRAGErms_run-1_T1w{out_ext}"
 
 
-class _BidsDwi(_SetSubjSess):
-    """BIDSify dwi directory.
+class _BidsAdrDwi(_SetSubjSess):
+    """BIDSify ADR dwi directory.
 
     Assumes local attic organization of DWI with b0 and
     b1000t files removed.
 
     Example:
-        bids_dwi = process._BidsDwi()
+        bids_dwi = process._BidsAdrDwi()
         bids_dwi.subj = "sub-0001"
         bids_dwi.sess = "ses-1"
         bids_dwi.data_dir = "/path/to/BIDS/dir"
@@ -145,8 +146,8 @@ class _BidsDwi(_SetSubjSess):
     """
 
     def __init__(self):
-        """Initialize _BidsDwi."""
-        log.write.info("Initializing _BidsDwi")
+        """Initialize _BidsAdrDwi."""
+        log.write.info("Initializing _BidsAdrDwi")
         _SetSubjSess.__init__(self)
 
     def _find_dwi(self):
@@ -179,8 +180,8 @@ class _BidsDwi(_SetSubjSess):
             os.rename(file_path, os.path.join(file_dir, new_name))
 
 
-class _BidsFmap(_SetSubjSess):
-    """BIDSify fmap directory.
+class _BidsAdrFmap(_SetSubjSess):
+    """BIDSify ADR fmap directory.
 
     Assumes local attic organization of fmap files.
 
@@ -189,7 +190,7 @@ class _BidsFmap(_SetSubjSess):
         - Requires BIDSified DWI files.
 
     Example:
-        bids_fmap = process._BidsFmap()
+        bids_fmap = process._BidsAdrFmap()
         bids_fmap.subj = "sub-0001"
         bids_fmap.sess = "ses-1"
         bids_fmap.data_dir = "/path/to/BIDS/dir"
@@ -200,8 +201,8 @@ class _BidsFmap(_SetSubjSess):
     """
 
     def __init__(self):
-        """Initialize _BidsFmap."""
-        log.write.info("Initializing _BidsFmap")
+        """Initialize _BidsAdrFmap."""
+        log.write.info("Initializing _BidsAdrFmap")
         _SetSubjSess.__init__(self)
 
     def _find_fmap(self, ext: str = "*"):
@@ -303,15 +304,15 @@ class _BidsFmap(_SetSubjSess):
             os.remove(tmp_file)
 
 
-class BidsOrg(_BidsAnat, _BidsDwi, _BidsFmap):
-    """Provide methods for BIDSifying anat, dwi, and famp data.
+class BidsAdr(_BidsAdrAnat, _BidsAdrDwi, _BidsAdrFmap):
+    """Provide methods for BIDSifying ADR anat, dwi, and famp data.
 
     Combine BIDS classes into one for centralized methods, inherits
-    _BidsAnat, _BidsDwi, and _BidsFmap.
+    _BidsAdrAnat, _BidsAdrDwi, and _BidsAdrFmap.
 
     Example:
         # Initialize and set attrs
-        bids_org = process.BidsOrg()
+        bids_org = process.BidsAdr()
         bids_org.subj = "sub-0001"
         bids_org.sess = "ses-1"
         bids_org.data_dir = "/path/to/BIDS/dir"
@@ -326,11 +327,69 @@ class BidsOrg(_BidsAnat, _BidsDwi, _BidsFmap):
     """
 
     def __init__(self):
-        """Initialize BidsOrg."""
-        log.write.info("Initializing BidsOrg")
-        _BidsAnat.__init__(self)
-        _BidsDwi.__init__(self)
-        _BidsFmap.__init__(self)
+        """Initialize BidsAdr."""
+        log.write.info("Initializing BidsAdr")
+        _BidsAdrAnat.__init__(self)
+        _BidsAdrDwi.__init__(self)
+        _BidsAdrFmap.__init__(self)
+
+
+class _BidsHcpAnat:
+    """Title."""
+
+    def __init__(self):
+        """Initialize _BidsHcpAnat."""
+        log.write.info("Initializing _BidsHcpAnat")
+
+    def _set_subj(self):
+        """Title."""
+        self._subj_id = os.path.dirname(self._zip_path).split("_")[0]
+        self._subj = f"sub-{self._subj_id}"
+
+    def _unzip_struct(self):
+        """Title."""
+        log.write.info(f"Unzipping: {self._zip_path}")
+
+        #
+        self._set_subj()
+        file_dir = os.path.dirname(self._zip_path)
+        self._unzip_dir = os.path.join(file_dir, self._subj_id)
+        if os.path.exists(self._unzip_dir):
+            return
+
+        #
+        with zipfile.ZipFile(self._zip_path, "r") as zf:
+            zf.extractall(file_dir)
+        chk_file = os.path.join(
+            self._unzip_dir, "unprocessed", "3T", f"{self._subj_id}_3T.csv"
+        )
+        if not os.path.exists(chk_file):
+            raise FileNotFoundError(chk_file)
+
+    def bids_anat(self, zip_path: PT):
+        """Title."""
+        self._zip_path = zip_path
+        self._unzip_struct()
+
+        #
+        search_dir = os.path.join(self._unzip_dir, "unprocessed", "3T")
+        t1_list = sorted(
+            glob.glob(f"{search_dir}/T1*/{self._subj_id}_3T_T1w_*.nii.gz")
+        )
+        if not t1_list:
+            raise FileNotFoundError(
+                f"Expected unzipped T1w files in: {search_dir}"
+            )
+        t1_orig = t1_list[0]
+
+
+class BidsHcp(_BidsHcpAnat):
+    """Title."""
+
+    def __init__(self):
+        """Initialize BidsHcp."""
+        log.write.info("Initializing BidsHcp")
+        _BidsHcpAnat.__init__(self)
 
 
 class _FslTopup:

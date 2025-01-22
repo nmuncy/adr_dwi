@@ -110,7 +110,7 @@ def clean_rawdata(data_dir: PT):
         subj_sess[subj] = [os.path.basename(x) for x in sess_list]
 
     # Clean rawdata
-    bids_org = process.BidsOrg()
+    bids_org = process.BidsAdr()
     bids_org.data_dir = data_dir
     for subj, sess_list in subj_sess.items():
         bids_org.subj = subj
@@ -507,3 +507,11 @@ def insert_pyafq() -> pd.DataFrame:
 
     df = pd.read_csv(csv_path)
     return database.build_afq(df)
+
+
+def bidsify_hcp(data_dir: PT):
+    """Title."""
+    raw_dir = os.path.join(data_dir, "rawdata")
+    deriv_dir = os.path.join(data_dir, "derivatives")
+    dl1200_dir = os.path.join(data_dir, "download_1200")
+    dl46_dir = os.path.join(data_dir, "download_46")

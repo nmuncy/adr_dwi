@@ -352,19 +352,21 @@ def build_impact_user(df_user: pd.DataFrame, ref_maps: Type[RefMaps]):
     ref_maps._db_con.exec_many(sql_cmd, tbl_input)
 
 
-def build_afq(df: pd.DataFrame) -> pd.DataFrame:
+def build_afq(df: pd.DataFrame, rerun: bool = False) -> pd.DataFrame:
     """Insert data into db_adr.tbl_afq.
 
     Format pyAFQ output for insertion into database.
 
     Args:
-        df: Dataframe of afq derivative tract_profiles.csv
+        df: Dataframe of afq derivative tract_profiles.csv.
+        rerun: Optional, get and send rerun metrics instead of all.
 
     Returns:
         Formatted dataframe used for insertion.
 
     """
-    log.write.info("Sending AFQ data to db_adr.tbl_afq")
+    tbl_name = "tbl_afq" if not rerun else "tbl_afq_rerun"
+    log.write.info(f"Sending AFQ data to db_adr.{tbl_name}")
 
     # Start connection and load references
     db_con = DbConnect()
@@ -390,7 +392,7 @@ def build_afq(df: pd.DataFrame) -> pd.DataFrame:
     col_list = list(df.columns)
     value_list = ["%s" for x in col_list]
     sql_cmd = (
-        "insert ignore into tbl_afq"
+        f"insert ignore into {tbl_name}"
         + f"({', '.join(col_list)}) "
         + f"values ({', '.join(value_list)})"
     )

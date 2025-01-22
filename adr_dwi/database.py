@@ -114,7 +114,7 @@ class DbConnect:
         log.write.info("Starting SSH tunnel")
         rsa_ws = paramiko.RSAKey.from_private_key_file(os.environ["RSA_WS"])
         self._ssh_tunnel = SSHTunnelForwarder(
-            ("10.64.118.79", 22),
+            ("gimli", 22),
             ssh_username=os.environ["USER"],
             ssh_pkey=rsa_ws,
             remote_bind_address=("127.0.0.1", 3306),

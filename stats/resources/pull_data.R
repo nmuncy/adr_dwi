@@ -86,9 +86,10 @@ get_user_comp <- function() {
 #'
 #' @param sess_id (int, 0-2) Optional, identifier of session.
 #' @param tract_id (int, 1-28) Optional, identifier of tract.
+#' @param table_name (String) Optional, name of table holding pyAFQ metrics.
 #' @returns Tidy dataframe of AFQ scalars.
 export("get_afq")
-get_afq <- function(sess_id = NULL, tract_id = NULL) {
+get_afq <- function(sess_id = NULL, tract_id = NULL, table_name = "tbl_afq") {
   # Validate user args
   if (!is.null(sess_id)) {
     if (!sess_id %in% 0:2) {
@@ -100,6 +101,9 @@ get_afq <- function(sess_id = NULL, tract_id = NULL) {
       throw(paste("Unexpected sess_id:", sess_id))
     }
   }
+  if (!table_name %in% c("tbl_afq", "tbl_afq_rerun")){
+    throw(paste("Unexpected table_name:", tbl_name))
+  }
 
   # Build select statement, manage user args.
   db_con <- .db_connect()
@@ -107,12 +111,15 @@ get_afq <- function(sess_id = NULL, tract_id = NULL) {
     tafq.subj_id, rfs.scan_name, tsd.scan_date,
       rft.tract_name, tafq.node_id,
       tafq.dti_fa, tafq.dti_md, tafq.dti_ad, tafq.dti_rd
-    from tbl_afq tafq
-    join ref_scan rfs on tafq.sess_id=rfs.scan_id
-    join ref_tract rft on tafq.tract_id=rft.tract_id
-    join tbl_scan_dates tsd on tafq.subj_id=tsd.subj_id
-      and tafq.sess_id=tsd.scan_id
   "
+  sql_cmd <- paste(sql_cmd, "from", table_name, "tafq")
+  sql_cmd <- paste(sql_cmd, 
+    " join ref_scan rfs on tafq.sess_id=rfs.scan_id
+      join ref_tract rft on tafq.tract_id=rft.tract_id
+      join tbl_scan_dates tsd on tafq.subj_id=tsd.subj_id
+        and tafq.sess_id=tsd.scan_id
+    "
+  )
   if (!is.null(sess_id) & !is.null(tract_id)) {
     sql_cmd <- paste(
       sql_cmd,

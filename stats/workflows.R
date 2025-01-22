@@ -86,14 +86,24 @@ quick_stats <- use("resources/quick_stats.R")
 #'
 #' Clip tail nodes (x<10, x>89).
 #'
+#' @param table_name (String) Name of table holding pyAFQ metrics, tbl_afq
+#'  or tbl_afq_rerun.
 #' @returns Dataframe of AFQ tract metrics.
 export("clean_afq")
-clean_afq <- function() {
-  # Check for local csv, ead-in data or pull for db_adr.
-  afq_path <- paste(.analysis_dir(), "dataframes", "df_afq.csv", sep = "/")
+clean_afq <- function(table_name) {
+  # Validate user args
+  if (!table_name %in% c("tbl_afq", "tbl_afq_rerun")) {
+    throw(paste("Unexpected table_name:", tbl_name))
+  }
+
+  # Check for local csv, read-in data or pull from db_adr.
+  afq_name <- strsplit(table_name, "tbl_")[[1]][2]
+  afq_path <- paste(
+    .analysis_dir(), "dataframes", paste0("df_", afq_name, ".csv"), sep = "/"
+  )
 
   if (!file.exists(afq_path)) {
-    df <- pull_data$get_afq()
+    df <- pull_data$get_afq(table_name = table_name)
     utils::write.csv(df, afq_path, row.names = F)
     rm(df)
   }
@@ -453,6 +463,71 @@ gam_delta_long_all <- function(df_afq, make_plots = T) {
 }
 
 
+
+#' Title.
+#' TODO
+export("gam_delta_rerun_all")
+gam_delta_rerun_all <- function(df_afq, df_afq_rr){
+  # Subset df_afq for relevant values
+  df_afq_base <- df_afq[which(df_afq$scan_name == "base"), ]
+  df_afq_base <- subset(
+    df_afq_base, select = c("subj_id", "tract_name", "node_id", "dti_fa")
+  )
+  colnames(df_afq_base)[4] <- "fa_base1"
+  row.names(df_afq_base) <- NULL
+  
+  # Match df_afq_rr for merging
+  df_rerun_base <- subset(
+    df_afq_rr, select = c("subj_id", "tract_name", "node_id", "dti_fa")
+  )
+  colnames(df_rerun_base)[4] <- "fa_base2"
+  row.names(df_rerun_base) <- NULL
+  
+  # Get difference of FAs between runs
+  df <- merge(
+    df_afq_base, df_rerun_base, 
+    by = c("subj_id", "tract_name", "node_id"), 
+    all = T
+  )
+  rm(df_afq_base, df_rerun_base)
+  df$delta <- df$fa_base1 - df$fa_base2
+  
+  #
+  analysis_dir <- .analysis_dir()
+  rds_di <- paste0(analysis_dir, "/stats_gams/rda_objects/fit_DI_fa.Rda")
+  if (!file.exists(rds_di)) {
+    h_gam <- fit_gams$mod_di(df)
+    saveRDS(h_gam, file = rds_di)
+    rm(h_gam)
+  }
+  fit_DI <- readRDS(rds_di)
+  
+  # Match smooth to tract name
+  node_smooths <- name_smooths <- c()
+  for (num in 1:length(fit_DI$smooth)) {
+    if (fit_DI[["smooth"]][[num]][["term"]] == "node_id") {
+      node_smooths <- c(node_smooths, num)
+      label <- fit_DI[["smooth"]][[num]][["label"]]
+      name_smooths <- c(name_smooths, strsplit(label, "tract_name")[[1]][2])
+    }
+  }
+  
+  # Draw combined plot
+  grDevices::png(
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/DI_all/fit_DI_all.png"
+    ),
+    units = "in",
+    height = 6,
+    width = 12,
+    res = 600
+  )
+  draw_plots$grid_di_comb(fit_DI, node_smooths, name_smooths)
+  grDevices::dev.off()
+  
+}
+
+
 #' Fit and coordinate plotting of longitudinal HGAMs.
 #'
 #' Support longitudinal modeling and plotting of scalars. Makes longitudinal
@@ -801,5 +876,3 @@ gams_post_kmeans <- function(df_afq, tract, df_scan_imp, imp_clust) {
 #'   fit_rand <- gam_spar(df)
 #'   return(fit_rand)
 #' }
-
-

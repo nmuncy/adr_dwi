@@ -1,16 +1,13 @@
-"""Fully BIDSify rawdata.
+"""Make HCP data BIDSy
 
-Data copied from attic/barbey/shared/ADR is nearly BIDS compliant,
-this will finish the BIDS-ification process for anat, dwi, and
-fmap files copied to data-dir/rawdata.
+BIDSify unprocessed anat and preprocessed dwi for the
+1200 and 46 retest datasets.
 
 Notes:
-    - To be used after manual copying (scp) of data from attic to nrdstor.
-    - Assumes the extra DWI and SWI files have manually been removed from
-        nrdstor rawdata.
+    - Assumes zipped files are found in [data-dir]/download_[46,1200]
 
 Example:
-    clean_raw -r
+    clean_hcp -r
 
 """
 
@@ -29,7 +26,7 @@ def get_args():
     )
     parser.add_argument(
         "--data-dir",
-        default="/mnt/nrdstor/muncylab/nmuncy2/ADR/data_mri",
+        default="/mnt/nrdstor/muncylab/nmuncy2/HCP",
         help=textwrap.dedent(
             """\
             BIDS project directory.
@@ -72,12 +69,12 @@ def main():
         return
 
     # Setup data and log dirs
-    log_dir = os.path.join(data_dir, "logs", "clean_rawdata")
+    log_dir = os.path.join(data_dir, "logs", "clean_hcp")
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
     # Submit data check
-    _, _ = submit.sched_clean_rawdata(data_dir, log_dir)
+    _, _ = submit.sched_bidsify_hcp(data_dir, log_dir)
 
 
 if __name__ == "__main__":

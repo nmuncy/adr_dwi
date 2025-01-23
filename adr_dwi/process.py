@@ -2,6 +2,7 @@
 
 cnt_nvol: Determine number of EPI volumes.
 BidsAdr: Methods for BIDSifying anat, dwi, and fmap shared ADR rawdata.
+BidsHcp: Methods for BIDSifying HCP unpreproc anat and preproc dwi data.
 DwiPreproc: Methods for preprocessing DWI data via FSL's topup and eddy.
 
 """
@@ -11,6 +12,7 @@ import glob
 import json
 import shutil
 import zipfile
+import SimpleITK as sitk
 from adr_dwi import submit
 from adr_dwi import helper
 
@@ -334,62 +336,283 @@ class BidsAdr(_BidsAdrAnat, _BidsAdrDwi, _BidsAdrFmap):
         _BidsAdrFmap.__init__(self)
 
 
-class _BidsHcpAnat:
-    """Title."""
+class _BidsHelper(_SetSubjSess):
+    """Provide generic helper methods for BIDSification."""
+
+    def __init__(self):
+        """Initialize _BidsHelper."""
+        log.write.info("Initializing _BidsHelper")
+        _SetSubjSess.__init__(self)
+
+    def itk_json(self, file_path: PT, intended_for: PT = None):
+        """Dump ITK header to JSON, not currently BIDS compliant."""
+        # Avoid repeating work
+        raw_json_path = file_path.replace(".nii.gz", ".json")
+        if os.path.exists(raw_json_path):
+            return
+
+        # Dump ITK header to JSON
+        itk_image = sitk.ReadImage(file_path)
+        header = {
+            k: itk_image.GetMetaData(k) for k in itk_image.GetMetaDataKeys()
+        }
+        if intended_for:
+            header["IntendedFor"] = intended_for
+        raw_json_path = file_path.replace(".nii.gz", ".json")
+        with open(raw_json_path, "w") as of:
+            json.dump(header, of, indent=4)
+
+    def set_subj(self, zip_path: PT):
+        """Set subj, subj_id attrs."""
+        self._subj_id = os.path.basename(zip_path).split("_")[0]
+        self.subj = f"sub-{self._subj_id}"  # Uses setter method
+
+
+class _BidsHcpAnat(_BidsHelper):
+    """BIDSify HCP unpreproc anat files.
+
+    Not fully BIDS-compliant (JSON), and leaves fmaps behind.
+
+    Example:
+        hcp_anat = process._BidsHcpAnat()
+        hcp_anat.sess = "ses-1"
+        hcp_anat.data_dir = "/path/to/BIDS/dir"
+        hcp_anat.bids_anat("/path/to/file.zip")
+
+    """
 
     def __init__(self):
         """Initialize _BidsHcpAnat."""
         log.write.info("Initializing _BidsHcpAnat")
+        _BidsHelper.__init__(self)
 
-    def _set_subj(self):
-        """Title."""
-        self._subj_id = os.path.dirname(self._zip_path).split("_")[0]
-        self._subj = f"sub-{self._subj_id}"
-
-    def _unzip_struct(self):
-        """Title."""
-        log.write.info(f"Unzipping: {self._zip_path}")
-
-        #
-        self._set_subj()
+    def _unzip_struct(self) -> tuple:
+        """Unzip and check for contents."""
+        # Check for previous unzip
         file_dir = os.path.dirname(self._zip_path)
-        self._unzip_dir = os.path.join(file_dir, self._subj_id)
-        if os.path.exists(self._unzip_dir):
-            return
+        unzip_dir = os.path.join(file_dir, self._subj_id)
+        chk_file = os.path.join(
+            unzip_dir,
+            "unprocessed",
+            "3T",
+            f"{self._subj_id}_3T.csv",
+        )
+        if os.path.exists(chk_file):
+            return os.path.dirname(chk_file)
 
-        #
+        # Unzip file
+        log.write.info(f"Unzipping: {self._zip_path}")
         with zipfile.ZipFile(self._zip_path, "r") as zf:
             zf.extractall(file_dir)
-        chk_file = os.path.join(
-            self._unzip_dir, "unprocessed", "3T", f"{self._subj_id}_3T.csv"
-        )
+
+        # Validate unzip
         if not os.path.exists(chk_file):
             raise FileNotFoundError(chk_file)
+        return (unzip_dir, os.path.dirname(chk_file))
 
     def bids_anat(self, zip_path: PT):
-        """Title."""
+        """BIDSify T1w and T2w files.
+
+        Args:
+            zip_path: Location of zipped Structural_unproc file.
+
+        """
+        # Identify subject
         self._zip_path = zip_path
-        self._unzip_struct()
+        self.set_subj(zip_path)
 
-        #
-        search_dir = os.path.join(self._unzip_dir, "unprocessed", "3T")
-        t1_list = sorted(
-            glob.glob(f"{search_dir}/T1*/{self._subj_id}_3T_T1w_*.nii.gz")
+        # Extract data
+        unzip_dir, self._search_dir = self._unzip_struct()
+
+        # Setup rawdata location
+        log.write.info(f"BIDSifying anat: {self._subj}, {self._sess}")
+        self._raw_anat_dir = os.path.join(
+            self._data_dir, "rawdata", self._subj, self._sess, "anat"
         )
-        if not t1_list:
-            raise FileNotFoundError(
-                f"Expected unzipped T1w files in: {search_dir}"
+        if not os.path.exists(self._raw_anat_dir):
+            os.makedirs(self._raw_anat_dir)
+
+        # Organize anat types, clean
+        self._org_t1w_t2w("T1w")
+        self._org_t1w_t2w("T2w")
+        shutil.rmtree(unzip_dir)
+
+    def _org_t1w_t2w(self, d_type: str):
+        """Coordinate BIDSification T1w and T2w files."""
+        anat_dirs = sorted(glob.glob(f"{self._search_dir}/{d_type}*"))
+        if not anat_dirs:
+            log.write.warning(
+                f"Expected unzipped {d_type} files in: {self._search_dir}"
             )
-        t1_orig = t1_list[0]
+            return
+        self._d_type = d_type
+
+        for self._anat_dir in anat_dirs:
+            self._anat_name = os.path.basename(self._anat_dir)
+            self._run = "run-" + self._anat_name[-1]
+            self._org_anat()
+
+    def _org_anat(self):
+        """BIDSify anat files."""
+        # Identify anat file
+        anat_path = os.path.join(
+            self._anat_dir, f"{self._subj_id}_3T_{self._anat_name}.nii.gz"
+        )
+        if not os.path.exists(anat_path):
+            return
+
+        # Check for existing rawdata
+        self._raw_anat_path = os.path.join(
+            self._raw_anat_dir,
+            f"{self._subj}_{self._sess}_{self._run}_{self._d_type}.nii.gz",
+        )
+        if os.path.exists(self._raw_anat_path):
+            return
+
+        # Copy file, rename, make json sidecar
+        log.write.info(
+            f"BIDSifying anat: {self._subj}, {self._sess}, "
+            + f"{self._d_type}, {self._run}"
+        )
+        _, _ = submit.simp_subproc(f"cp {anat_path} {self._raw_anat_path}")
+        self.itk_json(self._raw_anat_path)
+
+        # Get fmaps
+        return  # BIDS does not really support map types for T1&T2 anats
+        self._org_anat_fmap("Phase")
+        self._org_anat_fmap("Magnitude")
+
+    def _org_anat_fmap(self, f_type: str):
+        """BIDSify anat fmap files."""
+        # Identify fmap file
+        fmap_path = os.path.join(
+            self._anat_dir, f"{self._subj_id}_3T_FieldMap_{f_type}.nii.gz"
+        )
+        if not os.path.exists(fmap_path):
+            return
+
+        # Setup
+        suff_dict = {"Phase": "phase1", "Magnitude": "magnitude"}
+        raw_fmap_dir = os.path.join(
+            self._data_dir,
+            "rawdata",
+            self._subj,
+            self._sess,
+            "fmap",
+        )
+        if not os.path.exists(raw_fmap_dir):
+            os.makedirs(raw_fmap_dir)
+
+        # Check for existing work
+        raw_fmap_path = os.path.join(
+            raw_fmap_dir,
+            f"{self._subj}_{self._sess}_{self._run}_"
+            + f"{suff_dict[f_type]}.nii.gz",
+        )
+        if os.path.exists(raw_fmap_path):
+            return
+
+        # Copy file, rename, make json sidecar
+        log.write.info(
+            f"BIDSifying fmap: {self._subj}, {self._sess}, "
+            + f"{self._d_type}, {self._run}, fmap {f_type}"
+        )
+        _, _ = submit.simp_subproc(f"cp {fmap_path} {raw_fmap_path}")
+        self.itk_json(raw_fmap_path, intended_for=self._raw_anat_path)
 
 
-class BidsHcp(_BidsHcpAnat):
+class _BidsHcpDwi(_BidsHelper):
+    """BIDSify HCP preproc dwi files.
+
+    Example:
+        hcp_dwi = process._BidsHcpDwi()
+        hcp_dwi.sess = "ses-1"
+        hcp_dwi.data_dir = "/path/to/BIDS/dir"
+        hcp_dwi.bids_dwi("/path/to/file.zip")
+
+    """
+
+    def __init__(self):
+        """Initialize _BidsHcpDwi."""
+        log.write.info("Initializing _BidsHcpDwi")
+        _BidsHelper.__init__(self)
+
+    def _unzip_diff(self) -> tuple:
+        """Unzip and check for contents."""
+        # Check for previous unzip
+        file_dir = os.path.dirname(self._zip_path)
+        unzip_dir = os.path.join(file_dir, self._subj_id)
+        chk_file = os.path.join(unzip_dir, "T1w", "Diffusion", "data.nii.gz")
+        if os.path.exists(chk_file):
+            return os.path.dirname(chk_file)
+
+        # Unzip file
+        log.write.info(f"Unzipping: {self._zip_path}")
+        with zipfile.ZipFile(self._zip_path, "r") as zf:
+            zf.extractall(file_dir)
+
+        # Validate unzip
+        if not os.path.exists(chk_file):
+            raise FileNotFoundError(chk_file)
+        return (unzip_dir, os.path.dirname(chk_file))
+
+    def bids_dwi(self, zip_path: PT):
+        """BIDSify preprocessed DWI files.
+
+        Args:
+            zip_path: Location of zipped Diffusion_preproc file.
+
+        """
+        # Identify subject, extract data
+        self._zip_path = zip_path
+        self.set_subj(zip_path)
+        unzip_dir, search_dir = self._unzip_diff()
+
+        # Setup derivatives location
+        log.write.info(f"BIDSifying dwi: {self._subj}, {self._sess}")
+        deriv_dwi = os.path.join(
+            self._data_dir,
+            "derivatives",
+            "dwi_preproc",
+            self._subj,
+            self._sess,
+            "dwi",
+        )
+        if not os.path.exists(deriv_dwi):
+            os.makedirs(deriv_dwi)
+
+        # Map HPC to BIDS names
+        file_pref = f"{self._subj}_{self._sess}"
+        file_map = {
+            "data.nii.gz": f"{file_pref}_desc-eddy_dwi.nii.gz",
+            "bvals": f"{file_pref}_dwi.bval",
+            "bvecs": f"{file_pref}_dwi.bvec",
+            "nodif_brain_mask.nii.gz": f"{file_pref}_desc-brain_mask.nii.gz",
+        }
+
+        # Copy planned files
+        for src, dst in file_map.items():
+            log.write.info(f"BIDSifying dwi: {dst}")
+            src_path = os.path.join(search_dir, src)
+            if not os.path.exists(src_path):
+                continue
+
+            # Avoid repeating work
+            dst_path = os.path.join(deriv_dwi, dst)
+            if os.path.exists(dst_path):
+                continue
+            _, _ = submit.simp_subproc(f"cp {src_path} {dst_path}")
+        shutil.rmtree(unzip_dir)
+
+
+class BidsHcp(_BidsHcpAnat, _BidsHcpDwi):
     """Title."""
 
     def __init__(self):
         """Initialize BidsHcp."""
         log.write.info("Initializing BidsHcp")
         _BidsHcpAnat.__init__(self)
+        _BidsHcpDwi.__init__(self)
 
 
 class _FslTopup:

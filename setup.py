@@ -10,6 +10,7 @@ setup(
         "console_scripts": [
             "adr_dwi=adr_dwi.entrypoint:main",
             "clean_raw=adr_dwi.clis.run_clean_rawdata:main",
+            "clean_hcp=adr_dwi.clis.run_clean_hcp:main",
             "preproc_dwi=adr_dwi.clis.run_preproc_dwi:main",
             "setup_pyafq=adr_dwi.clis.run_setup_pyafq:main",
             "run_pyafq=adr_dwi.clis.run_pyafq:main",

@@ -14,6 +14,7 @@ def main():
 
         build_db    : Clean shared Impact data and send to db_adr.
         clean_raw   : BIDSify shared ADR rawdata.
+        clean_hcp   : BIDSify downloaded HCP data.
         preproc_dwi : Preprocess DWI data.
         setup_pyafq : Get preprocessed DWI data ready for running pyAFQ.
         run_pyafq   : Model DWI data via pyAFQ.

@@ -3,6 +3,7 @@
 When the same workflow is conducted for multiple subjects, a wrapper
 method is provided to allow for scheduling all subjects as an array.
 
+bidsify_hcp: BIDSify HCP download data.
 clean_rawdata: BIDSify ADR rawdata data.
 insert_pyafq: Send pyAFQ node metrics to db_adr.
 preproc_dwi: Preprocess DWI data with FSL.
@@ -511,7 +512,18 @@ def insert_pyafq() -> pd.DataFrame:
 
 def bidsify_hcp(data_dir: PT):
     """Title."""
-    raw_dir = os.path.join(data_dir, "rawdata")
-    deriv_dir = os.path.join(data_dir, "derivatives")
-    dl1200_dir = os.path.join(data_dir, "download_1200")
+
+    bids_hcp = process.BidsHcp()
+    bids_hcp.data_dir = data_dir
+
+    # TODO array could be setup to run subjs in parallel
+    bids_hcp.sess = "ses-2"
     dl46_dir = os.path.join(data_dir, "download_46")
+    for zip_path in sorted(
+        glob.glob(f"{dl46_dir}/*_3T_Structural_unproc.zip")
+    ):
+        bids_hcp.bids_anat(zip_path)
+    for zip_path in sorted(
+        glob.glob(f"{dl46_dir}/*_3T_Diffusion_preproc.zip")
+    ):
+        bids_hcp.bids_dwi(zip_path)

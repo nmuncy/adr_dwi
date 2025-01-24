@@ -11,6 +11,10 @@ df_afq <- workflows$clean_afq()
 df_scan_imp <- workflows$get_scan_impact()
 
 
+# Determine demographics ----
+demos <- workflows$basic_demographics()
+
+
 # Check Impact measures ----
 #
 # Show composite distributions, subject-level responses, and clustering.

@@ -43,6 +43,24 @@ get_scan_dates <- function() {
 }
 
 
+#' Pull demographics.
+#' 
+#' @returns Tidy dataframe of demographic values.
+export("get_demographics")
+get_demographics <- function(){
+  db_con <- .db_connect()
+  sql_cmd <- "select
+    td.subj_id, td.sex, td.age_base
+    from tbl_demo td
+  "
+  db_query <- dbSendQuery(db_con, sql_cmd)
+  df <- dbFetch(db_query, n = -1)
+  dbClearResult(db_query)
+  dbDisconnect(db_con)
+  return(df)
+}
+
+
 #' Pull Impact user composites.
 #'
 #' Get composites and total symptom score,

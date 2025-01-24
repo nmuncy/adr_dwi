@@ -246,6 +246,46 @@ impact_better_worse <- function(df) {
 }
 
 
+#' Title.
+#' TODO
+export("basic_demographics")
+basic_demographics <- function(){
+  demo_path <- paste(
+    .analysis_dir(), "dataframes", "df_demographics.csv", sep = "/"
+  )
+  
+  if (!file.exists(demo_path)) {
+    df <- pull_data$get_demographics()
+    utils::write.csv(df, demo_path, row.names = F)
+    rm(df)
+  }
+  df_demo <- utils::read.csv(demo_path)
+  df_demo$subj_id <- factor(as.character(df_demo$subj_id))
+  df_demo$sex <- factor(df_demo$sex)
+  
+  #
+  df_afq <- clean_afq()
+  tract_list <- unique(df_afq$tract_name)
+  df_afq <- df_afq[which(
+    df_afq$node == 10 & df_afq$tract_name == tract_list[1]
+  ), ]
+  
+  #
+  df <- merge(
+    x = df_afq, y = df_demo, by = "subj_id", all.x = T
+  )
+  rm(df_afq, df_demo)
+  df <- subset(df, select = c("subj_id", "scan_name", "sex", "age_base"))
+  
+  #
+  return(list(
+    "sex_scan" = table(df$sex, df$scan_name),
+    "age_avg" = round(mean(df$age_base), 2),
+    "age_std" = round(stats::sd(df$age_base), 2)
+  ))
+}
+
+
 #' Identify subjects of K-means groups.
 #'
 #' Identify which subjects are classified in the various k-means groups.

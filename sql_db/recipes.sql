@@ -270,5 +270,20 @@ create table tbl_afq(
     primary key(subj_id, sess_id, tract_id, node_id),
     foreign key(subj_id) references ref_subj(subj_id) on delete cascade,
     foreign key(sess_id) references ref_scan(scan_id),
-    foreign key(tract_id) references ref_afq(tract_id)
+    foreign key(tract_id) references ref_tract(tract_id)
+);
+
+create table tbl_afq_rerun(
+    subj_id int not null,
+    sess_id int not null,
+    tract_id int not null,
+    node_id int not null,
+    dti_fa numeric(17,16),
+    dti_md numeric(17,16),
+    dti_ad numeric(17,16),
+    dti_rd numeric(17,16),
+    primary key(subj_id, sess_id, tract_id, node_id),
+    foreign key(subj_id) references ref_subj(subj_id) on delete cascade,
+    foreign key(sess_id) references ref_scan(scan_id),
+    foreign key(tract_id) references ref_tract(tract_id)
 );

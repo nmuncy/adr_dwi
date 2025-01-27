@@ -165,6 +165,25 @@ mod_ldi <- function(df) {
   return(fit_LDI)
 }
 
+
+#' Title.
+#' TODO
+export("mod_di")
+mod_di <- function(df){
+  fit_DI <- bam(
+    delta ~ s(subj_id, by = tract_name, bs = "re") +
+      s(node_id, by = tract_name, bs = "tp", k = 15) +
+      tract_name,
+    data = df,
+    family = gaussian(),
+    method = "fREML", 
+    discrete = T,
+    nthreads = 12
+  )
+  return(fit_DI)
+}
+
+
 #' Fit longitudinal HGAM with global, group smooths and wiggliness, 
 #' and scalar-Impact interaction smooths.
 #' 

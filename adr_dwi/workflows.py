@@ -4,6 +4,7 @@ When the same workflow is conducted for multiple subjects, a wrapper
 method is provided to allow for scheduling all subjects as an array.
 
 clean_rawdata: BIDSify ADR rawdata data.
+insert_impactg: Send impact data to db_adr.
 insert_pyafq: Send pyAFQ node metrics to db_adr.
 preproc_dwi: Preprocess DWI data with FSL.
 run_pyafq: Run pyAFQ workflow on preprocessed DWI data.
@@ -34,8 +35,8 @@ type PT = str | os.PathLike
 log = helper.MakeLogger(os.path.basename(__file__))
 
 
-def setup_db():
-    """Build db_adr from shared data.
+def insert_impact():
+    """Clean then add impact and demographics to db_adr from shared data.
 
     Raises:
         EnvironmentError: Attempt to execute function on
@@ -405,7 +406,7 @@ def wrap_setup_pyafq(
     _ = setup_pyafq(subj, sess, data_dir, work_dir)
 
 
-def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
+def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT, rerun: bool) -> PT:
     """Run pyAFQ workflow.
 
     Use preprocessed DWI data to conduct tractography via pyAFQ. Assumes
@@ -419,6 +420,7 @@ def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
         data_dir: Location of BIDS organized directory.
         work_dir: Location for intermediates.
         log_dir: Location for writing stdout/err.
+        rerun: Keep derivatives separate from regular workflow.
 
     Raises:
         KeyError: Missing global variable 'SING_PYAFQ'.
@@ -437,7 +439,13 @@ def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
 
     # Avoid repeating work
     log.write.info("Starting pyAFQ")
-    data_deriv = os.path.join(data_dir, "derivatives")
+    data_deriv = (
+        os.path.join(data_dir, "derivatives_rerun")
+        if rerun
+        else os.path.join(data_dir, "derivatives")
+    )
+    if not os.path.exists(data_deriv):  # Account for rerun output dir
+        os.makedirs(data_deriv)
     out_path = os.path.join(data_deriv, "afq", "tract_profiles.csv")
     if os.path.exists(out_path):
         log.write.info("pyAFQ output found")
@@ -479,8 +487,11 @@ def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:
     return out_path
 
 
-def insert_pyafq() -> pd.DataFrame:
+def insert_pyafq(rerun: bool = False) -> pd.DataFrame:
     """Insert data from pyAFQ tract_profiles.csv into db_adr.tbl_afq.
+
+    Args:
+        rerun: Optional, get and send rerun metrics instead of all.
 
     Raises:
         EnvironmentError: Method not executed on HCC.
@@ -498,12 +509,14 @@ def insert_pyafq() -> pd.DataFrame:
             "workflows.setub_db is written for execution on HCC."
         )
 
-    data_dir = "/mnt/nrdstor/muncylab/nmuncy2/ADR/data_mri"
-    csv_path = os.path.join(
-        data_dir, "derivatives", "afq", "tract_profiles.csv"
+    deriv_dir = (
+        "/mnt/nrdstor/muncylab/nmuncy2/ADR/data_mri/derivatives"
+        if not rerun
+        else "/mnt/nrdstor/muncylab/nmuncy2/ADR/data_mri/derivatives_rerun"
     )
+    csv_path = os.path.join(deriv_dir, "afq", "tract_profiles.csv")
     if not os.path.exists(csv_path):
         raise FileNotFoundError(csv_path)
 
     df = pd.read_csv(csv_path)
-    return database.build_afq(df)
+    return database.build_afq(df, rerun=rerun)

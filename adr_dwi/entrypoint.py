@@ -12,7 +12,7 @@ def main():
     The package adr_dwi consists of workflows that can be accessed
     from their respective CLI triggers:
 
-        build_db    : Clean shared Impact data and send to db_adr.
+        build_db    : Clean and send data to db_adr.
         clean_raw   : BIDSify shared ADR rawdata.
         preproc_dwi : Preprocess DWI data.
         setup_pyafq : Get preprocessed DWI data ready for running pyAFQ.

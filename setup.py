@@ -13,6 +13,7 @@ setup(
             "preproc_dwi=adr_dwi.clis.run_preproc_dwi:main",
             "setup_pyafq=adr_dwi.clis.run_setup_pyafq:main",
             "run_pyafq=adr_dwi.clis.run_pyafq:main",
+            "build_db=adr_dwi.clis.run_build_db:main",
         ]
     },
     include_package_data=True,

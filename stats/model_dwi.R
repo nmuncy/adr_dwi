@@ -7,7 +7,7 @@ draw_plots <- modules::use("resources/draw_plots.R")
 
 
 # Get cleaned data ----
-df_afq <- workflows$clean_afq()
+df_afq <- workflows$clean_afq("tbl_afq")
 df_scan_imp <- workflows$get_scan_impact()
 
 
@@ -76,6 +76,8 @@ for(tract in tract_roi){
 # Sources of curvature variance are related to (at least) scan-rescan,
 # tractometry, and concussion.
 #
-# TODO Scan-rescan - would need another longitudinal dataset.
+# TODO Scan-rescan - use HCP data.
 # TODO Tractometry - push base data through pyAFQ again, compare.
 # TODO Concussion - split base into two groups, look for group differences.
+
+df_afq_rr <- workflows$clean_afq("tbl_afq_rerun")

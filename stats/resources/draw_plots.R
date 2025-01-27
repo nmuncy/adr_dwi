@@ -967,6 +967,58 @@ grid_ldi_comb <- function(
   # .arr_one_two(plot_list, name_list)
 }
 
+
+
+#' Combine DI smooths into single image.
+#'
+#' @param fit_LDI mgcv::gam object.
+#' @param scalar_name Optional, string DWI metric for title.
+#' @returns Object returned by grid.arrange.
+export("grid_di_comb")
+grid_di_comb <- function(
+    fit_DI, node_smooths, name_smooths, 
+    scalar_name = "FA", x_min = 10, x_max = 89) {
+  # Generate plots objs from smooths
+  plot_obj <- getViz(fit_DI)
+  # plot(sm(plot_obj, 28))
+  
+  # Identify CC, L, R smooth indices
+  idx_cc <- match(name_smooths[grepl("Callosum", name_smooths)], name_smooths)
+  idx_left <- match(name_smooths[grepl("Left", name_smooths)], name_smooths)
+  idx_right <- match(name_smooths[grepl("Right", name_smooths)], name_smooths)
+  
+  # Build post plots
+  ymin_ymax <- .get_ymin_ymax(plot_obj, node_smooths)
+  p_cc <- .draw_ldi_comb(
+    plot_obj, idx_cc, node_smooths, name_smooths, "Callosum", 
+    ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max, add_top=T, add_bot=T
+  )
+  p_left <- .draw_ldi_comb(
+    plot_obj, idx_left, node_smooths, name_smooths, "Left", 
+    ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max, add_top=T, add_bot=T
+  )
+  p_right <- .draw_ldi_comb(
+    plot_obj, idx_right, node_smooths, name_smooths, "Right", 
+    ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max, add_top=T, add_bot=T
+  )
+  
+  # draw grid
+  left1_name <- text_grob(
+    "Diff: Run-Rerun", size = 12, family = "Times New Roman", rot = 90
+  )
+  plot_grid <- grid.arrange(
+    arrangeGrob(p_cc, left = left1_name),
+    arrangeGrob(p_left),
+    arrangeGrob(p_right),
+    nrow = 1,
+    ncol = 3,
+    widths = c(1, 1, 1),
+    heights = 1
+  )
+  return(plot_grid)
+}
+
+
 #' Draw smooth grid for LGI models, containing global and group smooths.
 #'
 #' @param fit_LGI mgcv::gam object.

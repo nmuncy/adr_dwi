@@ -70,14 +70,19 @@ for(tract in tract_roi){
 }
 
 
-
 # Identify thresholds for GAM sensitivity ----
 #
 # Sources of curvature variance are related to (at least) scan-rescan,
 # tractometry, and concussion.
 #
 # TODO Scan-rescan - use HCP data.
-# TODO Tractometry - push base data through pyAFQ again, compare.
+# TODO Scan-rescan - ADR multiple runs.
 # TODO Concussion - split base into two groups, look for group differences.
+# TODO plot tract variance for scan/rescan, HCP, pyAFQ rerun, concussion.
 
+# Changes in FA resulting from rerunning pyAFQ on ADR base data
 df_afq_rr <- workflows$clean_afq("tbl_afq_rerun")
+fit_DI_rr <- workflows$gam_delta_rerun_all(df_afq, df_afq_rr)
+
+# Concatenate max and est dataframes
+workflows$plot_estiamtes(fit_LDI, fit_DI_rr)

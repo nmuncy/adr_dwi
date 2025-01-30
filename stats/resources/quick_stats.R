@@ -1,4 +1,6 @@
 import("stats", "reshape")
+import(mgcViz)
+
 
 # TODO survival analysis: time to an event
 
@@ -147,4 +149,69 @@ run_kmeans <- function(df, col_list, num_k){
   return(list(
     "data_norm" = data_norm, "stats_km" = stats_km, "clust_km" = clust_km)
   )
+}
+
+
+#' Identify GAM max deflections from zero.
+#' TODO
+export("max_deflect")
+max_deflect <- function(fit_gam, idx_smooths){
+  # Identify max deflections from zero
+  t_name <- c_name <- n_name <- m_val <- c()
+  p <- getViz(fit_gam)
+  for (num in idx_smooths) {
+    # Get plotting data and info
+    p_info <- plot(sm(p, num))
+    p_data <- as.data.frame(p_info$data$fit)
+    max_y <- max(abs(p_data$y))
+    
+    # Get tract, comparison names
+    row_name <- p_info$ggObj$labels$y
+    h_str <- strsplit(row_name, split = ":")
+    row_info <- strsplit(h_str[[1]][2], split = "\\.")
+    
+    # Update vecs for df building
+    t_name <- c(t_name, row_info[[1]][1])
+    c_name <- c(c_name, row_info[[1]][2])
+    n_name <- c(n_name, p_data[which(abs(p_data$y) == max_y), ]$x)
+    m_val <- c(m_val, max_y)
+  }
+  df_max <- data.frame(t_name, c_name, n_name, m_val)
+  colnames(df_max) <- c("tract", "comp", "node", "max")
+  df_max$tract <- gsub("tract_name", "", df_max$tract)
+  df_max$tract <- gsub("tract_scan", "", df_max$tract)
+  return(df_max)
+}
+
+
+
+#' Extract smooth node fit estimations.
+#' TODO
+export("get_estimations")
+get_estimations <- function(fit_gam, idx_smooths){
+  # Identify max deflections from zero
+  df_est <- data.frame(
+    node = numeric(), est = numeric(), se = numeric(), 
+    comp = character(), tract = character()
+  )
+  p <- getViz(fit_gam)
+  for (num in idx_smooths) {
+    # Get plotting data and info
+    p_info <- plot(sm(p, num))
+    p_data <- as.data.frame(p_info$data$fit)
+    colnames(p_data)[1:2] <- c("node", "est")
+
+    # Get tract, comparison names
+    row_name <- p_info$ggObj$labels$y
+    h_str <- strsplit(row_name, split = ":")
+    row_info <- strsplit(h_str[[1]][2], split = "\\.")
+    p_data$comp <- row_info[[1]][2]
+    p_data$tract <- row_info[[1]][1]
+    
+    #
+    df_est <- rbind(df_est, p_data[, c(1, 2, 4, 5, 6)])
+  }
+  df_est$tract <- gsub("tract_name", "", df_est$tract)
+  df_est$tract <- gsub("tract_scan", "", df_est$tract)
+  return(df_est)
 }

@@ -198,6 +198,51 @@ calc_fa_delta <- function(df_afq){
 }
 
 
+#' Get index of LDI tract smooths.
+#' TODO
+export("idx_ldi_smooths")
+idx_ldi_smooths <- function(fit_LDI){
+  # Identify Post, RTP smooth indices and smooth names
+  tract_smooths <- name_smooths <- c()
+  for (num in 1:length(fit_LDI$smooth)) {
+    if (fit_LDI[["smooth"]][[num]][["term"]] == "node_id") {
+      tract_smooths <- c(tract_smooths, num)
+      label <- fit_LDI[["smooth"]][[num]][["label"]]
+      h <- strsplit(label, "tract_scan")[[1]][2]
+      name_smooths <- c(name_smooths, strsplit(h, "\\.")[[1]][1])
+    }
+  }
+  half <- length(tract_smooths) / 2
+  post_smooths <- utils::head(tract_smooths, half)
+  rtp_smooths <- utils::tail(tract_smooths, half)
+  name_smooths <- utils::head(name_smooths, half) # Names appear twice
+  return(
+    list(
+      "names"=name_smooths, 
+      "post"=post_smooths, 
+      "rtp"=rtp_smooths, 
+      "all"=tract_smooths
+    )
+  )
+}
+
+
+#' Get index of DI tract smooths.
+#' TODO
+export("idx_di_smooths")
+idx_di_smooths <- function(fit_DI){
+  tract_smooths <- name_smooths <- c()
+  for (num in 1:length(fit_DI$smooth)) {
+    if (fit_DI[["smooth"]][[num]][["term"]] == "node_id") {
+      tract_smooths <- c(tract_smooths, num)
+      label <- fit_DI[["smooth"]][[num]][["label"]]
+      name_smooths <- c(name_smooths, strsplit(label, "tract_name")[[1]][2])
+    }
+  }
+  return(list("names"=name_smooths, "all"=tract_smooths))
+}
+
+
 # Deprecated
 # TODO remove
 .long_wide <- function(df) {

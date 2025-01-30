@@ -383,92 +383,6 @@ impact_cluster <- function(df_scan_imp, scan_name) {
 
 
 
-#' Make plots for delta_long_all.
-#'
-#' Identify max deflections from zero for each tract of
-#' post-base and rtp-base. Then draw grids for each tract.
-#'
-#' @param fit_LDI mgcv::gam object.
-#' @param make_plots Logical, whether to draw all tract grids.
-.plot_delta_long_all <- function(fit_LDI, make_plots) {
-  # Identify Post, RTP smooth indices and smooth names
-  node_smooths <- name_smooths <- c()
-  for (num in 1:length(fit_LDI$smooth)) {
-    if (fit_LDI[["smooth"]][[num]][["term"]] == "node_id") {
-      node_smooths <- c(node_smooths, num)
-      label <- fit_LDI[["smooth"]][[num]][["label"]]
-      h <- strsplit(label, "tract_scan")[[1]][2]
-      name_smooths <- c(name_smooths, strsplit(h, "\\.")[[1]][1])
-    }
-  }
-  half <- length(node_smooths) / 2
-  post_smooths <- utils::head(node_smooths, half)
-  rtp_smooths <- utils::tail(node_smooths, half)
-  name_smooths <- utils::head(name_smooths, half) # Names appear twice
-
-  # Draw combined plot
-  grDevices::png(
-    filename = paste0(
-      .analysis_dir(), "/stats_gams/plots/LDI_all/fit_LDI_all.png"
-    ),
-    units = "in",
-    height = 8,
-    width = 12,
-    res = 600
-  )
-  draw_plots$grid_ldi_comb(fit_LDI, post_smooths, rtp_smooths, name_smooths)
-  grDevices::dev.off()
-
-  # Identify max deflections from zero
-  t_name <- c_name <- n_name <- m_val <- c()
-  p <- getViz(fit_LDI)
-  for (num in node_smooths) {
-    # Get plotting data and info
-    p_info <- plot(sm(p, num))
-    p_data <- as.data.frame(p_info$data$fit)
-    max_y <- max(abs(p_data$y))
-
-    # Get tract, comparison names
-    row_name <- p_info$ggObj$labels$y
-    h_str <- strsplit(row_name, split = ":")
-    row_info <- strsplit(h_str[[1]][2], split = "\\.")
-
-    # Update vecs for df building
-    t_name <- c(t_name, row_info[[1]][1])
-    c_name <- c(c_name, row_info[[1]][2])
-    n_name <- c(n_name, p_data[which(abs(p_data$y) == max_y), ]$x)
-    m_val <- c(m_val, max_y)
-  }
-  df_max <- data.frame(t_name, c_name, n_name, m_val)
-  colnames(df_max) <- c("tract", "comp", "node", "max")
-  out_csv <- paste0(
-    .analysis_dir(), "/stats_gams/gam_summaries/fit_LDI_fa_max.csv"
-  )
-  utils::write.csv(df_max, out_csv, row.names = F)
-
-  # Generate grids of post-base and rtp-base.
-  stopifnot(make_plots)
-  c <- 1
-  while (c < length(name_smooths)) {
-    h_tract <- fit_gams$switch_tract(name_smooths[c])
-    grDevices::png(
-      filename = paste0(
-        .analysis_dir(), "/stats_gams/plots/LDI_all/fit_LDI_", h_tract, ".png"
-      ),
-      units = "in",
-      height = 8,
-      width = 6,
-      res = 600
-    )
-    draw_plots$grid_ldi(
-      fit_LDI, name_smooths[c], "FA", post_smooths[c], rtp_smooths[c]
-    )
-    grDevices::dev.off()
-    c <- c + 1
-  }
-}
-
-
 #' Model all tracts for post-base and rtp-base differences (delta).
 #'
 #' Conduct longitudinal HGAM with all tracts and scan times so subject variance
@@ -497,8 +411,52 @@ gam_delta_long_all <- function(df_afq, make_plots = T) {
     fit_gams$write_gam_stats(fit_LDI, sum_ldi)
   }
 
-  # Generate plots and max node df
-  .plot_delta_long_all(fit_LDI, make_plots)
+  # Get indices of tract smooths and their names
+  idx_smooths <- transform_data$idx_ldi_smooths(fit_LDI)
+  
+  # Draw combined plot
+  grDevices::png(
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/LDI_all/fit_LDI_all.png"
+    ),
+    units = "in",
+    height = 8,
+    width = 12,
+    res = 600
+  )
+  draw_plots$grid_ldi_comb(
+    fit_LDI, idx_smooths$post, idx_smooths$rtp, idx_smooths$names
+  )
+  grDevices::dev.off()
+  
+  # Identify max deflections from zero
+  df_max <- quick_stats$max_deflect(fit_LDI, idx_smooths$all)
+  out_csv <- paste0(
+    .analysis_dir(), "/stats_gams/gam_summaries/fit_LDI_fa_max.csv"
+  )
+  utils::write.csv(df_max, out_csv, row.names = F)
+  
+  # Generate grids of post-base and rtp-base.
+  stopifnot(make_plots)
+  c <- 1 # Use counter to align name with post and rtp tract smooths
+  while (c < length(idx_smooths$names)) {
+    h_tract <- fit_gams$switch_tract(idx_smooths$names[c])
+    grDevices::png(
+      filename = paste0(
+        .analysis_dir(), "/stats_gams/plots/LDI_all/fit_LDI_", h_tract, ".png"
+      ),
+      units = "in",
+      height = 8,
+      width = 6,
+      res = 600
+    )
+    draw_plots$grid_ldi(
+      fit_LDI, idx_smooths$names[c], "FA", 
+      idx_smooths$post[c], idx_smooths$rtp[c]
+    )
+    grDevices::dev.off()
+    c <- c + 1
+  }
   return(fit_LDI)
 }
 
@@ -530,41 +488,40 @@ gam_delta_rerun_all <- function(df_afq, df_afq_rr){
     all = T
   )
   rm(df_afq_base, df_rerun_base)
-  df$delta <- df$fa_base1 - df$fa_base2
+  df$delta <- df$fa_base2 - df$fa_base1 # Similar comparison to post-base
   
-  #
+  # Run model
   analysis_dir <- .analysis_dir()
-  rds_di <- paste0(analysis_dir, "/stats_gams/rda_objects/fit_DI_fa.Rda")
+  rds_di <- paste0(analysis_dir, "/stats_gams/rda_objects/fit_DI_rerun_fa.Rda")
   if (!file.exists(rds_di)) {
     h_gam <- fit_gams$mod_di(df)
     saveRDS(h_gam, file = rds_di)
     rm(h_gam)
   }
   fit_DI <- readRDS(rds_di)
+  idx_smooths <- transform_data$idx_di_smooths(fit_DI)
   
-  # Match smooth to tract name
-  node_smooths <- name_smooths <- c()
-  for (num in 1:length(fit_DI$smooth)) {
-    if (fit_DI[["smooth"]][[num]][["term"]] == "node_id") {
-      node_smooths <- c(node_smooths, num)
-      label <- fit_DI[["smooth"]][[num]][["label"]]
-      name_smooths <- c(name_smooths, strsplit(label, "tract_name")[[1]][2])
-    }
-  }
+  # Identify max deflections from zero
+  df_max <- quick_stats$max_deflect(fit_DI, idx_smooths$all)
+  df_max$comp <- "run-rerun"
+  out_csv <- paste0(
+    .analysis_dir(), "/stats_gams/gam_summaries/fit_DI_rerun_fa_max.csv"
+  )
+  utils::write.csv(df_max, out_csv, row.names = F)
   
   # Draw combined plot
   grDevices::png(
     filename = paste0(
-      .analysis_dir(), "/stats_gams/plots/DI_all/fit_DI_all.png"
+      .analysis_dir(), "/stats_gams/plots/DI_all/fit_DI_rerun_all.png"
     ),
     units = "in",
     height = 6,
     width = 12,
     res = 600
   )
-  draw_plots$grid_di_comb(fit_DI, node_smooths, name_smooths)
+  draw_plots$grid_di_comb(fit_DI, idx_smooths$all, idx_smooths$names)
   grDevices::dev.off()
-  
+  return(fit_DI)
 }
 
 
@@ -831,6 +788,114 @@ gams_long_tract_intx <- function(df_afq, df_scan_imp, tract) {
 }
 
 
+#' Plot fit estimates and max.
+#' 
+#' TODO
+export("plot_estimates")
+plot_estimates <- function(fit_LDI, fit_DI_rr){
+  # Node estimates and max from study data
+  idx_ldi <- transform_data$idx_ldi_smooths(fit_LDI)
+  df_est_study <- quick_stats$get_estimations(fit_LDI, idx_ldi$all)
+  df_max_study <- quick_stats$max_deflect(fit_LDI, idx_ldi$all)
+  
+  # Node estimates and max from pyAFQ rerun
+  idx_di_rr <- transform_data$idx_di_smooths(fit_DI_rr)
+  df_est_rr <- quick_stats$get_estimations(fit_DI_rr, idx_di_rr$all)
+  df_est_rr$comp <- "run_rerun"
+  df_max_rr <- quick_stats$max_deflect(fit_DI_rr, idx_di_rr$all)
+  df_max_rr$comp <- "run_rerun"
+  
+  # Concatenate estimations
+  df_est <- rbind(df_est_study, df_est_rr)
+  df_est$comp <- factor(df_est$comp)
+  df_est$tract <- factor(df_est$tract)
+  df_est$lb <- as.numeric(df_est$est - (1.96 * df_est$se))
+  df_est$ub <- as.numeric(df_est$est + (1.96 * df_est$se))
+  
+  # Concatenate max
+  df_max <- rbind(df_max_study, df_max_rr)
+  df_max$comp <- factor(df_max$comp)
+  df_max$tract <- factor(df_max$tract)
+  
+  # Boxplot of difference estimations by group of tracts
+  library(data.table)
+  df_est_cc <- df_est[df_est$tract %like% "Callosum", ]
+  df_est_cc$tract <- gsub("Callosum ", "", df_est_cc$tract)
+  ggplot(
+    data = df_est_cc,
+    aes(x = .data$tract, y=.data$est)
+  ) +
+    geom_boxplot(aes(fill=.data$comp)) +
+    theme(axis.text.x = element_text(angle = 45, hjust=1))
+  
+  df_est_left <- df_est[df_est$tract %like% "Left", ]
+  df_est_left$tract <- gsub("Left ", "", df_est_left$tract)
+  ggplot(
+    data = df_est_left,
+    aes(x = .data$tract, y=.data$est)
+  ) +
+    geom_boxplot(aes(fill=.data$comp)) +
+    theme(axis.text.x = element_text(angle = 45, hjust=1))
+  
+  df_est_right <- df_est[df_est$tract %like% "Right", ]
+  df_est_right$tract <- gsub("Right ", "", df_est_right$tract)
+  ggplot(
+    data = df_est_right,
+    aes(x = .data$tract, y=.data$est)
+  ) +
+    geom_boxplot(aes(fill=.data$comp)) +
+    theme(axis.text.x = element_text(angle = 45, hjust=1))
+  
+  # Lineplot of max differences by group of tracts
+  df_max_cc <- df_max[df_max$tract %like% "Callosum", ]
+  df_max_cc$tract <- gsub("Callosum ", "", df_max_cc$tract)
+  ggplot(
+    data = df_max_cc,
+    aes(x = .data$tract, y=.data$max, colour=.data$comp, group=.data$comp)
+  ) +
+    geom_line() +
+    geom_point() +
+    theme(axis.text.x = element_text(angle = 45, hjust=1))
+  
+  df_max_left <- df_max[df_max$tract %like% "Left", ]
+  df_max_left$tract <- gsub("Left ", "", df_max_left$tract)
+  ggplot(
+    data = df_max_left,
+    aes(x = .data$tract, y=.data$max, colour=.data$comp, group=.data$comp)
+  ) +
+    geom_line() +
+    geom_point() +
+    theme(axis.text.x = element_text(angle = 45, hjust=1))
+  
+  df_max_right <- df_max[df_max$tract %like% "Right", ]
+  df_max_right$tract <- gsub("Right ", "", df_max_right$tract)
+  ggplot(
+    data = df_max_right,
+    aes(x = .data$tract, y=.data$max, colour=.data$comp, group=.data$comp)
+  ) +
+    geom_line() +
+    geom_point() +
+    theme(axis.text.x = element_text(angle = 45, hjust=1))
+  
+  
+  #
+  tract <- "Callosum Orbital"
+  df_est_tract <- df_est[which(df_est$tract == tract), ]
+  ggplot(
+    data = df_est_tract,
+    aes(x = .data$node, y = .data$est, group = .data$comp)
+  ) +
+    geom_hline(yintercept = 0) +
+    geom_line(aes(color = .data$comp)) +
+    geom_ribbon(aes(ymin = .data$lb, ymax=.data$ub), alpha = 0.2) +
+    scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
+    scale_color_discrete(name = "") +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      legend.text = element_text(size = 10)
+    )
+  
+}
 
 
 #' Fit Post DWI scalars with HGAMs, grouped by k-means.

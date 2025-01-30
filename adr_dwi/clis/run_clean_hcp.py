@@ -7,7 +7,7 @@ Notes:
     - Assumes zipped files are found in [data-dir]/download_[46,1200]
 
 Example:
-    clean_hcp -r
+    clean_hcp -n 46
 
 """
 
@@ -38,10 +38,11 @@ def get_args():
 
     required_args = parser.add_argument_group("Required Arguments")
     required_args.add_argument(
-        "-r",
-        "--run",
-        action="store_true",
-        help="Run the workflow.",
+        "-n",
+        "--name",
+        choices=["46", "1200"],
+        type=str,
+        help="Download name.",
         required=True,
     )
 
@@ -58,23 +59,20 @@ def main():
     # Get args
     args = get_args().parse_args()
     data_dir = args.data_dir
-    run = args.run
+    dl_name = args.name
 
     # Validate env
     if "swan" not in platform.uname().node:
         raise EnvironmentError("Intended for use on HCC.")
 
-    # Allow for call to print help
-    if not run:
-        return
-
     # Setup data and log dirs
-    log_dir = os.path.join(data_dir, "logs", "clean_hcp")
+    log_dir = os.path.join(data_dir, "logs", f"clean_hcp_{dl_name}")
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
     # Submit data check
-    _, _ = submit.sched_bidsify_hcp(data_dir, log_dir)
+    dl_name = f"download_{dl_name}"
+    _, _ = submit.sched_bidsify_hcp(dl_name, data_dir, log_dir)
 
 
 if __name__ == "__main__":

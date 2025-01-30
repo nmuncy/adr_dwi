@@ -510,20 +510,30 @@ def insert_pyafq() -> pd.DataFrame:
     return database.build_afq(df)
 
 
-def bidsify_hcp(data_dir: PT):
-    """Title."""
+def bidsify_hcp(dl_name: str, data_dir: PT):
+    """Unzip and BIDSify data downloaded from HCP.
 
+    Notes:
+        - Data from download_1200 are organized under ses-1.
+        - Data from download_46 are organized under ses-2.
+
+    Args:
+        dl_name: Name of download directory {"download_46", "download_1200"}
+        data_dir: BIDS data location.
+
+    """
+    sess_map = {"download_1200": "ses-1", "download_46": "ses-2"}
+    if dl_name not in sess_map.keys():
+        raise ValueError()
+
+    # Initialize organizer and set attrs
     bids_hcp = process.BidsHcp()
     bids_hcp.data_dir = data_dir
+    bids_hcp.sess = sess_map[dl_name]
 
-    # TODO array could be setup to run subjs in parallel
-    bids_hcp.sess = "ses-2"
-    dl46_dir = os.path.join(data_dir, "download_46")
-    for zip_path in sorted(
-        glob.glob(f"{dl46_dir}/*_3T_Structural_unproc.zip")
-    ):
+    # Organize structural and difffusion data
+    dl_dir = os.path.join(data_dir, dl_name)
+    for zip_path in sorted(glob.glob(f"{dl_dir}/*_3T_Structural_unproc.zip")):
         bids_hcp.bids_anat(zip_path)
-    for zip_path in sorted(
-        glob.glob(f"{dl46_dir}/*_3T_Diffusion_preproc.zip")
-    ):
+    for zip_path in sorted(glob.glob(f"{dl_dir}/*_3T_Diffusion_preproc.zip")):
         bids_hcp.bids_dwi(zip_path)

@@ -12,6 +12,7 @@ import glob
 import json
 import shutil
 import zipfile
+from zipfile import BadZipFile
 import SimpleITK as sitk
 from adr_dwi import submit
 from adr_dwi import helper
@@ -402,8 +403,11 @@ class _BidsHcpAnat(_BidsHelper):
 
         # Unzip file
         log.write.info(f"Unzipping: {self._zip_path}")
-        with zipfile.ZipFile(self._zip_path, "r") as zf:
-            zf.extractall(file_dir)
+        try:
+            with zipfile.ZipFile(self._zip_path, "r") as zf:
+                zf.extractall(file_dir)
+        except BadZipFile:
+            return (None, None)
 
         # Validate unzip
         if not os.path.exists(chk_file):
@@ -423,6 +427,8 @@ class _BidsHcpAnat(_BidsHelper):
 
         # Extract data
         unzip_dir, self._search_dir = self._unzip_struct()
+        if not unzip_dir:
+            return
 
         # Setup rawdata location
         log.write.info(f"BIDSifying anat: {self._subj}, {self._sess}")
@@ -548,8 +554,11 @@ class _BidsHcpDwi(_BidsHelper):
 
         # Unzip file
         log.write.info(f"Unzipping: {self._zip_path}")
-        with zipfile.ZipFile(self._zip_path, "r") as zf:
-            zf.extractall(file_dir)
+        try:
+            with zipfile.ZipFile(self._zip_path, "r") as zf:
+                zf.extractall(file_dir)
+        except BadZipFile:
+            return (None, None)
 
         # Validate unzip
         if not os.path.exists(chk_file):
@@ -567,6 +576,8 @@ class _BidsHcpDwi(_BidsHelper):
         self._zip_path = zip_path
         self.set_subj(zip_path)
         unzip_dir, search_dir = self._unzip_diff()
+        if not unzip_dir:
+            return
 
         # Setup derivatives location
         log.write.info(f"BIDSifying dwi: {self._subj}, {self._sess}")

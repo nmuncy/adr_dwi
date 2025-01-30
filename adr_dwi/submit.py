@@ -318,12 +318,14 @@ def sched_pyafq(
 
 
 def sched_bidsify_hcp(
+    dl_name: str,
     data_dir: PT,
     log_dir: PT,
 ) -> tuple:
     """Schedule workflows.clean_rawdata().
 
     Args:
+        dl_name: Name of download directory.
         data_dir: BIDS data location.
         log_dir: Location for writing stdout/err.
 
@@ -342,7 +344,7 @@ def sched_bidsify_hcp(
 
         from adr_dwi import workflows
 
-        workflows.bidsify_hcp("{data_dir}")
+        workflows.bidsify_hcp("{dl_name}", "{data_dir}")
 
     """
     sbatch_cmd = textwrap.dedent(sbatch_cmd)

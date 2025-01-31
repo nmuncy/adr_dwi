@@ -597,7 +597,7 @@ class _BidsHcpDwi(_BidsHelper):
         file_map = {
             "data.nii.gz": f"{file_pref}_desc-eddy_dwi.nii.gz",
             "bvals": f"{file_pref}_dwi.bval",
-            "bvecs": f"{file_pref}_dwi.bvec",
+            "bvecs": f"{file_pref}_desc-eddy_dwi.eddy_rotated_bvecs",
             "nodif_brain_mask.nii.gz": f"{file_pref}_desc-brain_mask.nii.gz",
         }
 

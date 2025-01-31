@@ -226,6 +226,7 @@ def sched_setup_pyafq_array(
     data_dir: PT,
     work_dir: PT,
     log_dir: PT,
+    hcp_data: bool,
 ) -> tuple:
     """Schedule array of jobs for preparing for pyAFQ.
 
@@ -235,6 +236,7 @@ def sched_setup_pyafq_array(
         data_dir: BIDS data location.
         work_dir: Location for intermediates.
         log_dir: Location for writing stdout/err.
+        hcp_data: Data is from HCP.
 
     Returns:
         tuple: stdout/err of subprocess.
@@ -254,6 +256,7 @@ def sched_setup_pyafq_array(
             {subj_sess},
             "{data_dir}",
             "{work_dir}",
+            {hcp_data},
         )
 
     """

@@ -6,6 +6,9 @@ and brain masks. Schedules an SBATCH array for all subjects specified or
 found to have required preprocessed files. Output will be found in
 work-dir/dwi_afq.
 
+Notes:
+    - For HCP data, the directory path must contain "HCP".
+
 Requires:
     - FSL to be executable in system OS.
 
@@ -176,9 +179,10 @@ def main():
     # Report and submit jobs
     subj_sess = [(x, y) for x, y_list in data_avail.items() for y in y_list]
     log.write.info(f"Submitting jobs for: {subj_sess}")
-    _, _ = submit.sched_setup_pyafq_array(
-        subj_sess, arr_size, data_dir, work_dir, log_dir
-    )
+    args = [subj_sess, arr_size, data_dir, work_dir, log_dir]
+    if "HCP" in data_dir:
+        args.append(True)
+    _, _ = submit.sched_setup_pyafq_array(*args)
 
 
 if __name__ == "__main__":

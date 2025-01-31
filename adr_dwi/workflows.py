@@ -265,10 +265,7 @@ def wrap_preproc_dwi(
 
 
 def setup_pyafq(
-    subj: str,
-    sess: str,
-    data_dir: PT,
-    work_dir: PT,
+    subj: str, sess: str, data_dir: PT, work_dir: PT, hcp_data: bool
 ) -> PT:
     """Setup for running pyAFQ.
 
@@ -283,6 +280,7 @@ def setup_pyafq(
         sess: BIDS session ID.
         data_dir: Location of BIDS organized directory.
         work_dir: Location for intermediates.
+        hcp_data: Data is from HCP.
 
     Raises:
         EnvironmentError: FSL not executable in system OS.
@@ -318,6 +316,9 @@ def setup_pyafq(
         "bval": f"{subj}_{sess}_dir-AP_dwi.bval",
         "json": f"{subj}_{sess}_dir-AP_dwi.json",
     }
+    if hcp_data:
+        for key, value in preproc_dict.items():
+            preproc_dict[key] = value.replace("_dir-AP", "")
 
     # Pull files
     for file_type, file_name in preproc_dict.items():
@@ -357,6 +358,7 @@ def wrap_setup_pyafq(
     subj_sess: list,
     data_dir: PT,
     work_dir: PT,
+    hcp_data: bool,
 ):
     """Submit setup_pyafq for array task ID.
 
@@ -368,6 +370,7 @@ def wrap_setup_pyafq(
         subj_sess: Tuples of BIDS subject, session IDs.
         data_dir: BIDS data location.
         work_dir: Location for intermediates.
+        hcp_data: Data is from HCP.
 
     Raises:
         EnvironmentError: OS global variable 'SLURM_ARRAY_TASK_ID' not found.
@@ -403,7 +406,7 @@ def wrap_setup_pyafq(
     # Identify iteration subject and session list
     subj, sess = subj_sess[int(arr_id)]
     log.write.info(f"Starting setup_afq for: {subj}, {sess}")
-    _ = setup_pyafq(subj, sess, data_dir, work_dir)
+    _ = setup_pyafq(subj, sess, data_dir, work_dir, hcp_data)
 
 
 def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT) -> PT:

@@ -299,9 +299,12 @@ def setup_pyafq(
     subj_work = os.path.join(work_dir, "dwi_afq", subj, sess, "dwi")
     if not os.path.exists(subj_work):
         os.makedirs(subj_work)
-    out_mask = os.path.join(
-        subj_work, f"{subj}_{sess}_dir-AP_desc-brain_mask.nii.gz"
+    mask_name = (
+        f"{subj}_{sess}_desc-brain_mask.nii.gz"
+        if hcp_data
+        else f"{subj}_{sess}_dir-AP_desc-brain_mask.nii.gz"
     )
+    out_mask = os.path.join(subj_work, mask_name)
     if os.path.exists(out_mask):
         return out_mask
 
@@ -319,6 +322,8 @@ def setup_pyafq(
     if hcp_data:
         for key, value in preproc_dict.items():
             preproc_dict[key] = value.replace("_dir-AP", "")
+        preproc_dict["mask"] = mask_name
+        del preproc_dict["json"]
 
     # Pull files
     for file_type, file_name in preproc_dict.items():
@@ -336,6 +341,9 @@ def setup_pyafq(
         _, _ = submit.simp_subproc(f"cp {file_path} {out_path}")
 
     # Make a brain mask from preprocessed data
+    if hcp_data:
+        return out_mask
+
     fsl_cmd = [
         f"cd {subj_work};",
         f"bet {preproc_dict["dwi"]}",

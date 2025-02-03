@@ -721,6 +721,17 @@ class DwiPreproc(_FslTopup, _FslEddy):
         self._work_dir = work_dir
         self._data_dir = data_dir
         self._work_dir = work_dir
+        self._run = None
+
+    @property
+    def run(self):
+        """Get run attr."""
+        return self._run
+
+    @run.setter
+    def run(self, val: int):
+        """Set run attr."""
+        self._run = f"run-{val}"
 
     def setup(self) -> tuple:
         """Set attrs and copy data from data to work dirs.
@@ -783,7 +794,10 @@ class DwiPreproc(_FslTopup, _FslEddy):
         if not glob.glob(f"{subj_dwi}/sub*"):
             raise FileNotFoundError(f"Expected dwi data at {subj_dwi}")
         _, _ = submit.simp_subproc(f"cp {subj_dwi}/sub* {self._subj_work}")
-        dwi_list = sorted(glob.glob(f"{self._subj_work}/sub-*_dir-AP_dwi.*"))
+        suff = f"{self._run}_dwi" if self._run else "dwi"
+        dwi_list = sorted(
+            glob.glob(f"{self._subj_work}/sub-*_dir-AP_{suff}.*")
+        )
         if len(dwi_list) != 4:
             raise ValueError(
                 f"Missing/unexpected dwi data at {self._subj_work}"
@@ -818,7 +832,8 @@ class DwiPreproc(_FslTopup, _FslEddy):
         if not glob.glob(f"{subj_fmap}/sub*"):
             raise FileNotFoundError(f"Expected fmap data at {subj_fmap}")
         _, _ = submit.simp_subproc(f"cp {subj_fmap}/sub* {self._subj_work}")
-        fmap_list = sorted(glob.glob(f"{self._subj_work}/sub-*_epi.*"))
+        suff = f"{self._run}_epi" if self._run else "epi"
+        fmap_list = sorted(glob.glob(f"{self._subj_work}/sub-*_{suff}.*"))
         if len(fmap_list) != 4:
             raise ValueError(
                 f"Missing/unexpected fmap data at {self._subj_work}"
@@ -828,10 +843,7 @@ class DwiPreproc(_FslTopup, _FslEddy):
         fmap_dict = {}
         for fmap_path in fmap_list:
             fmap_ext = os.path.splitext(fmap_path)[1]
-            _subj, _sess, dir_val, suff = os.path.basename(fmap_path).split(
-                "_"
-            )
-            _dir = dir_val.split("-")[1]
+            _dir = os.path.basename(fmap_path).split("_")[2].split("-")[1]
             key = (
                 f"fmap_{_dir}"
                 if fmap_ext == ".gz"

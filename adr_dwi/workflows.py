@@ -126,7 +126,12 @@ def clean_rawdata(data_dir: PT):
 
 
 def preproc_dwi(
-    subj: str, sess: str, data_dir: PT, work_dir: PT, log_dir: PT
+    subj: str,
+    sess: str,
+    data_dir: PT,
+    work_dir: PT,
+    log_dir: PT,
+    run: int = None,
 ) -> PT:
     """Conduct preprocessing of DWI via FSL.
 
@@ -147,6 +152,7 @@ def preproc_dwi(
         work_dir: Location for intermediates.
         data_dir: Location of BIDS organized directory.
         log_dir: Location for capturing STDOUT/ERR.
+        run: Optional, run ID for scan-rescan of same session.
 
     Returns:
         Location of eddy output file in data dir.
@@ -161,7 +167,11 @@ def preproc_dwi(
     log.write.info(f"Starting preproc_dwi: {subj}, {sess}")
 
     # Set output name and dir
-    out_name = f"{subj}_{sess}_dir-AP_desc-eddy_dwi.nii.gz"
+    out_name = (
+        f"{subj}_{sess}_dir-AP_desc-eddy_dwi.nii.gz"
+        if not run
+        else f"{subj}_{sess}_dir-AP_run-{run}_desc-eddy_dwi.nii.gz"
+    )
     out_dir = os.path.join(
         data_dir, "derivatives", "dwi_preproc", subj, sess, "dwi"
     )
@@ -173,8 +183,17 @@ def preproc_dwi(
     if os.path.exists(out_path):
         return out_path
 
+    # Set out names accounting for run use
+    comb_out = f"tmp_AP_PA_r{run}_b0" if run else "tmp_AP_PA_b0"
+    top_out = f"tmp_topup_r{run}" if run else "tmp_topup"
+    param_out = f"tmp_r{run}_acq_param.txt" if run else "tmp_acq_param.txt"
+    mask_out = f"tmp_r{run}_brain.nii.gz" if run else "tmp_brain.nii.gz"
+    idx_out = f"tmp_r{run}_index.txt" if run else "tmp_index.txt"
+
     # Setup for preprocessing
     dwi_pp = process.DwiPreproc(subj, sess, work_dir, data_dir)
+    if run:
+        dwi_pp.run = run
     dwi_dict, fmap_dict = dwi_pp.setup()
 
     # Get AP, PA files
@@ -183,22 +202,25 @@ def preproc_dwi(
         if "fmap" not in fmap_type:
             continue
         dir_val = fmap_type.split("_")[1]
-        b0_dict[f"b0_{dir_val}"] = dwi_pp.extract_b0(
-            fmap_path, f"tmp_{dir_val}_b0"
-        )
+        tmp_out = f"tmp_{dir_val}_r{run}_b0" if run else f"tmp_{dir_val}_b0"
+        b0_dict[f"b0_{dir_val}"] = dwi_pp.extract_b0(fmap_path, tmp_out)
 
     # Preprocess for topup
     ap_pa_b0 = dwi_pp.combine_b0(
-        b0_dict["b0_AP"], b0_dict["b0_PA"], "tmp_AP_PA_b0"
+        b0_dict["b0_AP"], b0_dict["b0_PA"], out_name=comb_out
     )
-    acq_param = dwi_pp.acq_param(fmap_dict["json_AP"])
+    acq_param = dwi_pp.acq_param(fmap_dict["json_AP"], out_name=param_out)
     dwi_topup, dwi_unwarp = dwi_pp.run_topup(
-        ap_pa_b0, acq_param, f"topup_{subj[4:]}_{sess[4:]}", log_dir
+        ap_pa_b0,
+        acq_param,
+        f"topup_{subj[4:]}_{sess[4:]}",
+        log_dir,
+        out_name=top_out,
     )
 
     # Preprocess with eddy
-    dwi_mask = dwi_pp.brain_mask(dwi_unwarp)
-    dwi_idx = dwi_pp.write_index(dwi_dict["dwi"])
+    dwi_mask = dwi_pp.brain_mask(dwi_unwarp, out_name=mask_out)
+    dwi_idx = dwi_pp.write_index(dwi_dict["dwi"], out_name=idx_out)
     dwi_eddy = dwi_pp.run_eddy(
         dwi_dict["dwi"],
         dwi_dict["bvec"],
@@ -224,6 +246,8 @@ def preproc_dwi(
     # Clean session dir
     if not os.path.exists(out_path):
         raise FileNotFoundError(out_path)
+    if run:
+        return
     shutil.rmtree(os.path.dirname(os.path.dirname(dwi_eddy)))
     log.write.info(f"Finished preproc_dwi: {subj}, {sess}")
     return out_path

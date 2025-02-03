@@ -10,8 +10,9 @@ Requires:
     - FSL to be executable in system OS.
 
 Examples:
-    setup_pyafq --subj 0003 --sess 1
+    setup_pyafq --subj 0003 --sess 1  --array-size 1
     setup_pyafq --subj-all
+    setup_pyafq --subj 03298 --sess 1 --run 1 2 3 --array-size 1
 
 
 """
@@ -54,6 +55,14 @@ def get_args():
             """
         ),
         type=str,
+    )
+    parser.add_argument(
+        "--run",
+        nargs="+",
+        default=None,
+        choices=[1, 2, 3],
+        help="List of run IDs.",
+        type=int,
     )
     parser.add_argument(
         "--sess",
@@ -104,6 +113,7 @@ def main():
     sess_list = args.sess
     subj_list = args.subj
     subj_all = args.subj_all
+    run_list = args.run
 
     log = helper.MakeLogger(os.path.basename(__file__))
 
@@ -138,6 +148,7 @@ def main():
     log.write.info(f"Finding sessions for following subjects: {subj_list}")
 
     # Identify subjects and sessions for submission
+    # TODO support multiple runs in same session
     data_avail = {}
     for subj in subj_list:
 
@@ -177,7 +188,7 @@ def main():
     subj_sess = [(x, y) for x, y_list in data_avail.items() for y in y_list]
     log.write.info(f"Submitting jobs for: {subj_sess}")
     _, _ = submit.sched_setup_pyafq_array(
-        subj_sess, arr_size, data_dir, work_dir, log_dir
+        subj_sess, arr_size, data_dir, work_dir, log_dir, run_list
     )
 
 

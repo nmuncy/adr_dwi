@@ -293,6 +293,7 @@ def setup_pyafq(
     sess: str,
     data_dir: PT,
     work_dir: PT,
+    run: str = None,
 ) -> PT:
     """Setup for running pyAFQ.
 
@@ -307,6 +308,7 @@ def setup_pyafq(
         sess: BIDS session ID.
         data_dir: Location of BIDS organized directory.
         work_dir: Location for intermediates.
+        run: Optional, BIDS run ID for scan-rescan of same session.
 
     Raises:
         EnvironmentError: FSL not executable in system OS.
@@ -328,6 +330,8 @@ def setup_pyafq(
     out_mask = os.path.join(
         subj_work, f"{subj}_{sess}_dir-AP_desc-brain_mask.nii.gz"
     )
+    if run:
+        out_mask = out_mask.replace("_desc-brain", f"_{run}_desc-brain")
     if os.path.exists(out_mask):
         return out_mask
 
@@ -342,6 +346,9 @@ def setup_pyafq(
         "bval": f"{subj}_{sess}_dir-AP_dwi.bval",
         "json": f"{subj}_{sess}_dir-AP_dwi.json",
     }
+    if run:
+        for key, value in preproc_dict.items():
+            preproc_dict[key] = value.replace("_dir-AP", f"_dir-AP_{run}")
 
     # Pull files
     for file_type, file_name in preproc_dict.items():
@@ -381,6 +388,7 @@ def wrap_setup_pyafq(
     subj_sess: list,
     data_dir: PT,
     work_dir: PT,
+    run_list: list = None,
 ):
     """Submit setup_pyafq for array task ID.
 
@@ -392,6 +400,7 @@ def wrap_setup_pyafq(
         subj_sess: Tuples of BIDS subject, session IDs.
         data_dir: BIDS data location.
         work_dir: Location for intermediates.
+        run_list: Optional, list of run IDs for scan-rescan of same session.
 
     Raises:
         EnvironmentError: OS global variable 'SLURM_ARRAY_TASK_ID' not found.
@@ -426,6 +435,13 @@ def wrap_setup_pyafq(
 
     # Identify iteration subject and session list
     subj, sess = subj_sess[int(arr_id)]
+    if run_list:
+        for run_id in run_list:
+            run = f"run-{run_id}"
+            log.write.info(f"Starting setup_afq for: {subj}, {sess}, {run}")
+            _ = setup_pyafq(subj, sess, data_dir, work_dir, run=run)
+        return
+
     log.write.info(f"Starting setup_afq for: {subj}, {sess}")
     _ = setup_pyafq(subj, sess, data_dir, work_dir)
 

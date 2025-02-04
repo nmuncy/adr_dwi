@@ -19,6 +19,7 @@ import os
 import glob
 import shutil
 import json
+import toml
 import platform
 import pandas as pd
 import openpyxl  # noqa: F401
@@ -426,12 +427,15 @@ def wrap_setup_pyafq(
     with open(os.path.join(work_deriv, "dataset_description.json"), "w") as jf:
         json.dump(data_desc, jf)
 
-    # Write config.toml
+    # Write config.toml from resources, update bids path
     log.write.info("Writing config.toml")
-    with pkg_resources.open_text(adr_bin, "config.toml") as cnf_in:
-        cnf_lines = cnf_in.read()
-    with open(os.path.join(work_deriv, "config.toml"), "w") as cnf_out:
-        cnf_out.write(cnf_lines)
+    config_data = toml.load(
+        pkg_resources.files(adr_bin).joinpath("config.toml").open("r")
+    )
+    config_data["BIDS_PARAMS"]["bids_path"] = work_deriv
+    work_config = os.path.join(work_deriv, "config.toml")
+    with open(work_config, "w") as cnf_out:
+        toml.dump(config_data, cnf_out)
 
     # Identify iteration subject and session list
     subj, sess = subj_sess[int(arr_id)]

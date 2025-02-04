@@ -219,12 +219,69 @@ def sched_preproc_array(
     return (h_out, h_err)
 
 
+def sched_preproc_run(
+    subj: str,
+    sess: str,
+    run: int,
+    data_dir: PT,
+    work_dir: PT,
+    log_dir: PT,
+) -> tuple:
+    """Schedule jobs for preprocessing multiple runs of DWI data.
+
+    Args:
+        subj: BIDS subject ID.
+        sess: BIDS session ID.
+        run: Run ID.
+        data_dir: BIDS data location.
+        work_dir: Location for intermediates.
+        log_dir: Location for writing stdout/err.
+
+    Returns:
+        tuple: stdout/err of subprocess.
+
+    """
+    subj_id = subj.split("-")[1]
+    sess_id = sess.split("-")[1]
+    sbatch_cmd = f"""\
+        #!/bin/env {sys.executable}
+
+        #SBATCH --output={log_dir}/preproc_{subj_id}_{sess_id}_r{run}.txt
+        #SBATCH --time=12:00:00
+
+        from adr_dwi import workflows
+
+        workflows.preproc_dwi(
+            "{subj}",
+            "{sess}",
+            "{data_dir}",
+            "{work_dir}",
+            "{log_dir}",
+            run={run},
+        )
+
+    """
+    sbatch_cmd = textwrap.dedent(sbatch_cmd)
+
+    # Write as script
+    py_script = f"{log_dir}/preproc_{subj_id}_{sess_id}_r{run}.py"
+    with open(py_script, "w") as ps:
+        ps.write(sbatch_cmd)
+    log.write.info(f"Wrote script: {py_script}")
+
+    # Execute script
+    h_out, h_err = simp_subproc(f"sbatch {py_script}", wait=False)
+    log.write.info(h_out.decode("utf-8"))
+    return (h_out, h_err)
+
+
 def sched_setup_pyafq_array(
     subj_sess: list,
     arr_size: int,
     data_dir: PT,
     work_dir: PT,
     log_dir: PT,
+    run_list: list | None,
 ) -> tuple:
     """Schedule array of jobs for preparing for pyAFQ.
 
@@ -234,6 +291,7 @@ def sched_setup_pyafq_array(
         data_dir: BIDS data location.
         work_dir: Location for intermediates.
         log_dir: Location for writing stdout/err.
+        run_list: Optional, list of run IDs for scan-rescan of same session.
 
     Returns:
         tuple: stdout/err of subprocess.
@@ -253,6 +311,7 @@ def sched_setup_pyafq_array(
             {subj_sess},
             "{data_dir}",
             "{work_dir}",
+            run_list={run_list},
         )
 
     """

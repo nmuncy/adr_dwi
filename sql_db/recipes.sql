@@ -287,3 +287,17 @@ create table tbl_afq_rerun(
     foreign key(sess_id) references ref_scan(scan_id),
     foreign key(tract_id) references ref_tract(tract_id)
 );
+
+create table tbl_afq_rescan(
+    subj_id int not null,
+    sess_id int not null,
+    tract_id int not null,
+    node_id int not null,
+    dti_fa numeric(17,16),
+    dti_md numeric(17,16),
+    dti_ad numeric(17,16),
+    dti_rd numeric(17,16),
+    primary key(subj_id, sess_id, tract_id, node_id),
+    foreign key(sess_id) references ref_scan(scan_id),
+    foreign key(tract_id) references ref_tract(tract_id)
+);

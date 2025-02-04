@@ -531,11 +531,12 @@ def run_pyafq(data_dir: PT, work_dir: PT, log_dir: PT, rerun: bool) -> PT:
     return out_path
 
 
-def insert_pyafq(rerun: bool = False) -> pd.DataFrame:
+def insert_pyafq(rerun: bool = False, rescan: bool = False) -> pd.DataFrame:
     """Insert data from pyAFQ tract_profiles.csv into db_adr.tbl_afq.
 
     Args:
-        rerun: Optional, get and send rerun metrics instead of all.
+        rerun: Optional, get and send pyAFQ rerun metrics instead of all.
+        rescan: Optional, get and send scan-rescan metrics instead of all.
 
     Raises:
         EnvironmentError: Method not executed on HCC.
@@ -553,14 +554,19 @@ def insert_pyafq(rerun: bool = False) -> pd.DataFrame:
             "workflows.setub_db is written for execution on HCC."
         )
 
-    deriv_dir = (
-        "/mnt/nrdstor/muncylab/nmuncy2/ADR/data_mri/derivatives"
-        if not rerun
-        else "/mnt/nrdstor/muncylab/nmuncy2/ADR/data_mri/derivatives_rerun"
-    )
+    # Identify relevant derivatives path
+    deriv_dir = "/mnt/nrdstor/muncylab/nmuncy2/ADR/data_mri/derivatives"
+    if rerun:
+        deriv_dir = (
+            "/mnt/nrdstor/muncylab/nmuncy2/ADR/data_mri/derivatives_rerun"
+        )
+    if rescan:
+        deriv_dir = "/mnt/nrdstor/muncylab/nmuncy2/scan_rescan/derivatives"
+
+    # Find data, insert it
     csv_path = os.path.join(deriv_dir, "afq", "tract_profiles.csv")
     if not os.path.exists(csv_path):
         raise FileNotFoundError(csv_path)
 
     df = pd.read_csv(csv_path)
-    return database.build_afq(df, rerun=rerun)
+    return database.build_afq(df, rerun=rerun, rescan=rescan)

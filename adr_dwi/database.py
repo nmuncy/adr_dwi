@@ -352,7 +352,9 @@ def build_impact_user(df_user: pd.DataFrame, ref_maps: Type[RefMaps]):
     ref_maps._db_con.exec_many(sql_cmd, tbl_input)
 
 
-def build_afq(df: pd.DataFrame, rerun: bool = False) -> pd.DataFrame:
+def build_afq(
+    df: pd.DataFrame, rerun: bool = False, rescan: bool = False
+) -> pd.DataFrame:
     """Insert data into db_adr.tbl_afq.
 
     Format pyAFQ output for insertion into database.
@@ -360,12 +362,17 @@ def build_afq(df: pd.DataFrame, rerun: bool = False) -> pd.DataFrame:
     Args:
         df: Dataframe of afq derivative tract_profiles.csv.
         rerun: Optional, get and send rerun metrics instead of all.
+        rescan: Optional, get and send scan-rescan metrics instead of all.
 
     Returns:
         Formatted dataframe used for insertion.
 
     """
-    tbl_name = "tbl_afq" if not rerun else "tbl_afq_rerun"
+    tbl_name = "tbl_afq"
+    if rerun:
+        tbl_name = "tbl_afq_rerun"
+    if rescan:
+        tbl_name = "tbl_afq_rescan"
     log.write.info(f"Sending AFQ data to db_adr.{tbl_name}")
 
     # Start connection and load references

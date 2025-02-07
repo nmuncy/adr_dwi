@@ -3,12 +3,13 @@ import(dplyr)
 import(lubridate)
 import("stats", "complete.cases")
 import(mgcViz)
+import(data.table)
 
-pull_data <- use("resources/pull_data.R")
-transform_data <- use("resources/transform_data.R")
-fit_gams <- use("resources/fit_gams.R")
 draw_plots <- use("resources/draw_plots.R")
+fit_gams <- use("resources/fit_gams.R")
+pull_data <- use("resources/pull_data.R")
 quick_stats <- use("resources/quick_stats.R")
+transform_data <- use("resources/transform_data.R")
 
 
 #' Setup project analysis directory.
@@ -92,8 +93,8 @@ quick_stats <- use("resources/quick_stats.R")
 export("clean_afq")
 clean_afq <- function(table_name) {
   # Validate user args
-  if (!table_name %in% c("tbl_afq", "tbl_afq_rerun")) {
-    throw(paste("Unexpected table_name:", tbl_name))
+  if (!table_name %in% c("tbl_afq", "tbl_afq_rerun", "tbl_afq_rescan")) {
+    stop(paste("Unexpected table_name:", tbl_name))
   }
 
   # Check for local csv, read-in data or pull from db_adr.
@@ -121,12 +122,20 @@ clean_afq <- function(table_name) {
 
   # Manage column types, clip tails
   df_afq$subj_id <- factor(df_afq$subj_id)
-  df_afq$scan_name <- factor(df_afq$scan_name)
   df_afq$tract_name <- factor(df_afq$tract_name)
-  df_afq$scan_date <- as.POSIXct(
-    df_afq$scan_date,
-    format = "%Y-%m-%d", tz = "UTC"
-  )
+  
+  if (table_name != "tbl_afq_rescan"){
+    df_afq$scan_name <- factor(df_afq$scan_name)
+    df_afq$scan_date <- as.POSIXct(
+      df_afq$scan_date,
+      format = "%Y-%m-%d", tz = "UTC"
+    )
+  } else{
+    colnames(df_afq)[2] <- "scan_id"
+    df_afq$scan_id <- as.character(as.numeric(df_afq$scan_id) + 1)
+    df_afq$scan_id <- factor(df_afq$scan_id)
+  }
+  
   df_afq <- df_afq[which(df_afq$node_id > 9 & df_afq$node_id < 90), ]
   return(df_afq)
 }
@@ -168,7 +177,7 @@ export("get_scan_impact")
 get_scan_impact <- function() {
   # Get cleaned data.
   df_imp <- .clean_impact()
-  df_afq <- clean_afq()
+  df_afq <- clean_afq("tbl_afq")
 
   # Extract scan dates and names
   df_afq <- df_afq[
@@ -274,7 +283,7 @@ basic_demographics <- function(){
   df_demo$sex <- factor(df_demo$sex)
   
   #
-  df_afq <- clean_afq()
+  df_afq <- clean_afq("tbl_afq")
   tract_list <- unique(df_afq$tract_name)
   df_afq <- df_afq[which(
     df_afq$node == 10 & df_afq$tract_name == tract_list[1]
@@ -404,6 +413,11 @@ gam_delta_long_all <- function(df_afq, make_plots = T) {
     rm(h_gam)
   }
   fit_LDI <- readRDS(rds_ldi)
+  
+  # Generate grids of post-base and rtp-base.
+  if(make_plots == FALSE){
+    return(fit_LDI)
+  }
 
   # Mine, print summary stats
   sum_ldi <- paste0(analysis_dir, "/stats_gams/gam_summaries/fit_LDI_fa.txt")
@@ -417,7 +431,7 @@ gam_delta_long_all <- function(df_afq, make_plots = T) {
   # Draw combined plot
   grDevices::png(
     filename = paste0(
-      .analysis_dir(), "/stats_gams/plots/LDI_all/fit_LDI_all.png"
+      analysis_dir, "/stats_gams/plots/LDI_all/fit_LDI_all.png"
     ),
     units = "in",
     height = 8,
@@ -432,18 +446,16 @@ gam_delta_long_all <- function(df_afq, make_plots = T) {
   # Identify max deflections from zero
   df_max <- quick_stats$max_deflect(fit_LDI, idx_smooths$all)
   out_csv <- paste0(
-    .analysis_dir(), "/stats_gams/gam_summaries/fit_LDI_fa_max.csv"
+    analysis_dir, "/stats_gams/gam_summaries/fit_LDI_fa_max.csv"
   )
   utils::write.csv(df_max, out_csv, row.names = F)
-  
-  # Generate grids of post-base and rtp-base.
-  stopifnot(make_plots)
+
   c <- 1 # Use counter to align name with post and rtp tract smooths
   while (c < length(idx_smooths$names)) {
     h_tract <- fit_gams$switch_tract(idx_smooths$names[c])
     grDevices::png(
       filename = paste0(
-        .analysis_dir(), "/stats_gams/plots/LDI_all/fit_LDI_", h_tract, ".png"
+        analysis_dir, "/stats_gams/plots/LDI_all/fit_LDI_", h_tract, ".png"
       ),
       units = "in",
       height = 8,
@@ -522,6 +534,104 @@ gam_delta_rerun_all <- function(df_afq, df_afq_rr){
   draw_plots$grid_di_comb(fit_DI, idx_smooths$all, idx_smooths$names)
   grDevices::dev.off()
   return(fit_DI)
+}
+
+
+#' Title.
+#' TODO
+export("gam_delta_rescan_all")
+gam_delta_rescan_all <- function(df_afq_rs){
+  analysis_dir <- .analysis_dir()
+  
+  # Mimic scan column from study data for use with existing functions.
+  df_afq_rs$scan_name <- NA
+  df_afq_rs[which(df_afq_rs$scan_id == "1"), ]$scan_name <- "base"
+  df_afq_rs[which(df_afq_rs$scan_id == "2"), ]$scan_name <- "post"
+  df_afq_rs[which(df_afq_rs$scan_id == "3"), ]$scan_name <- "rtp"
+  df_afq_rs$scan_name <- factor(df_afq_rs$scan_name)
+  df_afq_rs <- subset(df_afq_rs, select = -c(scan_id))
+  
+  # Calculate delta and run model
+  df <- transform_data$calc_fa_delta(df_afq_rs)
+  rm(df_afq_rs)
+  
+  # Convert back to scan-rescan column names
+  df$comp <- NA
+  df[which(df$comp_scan == "post_base"), ]$comp <- "S2-S1"
+  df[which(df$comp_scan == "rtp_base"), ]$comp <- "S3-S1"
+  df <- subset(df, select = -c(comp_scan))
+  colnames(df)[5] <- "comp_scan"
+  df$comp_scan <- factor(df$comp_scan)
+  
+  #
+  rds_ldi <- paste0(analysis_dir, "/stats_gams/rda_objects/fit_LDI_rescan_fa.Rda")
+  if (!file.exists(rds_ldi)) {
+    h_gam <- fit_gams$mod_ldi_rescan(df)
+    saveRDS(h_gam, file = rds_ldi)
+    rm(h_gam)
+  }
+  fit_LDI <- readRDS(rds_ldi)
+  
+  # Mine, print summary stats
+  sum_ldi <- paste0(analysis_dir, "/stats_gams/gam_summaries/fit_LDI_rescan_fa.txt")
+  if (!file.exists(sum_ldi)) {
+    fit_gams$write_gam_stats(fit_LDI, sum_ldi)
+  }
+  
+  # Get indices of tract smooths and their names, rather
+  # than write a new function just use existing and know that
+  # post = 2-1, rtp = 3-1.
+  idx_smooths <- transform_data$idx_ldi_smooths(fit_LDI)
+  
+  # Draw combined plot
+  grDevices::png(
+    filename = paste0(
+      analysis_dir, "/stats_gams/plots/LDI_all/fit_LDI_rescan_all.png"
+    ),
+    units = "in",
+    height = 8,
+    width = 12,
+    res = 600
+  )
+  draw_plots$grid_ldi_comb(
+    fit_LDI, idx_smooths$post, idx_smooths$rtp, idx_smooths$names,
+    comp_a = "S2-S1", comp_b = "S3-S1"
+  )
+  grDevices::dev.off()
+  
+  # Identify max deflections from zero
+  df_max <- quick_stats$max_deflect(fit_LDI, idx_smooths$all)
+  out_csv <- paste0(
+    analysis_dir, "/stats_gams/gam_summaries/fit_LDI_rescan_fa_max.csv"
+  )
+  utils::write.csv(df_max, out_csv, row.names = F)
+  return(fit_LDI)
+}
+
+
+#' TODO
+#' 
+export("gam_fa_rebase_all")
+gam_fa_rebase_all <- function(df_afq){
+  
+  #
+  df <- df_afq[which(df_afq$scan_name == "base"), ]
+  set.seed(123)
+  subj_ids <- sample(unique(as.character(df$subj_id)))
+  subj_a <- subj_ids[1:34]
+  subj_b <- subj_ids[35:67]
+  
+  df$scan_name <- NA
+  df[which(df$subj_id %in% subj_a), ]$scan_name <- "base1"
+  df[which(df$subj_id %in% subj_b), ]$scan_name <- "base2"
+  df$scan_name <- factor(df$scan_name)
+  df <- subset(df, select = -c(scan_date, dti_md, dti_ad, dti_rd))
+  
+  #
+  library(data.table)
+  df <- df[which(df$tract_name %like% "Callosum"), ]
+  df$tract_name <- factor(as.character(df$tract_name))
+  
 }
 
 
@@ -792,7 +902,7 @@ gams_long_tract_intx <- function(df_afq, df_scan_imp, tract) {
 #' 
 #' TODO
 export("plot_estimates")
-plot_estimates <- function(fit_LDI, fit_DI_rr){
+plot_estimates <- function(fit_LDI, fit_DI_rr, fit_LDI_rs){
   # Node estimates and max from study data
   idx_ldi <- transform_data$idx_ldi_smooths(fit_LDI)
   df_est_study <- quick_stats$get_estimations(fit_LDI, idx_ldi$all)
@@ -805,20 +915,28 @@ plot_estimates <- function(fit_LDI, fit_DI_rr){
   df_max_rr <- quick_stats$max_deflect(fit_DI_rr, idx_di_rr$all)
   df_max_rr$comp <- "run_rerun"
   
+  # Node estimations and max from rescan
+  idx_ldi_rs <- transform_data$idx_ldi_smooths(fit_LDI_rs)
+  df_est_rs <- quick_stats$get_estimations(fit_LDI_rs, idx_ldi_rs$all)
+  df_max_rs <- quick_stats$max_deflect(fit_LDI_rs, idx_ldi_rs$all)
+  
   # Concatenate estimations
+  # df_est <- rbind(df_est_study, df_est_rr, df_est_rs)
   df_est <- rbind(df_est_study, df_est_rr)
+  rm(df_est_study, df_est_rr, df_est_rs)
   df_est$comp <- factor(df_est$comp)
   df_est$tract <- factor(df_est$tract)
   df_est$lb <- as.numeric(df_est$est - (1.96 * df_est$se))
   df_est$ub <- as.numeric(df_est$est + (1.96 * df_est$se))
   
   # Concatenate max
+  # df_max <- rbind(df_max_study, df_max_rr, df_max_rs)
   df_max <- rbind(df_max_study, df_max_rr)
+  rm(df_max_study, df_max_rr, df_max_rs)
   df_max$comp <- factor(df_max$comp)
   df_max$tract <- factor(df_max$tract)
   
   # Boxplot of difference estimations by group of tracts
-  library(data.table)
   df_est_cc <- df_est[df_est$tract %like% "Callosum", ]
   df_est_cc$tract <- gsub("Callosum ", "", df_est_cc$tract)
   ggplot(
@@ -845,6 +963,7 @@ plot_estimates <- function(fit_LDI, fit_DI_rr){
   ) +
     geom_boxplot(aes(fill=.data$comp)) +
     theme(axis.text.x = element_text(angle = 45, hjust=1))
+  rm(df_est_cc, df_est_left, df_est_right)
   
   # Lineplot of max differences by group of tracts
   df_max_cc <- df_max[df_max$tract %like% "Callosum", ]
@@ -876,10 +995,11 @@ plot_estimates <- function(fit_LDI, fit_DI_rr){
     geom_line() +
     geom_point() +
     theme(axis.text.x = element_text(angle = 45, hjust=1))
+  rm(df_max_cc, df_max_left, df_max_right)
   
   
   #
-  tract <- "Callosum Orbital"
+  tract <- "Callosum Motor"
   df_est_tract <- df_est[which(df_est$tract == tract), ]
   ggplot(
     data = df_est_tract,

@@ -1,17 +1,28 @@
+# Compute various quick statistics.
+#
+# Used for quick summaries and/or involve simple statistic tests.
+#
+# better_worse: Identify which participants became better or worse
+#   on ImPACT measures from baseline to post.
+# score_change: Calculate average value of measure that changed across visit.
+# wc_ranksum: Conduct Wilcoxon rank sum test.
+# run_pca: Conduct PCA analysis on ImPACT measures.
+# run_kmeans: Conduct K-means clustering on ImPACT measures.
+# max_deflect: Identify node with largest difference from 0.
+# get_estimations: Return GAM fit estimations.
+
 import("stats", "reshape")
 import(mgcViz)
 
 
-# TODO survival analysis: time to an event
-
 #' Identify subjects who got worse or better for visit.
 #'
 #' @param col_name Column name for testing.
-#' @param df Dataframe of data.
+#' @param df Dataframe of data, output by workflows$get_scan_impact().
 #' @param visit_name Name of visit.
 #' @return List with following elements:
-#' @better element1 Subjects who got better
-#' @worse element2 Subjects who got worse
+#'  'better' = element1 Subjects who got better
+#'  'worse' = element2 Subjects who got worse
 export("better_worse")
 better_worse <- function(col_name, df, visit_name) {
   post_bet <- df[
@@ -40,6 +51,8 @@ better_worse <- function(col_name, df, visit_name) {
 #' across visits; avg_wor = avergae value of those who got worse across visits.
 export("score_change")
 score_change <- function(col_name, df, visit_name) {
+  
+  # Cast wide and calculate differences
   df_sub <- reshape(
     df,
     idvar = c("subj_id", "base_v_post"),
@@ -54,7 +67,7 @@ score_change <- function(col_name, df, visit_name) {
   df_sub$d_post <- df_sub[, post] - df_sub[, base]
   df_sub$d_rtp <- df_sub[, rtp] - df_sub[, base]
 
-  # df_sub <- df_sub[, -c(3:7)]
+  # Cast long
   df_long <- reshape(
     df_sub,
     direction = "long",
@@ -65,6 +78,7 @@ score_change <- function(col_name, df, visit_name) {
     idvar = c("subj_id")
   )
 
+  # Determine averages of scores that get better/worse across visits.
   visit <- paste0("d_", visit_name)
   avg_bet <- round(
     mean(
@@ -153,7 +167,10 @@ run_kmeans <- function(df, col_list, num_k){
 
 
 #' Identify GAM max deflections from zero.
-#' TODO
+#' 
+#' @param fit_gam mgcv::bam fit object.
+#' @param idx_smooths Index of smooths in fit_gam to find deflections in.
+#' @returns Dataframe containing node and deflection value for each smooth.
 export("max_deflect")
 max_deflect <- function(fit_gam, idx_smooths){
   # Identify max deflections from zero
@@ -176,6 +193,8 @@ max_deflect <- function(fit_gam, idx_smooths){
     n_name <- c(n_name, p_data[which(abs(p_data$y) == max_y), ]$x)
     m_val <- c(m_val, max_y)
   }
+  
+  # Make dataframe, identify max, update names
   df_max <- data.frame(t_name, c_name, n_name, m_val)
   colnames(df_max) <- c("tract", "comp", "node", "max")
   df_max$tract <- gsub("tract_name", "", df_max$tract)
@@ -184,9 +203,11 @@ max_deflect <- function(fit_gam, idx_smooths){
 }
 
 
-
 #' Extract smooth node fit estimations.
-#' TODO
+#' 
+#' @param fit_gam mgcv::bam fit object.
+#' @param idx_smooths Index of smooths in fit_gam to extract estimations from.
+#' @returns Dataframe of estimations for each smooth.
 export("get_estimations")
 get_estimations <- function(fit_gam, idx_smooths){
   # Identify max deflections from zero
@@ -208,9 +229,11 @@ get_estimations <- function(fit_gam, idx_smooths){
     p_data$comp <- row_info[[1]][2]
     p_data$tract <- row_info[[1]][1]
     
-    #
+    # Stack dfs
     df_est <- rbind(df_est, p_data[, c(1, 2, 4, 5, 6)])
   }
+  
+  # Manage string values
   df_est$tract <- gsub("tract_name", "", df_est$tract)
   df_est$tract <- gsub("tract_scan", "", df_est$tract)
   return(df_est)

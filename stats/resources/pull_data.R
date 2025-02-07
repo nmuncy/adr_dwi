@@ -1,3 +1,9 @@
+# Various methods for pulling data from MySQL database db_adr.
+#
+# get_demographics: Get subj_id, sex, and age at baseline from tbl_demo.
+# get_user_comp: Get ImPACT user composite measures, and total symptom.
+# get_afq: Get AFQ data from requested table.
+
 import("RMySQL")
 
 #' Establish connection with db_adr.
@@ -22,28 +28,7 @@ import("RMySQL")
 }
 
 
-#' Pull scan dates.
-#'
-#' Deprecated.
-#' 
-#' @returns Long dataframe of subj_id, scan_name, and scan_date.
-export("get_scan_dates")
-get_scan_dates <- function() {
-  db_con <- .db_connect()
-  sql_cmd <- "select
-    tsd.subj_id, rfs.scan_name, tsd.scan_date
-    from tbl_scan_dates tsd
-    join ref_scan rfs on tsd.scan_id=rfs.scan_id
-  "
-  db_query <- dbSendQuery(db_con, sql_cmd)
-  df <- dbFetch(db_query, n = -1)
-  dbClearResult(db_query)
-  dbDisconnect(db_con)
-  return(df)
-}
-
-
-#' Pull demographics.
+#' Pull subject age-at-baseline and sex demographics.
 #' 
 #' @returns Tidy dataframe of demographic values.
 export("get_demographics")
@@ -61,7 +46,7 @@ get_demographics <- function(){
 }
 
 
-#' Pull Impact user composites.
+#' Pull ImPACT user composites.
 #'
 #' Get composites and total symptom score,
 #' also fetch test name and impact dates.
@@ -96,6 +81,20 @@ get_user_comp <- function() {
 }
 
 
+#' Build select command for afq rescan data.
+#' 
+#' @returns String of SQL select syntax.
+.select_afq_rescan <- function(){
+  sql_cmd <- "select
+    tafq.subj_id, tafq.sess_id, rft.tract_name, tafq.node_id,
+      tafq.dti_fa, tafq.dti_md, tafq.dti_ad, tafq.dti_rd
+    from tbl_afq_rescan tafq
+    join ref_tract rft on tafq.tract_id=rft.tract_id
+  "
+  return(sql_cmd)
+}
+
+
 #' Pull AFQ data from db_adr.
 #' 
 #' Get AFQ FA, MD, AD, and RD values for all or
@@ -111,33 +110,39 @@ get_afq <- function(sess_id = NULL, tract_id = NULL, table_name = "tbl_afq") {
   # Validate user args
   if (!is.null(sess_id)) {
     if (!sess_id %in% 0:2) {
-      throw(paste("Unexpected sess_id:", sess_id))
+      stop(paste("Unexpected sess_id:", sess_id))
     }
   }
   if (!is.null(tract_id)) {
     if (!tract_id %in% 1:28) {
-      throw(paste("Unexpected sess_id:", sess_id))
+      stop(paste("Unexpected sess_id:", sess_id))
     }
   }
-  if (!table_name %in% c("tbl_afq", "tbl_afq_rerun")){
-    throw(paste("Unexpected table_name:", tbl_name))
+  if (!table_name %in% c("tbl_afq", "tbl_afq_rerun", "tbl_afq_rescan")){
+    stop(paste("Unexpected table_name:", tbl_name))
   }
 
-  # Build select statement, manage user args.
+  # Build select statement from appropriate table,
+  # tbl_afq_rescan is unique and does not have scan dates.
   db_con <- .db_connect()
-  sql_cmd <- "select
-    tafq.subj_id, rfs.scan_name, tsd.scan_date,
-      rft.tract_name, tafq.node_id,
-      tafq.dti_fa, tafq.dti_md, tafq.dti_ad, tafq.dti_rd
-  "
-  sql_cmd <- paste(sql_cmd, "from", table_name, "tafq")
-  sql_cmd <- paste(sql_cmd, 
-    " join ref_scan rfs on tafq.sess_id=rfs.scan_id
-      join ref_tract rft on tafq.tract_id=rft.tract_id
-      join tbl_scan_dates tsd on tafq.subj_id=tsd.subj_id
-        and tafq.sess_id=tsd.scan_id
+  if (table_name == "tbl_afq_rescan"){
+    sql_cmd <- .select_afq_rescan()
+  } else {
+    sql_cmd <- "select
+      tafq.subj_id, rfs.scan_name, tsd.scan_date,
+        rft.tract_name, tafq.node_id,
+        tafq.dti_fa, tafq.dti_md, tafq.dti_ad, tafq.dti_rd
     "
-  )
+    sql_cmd <- paste(sql_cmd, "from", table_name, "tafq") # Query relevant table
+    sql_cmd <- paste(
+      sql_cmd, 
+      " join ref_scan rfs on tafq.sess_id=rfs.scan_id
+        join ref_tract rft on tafq.tract_id=rft.tract_id
+      "
+    )
+  }
+  
+  # If user specifies specific session and/or tract
   if (!is.null(sess_id) & !is.null(tract_id)) {
     sql_cmd <- paste(
       sql_cmd,

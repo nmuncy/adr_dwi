@@ -1,3 +1,19 @@
+# Methods for executing GAM models.
+#
+# Public functions described below.
+#
+# switch_tract: Return short tract name give long.
+# write_gam_stats: Write GAM summary stats to txt file.
+# mod_lgi: Fit longitudinal HGAM with global, group smooths and wiggliness.
+# mod_lgio: Same as mod_lgi but with ordered group factors.
+# mod_ldi: Fit longitudinal HGAM for all tracts of FA differences.
+# mod_ldi_rescan: Same as mod_ldi, for single subjetc scanned multiple times.
+# mod_di: Similar to mod_ldi, for baseline data modeled twice.
+# mod_lgi_intx: Similar to mod_lgi, include a tensor product interaction
+#   smooth to test for interaction between scalar and behavioral measure.
+# mod_lgio_intx: Similar to mod_lgi_intx but with group as ordered factors.
+
+
 import(mgcv)
 
 
@@ -10,7 +26,8 @@ import(mgcv)
     "dti_fa" = "betar(link = \"logit\")",
     "dti_rd" = "gaussian()",
     "dti_md" = "Gamma(link = \"logit\")",
-    "dti_ad" = "gaussian()"
+    "dti_ad" = "gaussian()",
+    "delta" = "gaussian()"
   )
   return(s_fam)
 }
@@ -71,7 +88,8 @@ write_gam_stats <- function(gam_obj, out_file) {
 
 #' Fit longitudinal HGAM with global, group smooths and wiggliness.
 #' 
-#' Pool within subject across multiple scans.
+#' Pool within subject across multiple scans. Models scalar name of a single
+#' tract across multiple time points.
 #' 
 #' @param df Dataframe of AFQ data for single tract.
 #' @param scalar_name DWI metric, dti_fa, dti_rd, dti_md, or dti_ad.
@@ -152,12 +170,13 @@ mod_lgio <- function(df, scalar_name, k_max = 15) {
 export("mod_ldi")
 mod_ldi <- function(df) {
   df$tract_scan <- interaction(df$tract_name, df$comp_scan)
+  fam_scalar <- .switch_family("delta")
   fit_LDI <- bam(
     delta ~ s(subj_id, by = tract_scan, bs = "re") +
       s(node_id, by = tract_scan, bs = "tp", k = 15) +
       tract_name + comp_scan + tract_scan,
     data = df,
-    family = gaussian(),
+    family = fam_scalar,
     method = "fREML",
     discrete = T,
     nthreads = 12
@@ -166,16 +185,49 @@ mod_ldi <- function(df) {
 }
 
 
-#' Title.
-#' TODO
+#' Fit longitudinal HGAM for all tracts of FA differences for one subject.
+#' 
+#' Very similar to mod_ldi, but used to model data from single subject
+#' scanned multiple times (so no random effect of subject).
+#' 
+#' @param df Dataframe of AFQ with comp_scan and delta columns (output by 
+#'  transform_data$calc_fa_delta).
+#' @returns mgcv::bam fit object.
+export("mod_ldi_rescan")
+mod_ldi_rescan <- function(df) {
+  df$tract_scan <- interaction(df$tract_name, df$comp_scan)
+  fam_scalar <- .switch_family("delta")
+  fit_LDI <- bam(
+    delta ~ s(node_id, by = tract_scan, bs = "tp", k = 15) +
+      tract_name + comp_scan + tract_scan,
+    data = df,
+    family = fam_scalar,
+    method = "fREML",
+    discrete = T,
+    nthreads = 12
+  )
+  return(fit_LDI)
+}
+
+
+
+#' Fit HGAM for all tract FA differences.
+#' 
+#' Test for differences between times 1 and 2 of modeling data. Similar
+#' to mod_ldi, but without the extra scan_name factor. Used for investigating
+#' effect of rerunning tractography on baseline data.
+#' 
+#' @param df Dataframe of AFQ with columns subj_id, tract_name, node_id, delta.
+#' @returns mgcv::bam fit object.
 export("mod_di")
 mod_di <- function(df){
+  fam_scalar <- .switch_family("delta")
   fit_DI <- bam(
     delta ~ s(subj_id, by = tract_name, bs = "re") +
       s(node_id, by = tract_name, bs = "tp", k = 15) +
       tract_name,
     data = df,
-    family = gaussian(),
+    family = fam_scalar,
     method = "fREML", 
     discrete = T,
     nthreads = 12
@@ -184,8 +236,38 @@ mod_di <- function(df){
 }
 
 
+#' Fit longitudinal HGAM for all tracts of dti_fa values.
+#' 
+#' Deprecated.
+#' 
+#' Similar to mod_ldi, but without the delta calculation.
+#' 
+#' @param df Dataframe of AFQ with columns subj_id, tract_name, scan_name,
+#'  node_id, dti_fa.
+#' @returns mgcv::bam fit object.
+export("mod_li")
+mod_li <- function(df){
+  df$tract_scan <- interaction(df$tract_name, df$scan_name)
+  fam_scalar <- .switch_family("dti_fa")
+  fit_I <- bam(
+    dti_fa ~ s(subj_id, by = tract_scan, bs = "re") +
+      s(node_id, by = tract_scan, bs = "tp", k = 15) +
+      tract_name + scan_name + tract_scan,
+    data = df,
+    family = fam_scalar,
+    method = "fREML", 
+    discrete = T,
+    nthreads = 12
+  )
+  return(fit_I)
+}
+
+
 #' Fit longitudinal HGAM with global, group smooths and wiggliness, 
-#' and scalar-Impact interaction smooths.
+#' and scalar-impact interaction smooths.
+#' 
+#' Use a tensor product interaction smooth to see if impact and scalar
+#' values are related.
 #' 
 #' @param df Dataframe of AFQ data for single tract.
 #' @param impact_meas IMPACT metric: mem_ver, mem_vis, vis_mot, rx_time, 
@@ -234,6 +316,10 @@ mod_lgi_intx <- function(
 
 #' Fit longitudinal HGAM with global, group (ordered) smooths and wiggliness, 
 #' and scalar-Impact interaction smooths.
+#' 
+#' Use a tensor product interaction smooth to see if impact and scalar
+#' values are related, using group as ordered factors to compare against
+#' baseline.
 #' 
 #' @param df Dataframe of AFQ data for single tract.
 #' @param impact_meas IMPACT metric: mem_ver, mem_vis, vis_mot, rx_time, 

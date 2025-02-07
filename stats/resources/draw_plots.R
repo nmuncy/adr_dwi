@@ -1,3 +1,33 @@
+# Methods for drawing and building plots.
+#
+# Public functions described below. Generally, functions that draw
+# individual plots are named draw_*, and functions that assemble plots into
+# a single plot are named grid_*. Functions are also named for the type
+# of GAM used (GS, GIOS, IOS, IS, LDI, DI, LGI, LGIO) where appropriate.
+#
+# draw_impact_smooths: Draw GAM smooths of ImPACT composites.
+# draw_impact_pairs: Draw pairs of ImPACT scores accounting for k-means groups.
+# draw_kmeans: Draw K-means clustering plot.
+# draw_pca: Draw PCA biplot and eigenvector.
+# draw_scalar_grid: Draw 2x2 grid of scalar smooths.
+# draw_gios_diff: Draw group difference smooths in Y-range of global smooth.
+# draw_gios_diff_sig: Draw group difference smooths in y-range of global 
+#   smooth with significance boxes.
+# draw_gs: Draw global smooth and CI.
+# draw_is: Draw group smooths and CIs.
+# draw_is_intx: Draw group interaction smooths.
+# draw_ios_diff_sig: Draw group difference smooths with significance boxes.
+# grid_di_comb: Combine DI smooths into single image.
+# grid_ldi: Draw smooth grid for LDI models.
+# grid_ldi_comb: Combine LDI smooths into single image.
+# grid_lgi: Draw smooth grid for LGI models, containing global & group smooths.
+# grid_lgi_intx: Draw smooth grid for LGI_intx models.
+# grid_lgio_intx: Draw smooth grid for LGIO_intx models.
+# grid_lgio: Draw smooth grid for LGIO models, containing global 
+#   and difference smooths.
+# visit_track: Draw ImPACT values, tracking subject across visits.
+
+
 import(ggplot2)
 import(ggpubr)
 import(mgcViz)
@@ -173,31 +203,6 @@ visit_track <- function(col_name, df) {
     )
   )
   return(plot)
-}
-
-
-#' Plot subjects with better fu1 vs base impact measures.
-#'
-#' Deprecated.
-#'
-#' TODO remove
-export("visit_box")
-visit_box <- function(col_name, df) {
-  stats_b <- quick_stats$wc_ranksum(col_name, df, "base")
-  stats_f <- quick_stats$wc_ranksum(col_name, df, "fu1")
-
-  ggplot(
-    df,
-    aes(x = visit_name, y = get(col_name), fill = fu1_change),
-  ) +
-    geom_boxplot() +
-    ylab(.meas_names(col_name)) +
-    ggtitle(paste0(
-      "base: bVw p=",
-      round(stats_b$p.value, 3),
-      "; fu1: bVw p=",
-      round(stats_f$p.value, 3)
-    ))
 }
 
 
@@ -591,10 +596,6 @@ draw_is_intx <- function(
   l2_name <-
     text_grob(name_list$rowL2, size = 12, family = "Times New Roman", rot = 90)
 
-  # r1_name <- r2_name <- text_grob(
-  #   "", size = 12, family = "Times New Roman", rot = 270
-  # )
-
   pOut <- grid.arrange(
     arrangeGrob(r1A, top = col1_name, left = l1_name),
     arrangeGrob(r2A, bottom = bot1_name, left = l2_name),
@@ -802,11 +803,18 @@ grid_ldi <- function(fit_LDI, tract, scalar_name, num_Ia, num_Ib) {
 }
 
 
+#' Determine y-min and y-max from plottable.
+#' 
+#' @param plot_obj mgcv::getViz object.
+#' @param num_list List of plottable indices.
+#' @returns list of ymin, ymax.
 .get_ymin_ymax <- function(plot_obj, num_list) {
+  # Start with data from first plottable
   c <- 1
   p <- plot(sm(plot_obj, num_list[c]))
   p_data <- as.data.frame(p$data$fit)
 
+  # Get data from rest of plottables
   c <- c + 1
   while (c <= as.numeric(length(num_list))) {
     p <- plot(sm(plot_obj, num_list[c]))
@@ -818,6 +826,20 @@ grid_ldi <- function(fit_LDI, tract, scalar_name, num_Ia, num_Ib) {
 }
 
 
+#' Draw combined LDI plot.
+#' 
+#' @param plot_obj mgcv::getViz object.
+#' @param idx_list List of plottable indices.
+#' @param smooth_list List of smooth indices.
+#' @param name_list List of names for smooth_list.
+#' @param group Name of grouping factor (e.g. 'Left' for LH tracts).
+#' @param y_min Numeric y-minimum.
+#' @param y_max Numeric y-maximum.
+#' @param x_min Numeric x-minimum.
+#' @param x_max Numeric x-max.
+#' @param add_bot Optional bool, add axis label to bottom.
+#' @param add_top Optional bool, add axis label to top.
+#' @returns Plottable object.
 .draw_ldi_comb <- function(
     plot_obj, idx_list, smooth_list, name_list, group, 
     y_min, y_max, x_min, x_max, add_bot = F, add_top = F
@@ -836,9 +858,6 @@ grid_ldi <- function(fit_LDI, tract, scalar_name, num_Ia, num_Ib) {
     p_data <- rbind(p_data, h_data)
   }
   
-  # # Clean group name for shorter legends
-  # p_data$tract <- gsub(paste0(group, " "), "", p_data$tract)
-  
   # Build plot
   p <- ggplot(
     data = p_data,
@@ -853,7 +872,7 @@ grid_ldi <- function(fit_LDI, tract, scalar_name, num_Ia, num_Ib) {
       legend.text = element_text(size = 10)
     )
     
-  
+  # Account for user options.
   if(add_top){
     p <- p + 
       ggtitle(paste(group, "FA Smooths")) +
@@ -890,7 +909,8 @@ grid_ldi <- function(fit_LDI, tract, scalar_name, num_Ia, num_Ib) {
 export("grid_ldi_comb")
 grid_ldi_comb <- function(
     fit_LDI, post_smooths, rtp_smooths, name_smooths,
-    scalar_name = "FA", x_min = 10, x_max = 89) {
+    scalar_name = "FA", x_min = 10, x_max = 89, 
+    comp_a = "Post-Base", comp_b = "RTP-Base") {
   # Generate plots objs from smooths
   plot_obj <- getViz(fit_LDI)
 
@@ -899,8 +919,6 @@ grid_ldi_comb <- function(
   idx_left <- match(name_smooths[grepl("Left", name_smooths)], name_smooths)
   idx_right <- match(name_smooths[grepl("Right", name_smooths)], name_smooths)
 
-  # ymin_ymax <- .get_ymin_ymax(plot_obj, c(post_smooths, rtp_smooths))
-  
   # Build post plots
   ymin_ymax <- .get_ymin_ymax(plot_obj, post_smooths)
   p_post_cc <- .draw_ldi_comb(
@@ -933,10 +951,10 @@ grid_ldi_comb <- function(
   
   # draw grid
   left1_name <- text_grob(
-    "Diff: Post-Base", size = 12, family = "Times New Roman", rot = 90
+    paste("Diff:", comp_a), size = 12, family = "Times New Roman", rot = 90
   )
   left2_name <- text_grob(
-    "Diff: RTP-Base", size = 12, family = "Times New Roman", rot = 90
+    paste("Diff:", comp_b), size = 12, family = "Times New Roman", rot = 90
   )
   plot_grid <- grid.arrange(
     arrangeGrob(p_post_cc, left = left1_name),
@@ -951,22 +969,7 @@ grid_ldi_comb <- function(
     heights = c(1, 1)
   )
   return(plot_grid)
-
-
-  # # draw grid
-  # plot_list <- list(
-  #   "Ia" = pIa,
-  #   "Ib" = pIb
-  # )
-  # name_list <- list(
-  #   "col1" = paste("LDI:", tract, scalar_name, "Smooths"),
-  #   "rowL1" = "Diff: Post-Base",
-  #   "rowL2" = "Diff: RTP-Base",
-  #   "bot1" = "Tract Node"
-  # )
-  # .arr_one_two(plot_list, name_list)
 }
-
 
 
 #' Combine DI smooths into single image.
@@ -980,8 +983,7 @@ grid_di_comb <- function(
     scalar_name = "FA", x_min = 10, x_max = 89) {
   # Generate plots objs from smooths
   plot_obj <- getViz(fit_DI)
-  # plot(sm(plot_obj, 28))
-  
+
   # Identify CC, L, R smooth indices
   idx_cc <- match(name_smooths[grepl("Callosum", name_smooths)], name_smooths)
   idx_left <- match(name_smooths[grepl("Left", name_smooths)], name_smooths)
@@ -1059,7 +1061,6 @@ grid_lgi <- function(
 }
 
 
-
 #' Identify Z-min and Z-max across multiple plots.
 #'
 #' @param plot_obj Plotable object returned by getViz.
@@ -1116,7 +1117,7 @@ grid_lgi_intx <- function(
 }
 
 
-#' Draw smooth grid for LGI_intx models.
+#' Draw smooth grid for LGIO_intx models.
 #'
 #' @param fit_LGIO mgcv::gam object.
 #' @param tract String tract name for title.

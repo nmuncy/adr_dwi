@@ -1,3 +1,12 @@
+# Methods for transforming data in various ways.
+#
+# fix_impact_scan: Manually resolve data issues in matched impact-scan data.
+# compare_base_post: Identify which ImPACT measures get better between 
+#   baseline and post-concussion visits.
+# calc_fa_delta: Calculate FA difference between post and base, rtp and base.
+# idx_ldi_smooths: Extract smooth info and index from LDI gam object.
+# idx_di_smooths: Same as idx_ldi_smooths, for DI gam objects.
+
 import("tidyr")
 import("tidyverse")
 import("ggpubr")
@@ -199,19 +208,24 @@ calc_fa_delta <- function(df_afq){
 
 
 #' Get index of LDI tract smooths.
-#' TODO
+#' 
+#' @param fit_obj mgcv::bam fit object.
+#' @returns Named list, names=list of smooth names, post=index of post
+#'    smooths, rtp=index of rtp smooths, all=index of post+rtp smooths.
 export("idx_ldi_smooths")
-idx_ldi_smooths <- function(fit_LDI){
+idx_ldi_smooths <- function(fit_obj){
   # Identify Post, RTP smooth indices and smooth names
   tract_smooths <- name_smooths <- c()
-  for (num in 1:length(fit_LDI$smooth)) {
-    if (fit_LDI[["smooth"]][[num]][["term"]] == "node_id") {
+  for (num in 1:length(fit_obj$smooth)) {
+    if (fit_obj[["smooth"]][[num]][["term"]] == "node_id") {
       tract_smooths <- c(tract_smooths, num)
-      label <- fit_LDI[["smooth"]][[num]][["label"]]
+      label <- fit_obj[["smooth"]][[num]][["label"]]
       h <- strsplit(label, "tract_scan")[[1]][2]
       name_smooths <- c(name_smooths, strsplit(h, "\\.")[[1]][1])
     }
   }
+  
+  # Get smooth groups
   half <- length(tract_smooths) / 2
   post_smooths <- utils::head(tract_smooths, half)
   rtp_smooths <- utils::tail(tract_smooths, half)
@@ -228,58 +242,18 @@ idx_ldi_smooths <- function(fit_LDI){
 
 
 #' Get index of DI tract smooths.
-#' TODO
+#' 
+#' @param fit_obj mgcv::bam fit object.
+#' @returns Named list, names=list of smooth names, all=index of smooths.
 export("idx_di_smooths")
-idx_di_smooths <- function(fit_DI){
+idx_di_smooths <- function(fit_obj){
   tract_smooths <- name_smooths <- c()
-  for (num in 1:length(fit_DI$smooth)) {
-    if (fit_DI[["smooth"]][[num]][["term"]] == "node_id") {
+  for (num in 1:length(fit_obj$smooth)) {
+    if (fit_obj[["smooth"]][[num]][["term"]] == "node_id") {
       tract_smooths <- c(tract_smooths, num)
-      label <- fit_DI[["smooth"]][[num]][["label"]]
+      label <- fit_obj[["smooth"]][[num]][["label"]]
       name_smooths <- c(name_smooths, strsplit(label, "tract_name")[[1]][2])
     }
   }
   return(list("names"=name_smooths, "all"=tract_smooths))
-}
-
-
-# Deprecated
-# TODO remove
-.long_wide <- function(df) {
-  df_wide <- df %>%
-    pivot_wider(
-      names_from = c("visit_name", "num_tbi"),
-      values_from = c(
-        "visit_date",
-        "userMemoryCompositeScoreVerbal",
-        "userMemoryCompositeScoreVisual",
-        "userVisualMotorCompositeScore",
-        "userReactionTimeCompositeScore",
-        "userImpulseControlCompositeScore",
-        "userTotalSymptomScore",
-        "userSymptom1",
-        "userSymptom2",
-        "userSymptom3",
-        "userSymptom4",
-        "userSymptom5",
-        "userSymptom6",
-        "userSymptom7",
-        "userSymptom8",
-        "userSymptom9",
-        "userSymptom10",
-        "userSymptom11",
-        "userSymptom12",
-        "userSymptom13",
-        "userSymptom14",
-        "userSymptom15",
-        "userSymptom16",
-        "userSymptom17",
-        "userSymptom18",
-        "userSymptom19",
-        "userSymptom20",
-        "userSymptom21",
-        "userSymptom22"
-      )
-    )
-  return(df_wide)
 }

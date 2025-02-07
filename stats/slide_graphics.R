@@ -26,13 +26,28 @@ draw_plots <- modules::use("resources/draw_plots.R")
 
 
 # Get Data ----
-df_afq <- workflows$clean_afq()
+df_afq <- workflows$clean_afq("tbl_afq")
 tract <- "Callosum Orbital"
 df <- df_afq[which(df_afq$tract_name == tract), ]
 colnames(df)[2] <- "visit"
 
 
 # Non-linear data ----
+df_subj <- df[which(df$subj_id == "3" & df$visit == "base"), ]
+p_dist_subj <- ggplot(data = df_subj, aes(x = node_id, y = dti_fa)) +
+  geom_point() +
+  scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +
+  ggtitle(paste(tract, "Profile")) +
+  ylab("FA Value") +
+  xlab("Node ID") +
+  theme(
+    text = element_text(family = "Times New Roman", size = 14),
+    plot.title = element_text(hjust = 0.5)
+  )
+ggsave(
+  paste0(.analysis_dir(), "plot_dist_subj.png"), plot = p_dist_subj, dpi = 600
+)
+
 p_dist <- ggplot(data = df, aes(x = node_id, y = dti_fa)) +
   geom_point(alpha = 0.05) +
   scale_x_continuous(breaks = c(seq(10, 89, by = 10), 89)) +

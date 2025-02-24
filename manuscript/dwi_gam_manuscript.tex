@@ -1,0 +1,172 @@
+% doc type
+\documentclass[12pt]{article}
+
+% set up supplemental section
+\newcommand{\beginsupplement}{%
+	\setcounter{table}{0}
+	\renewcommand{\thetable}{S\arabic{table}}%
+	\setcounter{figure}{0}
+	\renewcommand{\thefigure}{S\arabic{figure}}%
+}
+
+% format page, paragraph
+\usepackage[margin=1in]{geometry}
+\usepackage{lineno}
+\linenumbers
+\usepackage{setspace}
+\doublespacing
+\usepackage[utf8]{inputenc}
+\usepackage[hidelinks]{hyperref}
+\usepackage{authblk}
+
+%% bib
+%\usepackage[style=apa,backend=biber]{biblatex}
+%\addbibresource{./Zotero_EmuUnc.bib}
+
+% figures and tables
+\usepackage{graphicx}
+\graphicspath{ {./} }
+\usepackage{multirow}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{url}
+\usepackage{float}
+\usepackage{longtable}
+
+% code
+\usepackage{listings,lstautogobble}
+\lstset{language=R,
+	basicstyle=\small\ttfamily,
+	otherkeywords={0,1,2,3,4,5,6,7,8,9},
+	morekeywords={TRUE,FALSE},
+	deletekeywords={data,frame,length,as,character},
+	autogobble=true
+}
+\renewcommand\lstlistingname{R Code}
+
+% math
+\usepackage{amsmath}
+\usepackage{caption}
+\DeclareCaptionType{equ}[R Code][]
+
+
+% title page info
+\title{Longitudinal study of concussion-related diffusion MRI changes in college athletes: modeling tracts via hierarchical generalized additive models}
+\date{}
+
+\author[1,*]{Nathan M. Muncy}
+\author[1]{Aron K. Barbey}
+
+\affil[1]{Center for Brain, Behavior \& Biology, University of Nebraska-Lincoln, Lincoln, Nebraska, USA}
+\affil[*]{Corresponding author.	Email: nmuncy2@unl.edu}
+
+
+% start document
+\begin{document}
+
+% title page
+\maketitle
+\pagebreak
+
+
+% abstract page
+\begin{abstract}
+Abstract here.
+\end{abstract}
+
+\vfill
+KEYWORDS: DWI, MRI, GAM, TBI\\
+\pagebreak
+
+
+\section{Introduction}
+\label{sec:intro}
+Introduction here.
+
+
+\section{Methods}
+\label{sec:meth}
+
+
+\subsection{Participants}
+\label{ssec:meth-part}
+Participants here.
+
+
+\subsection{ImPACT}
+\label{ssec:meth-imp}
+Description of ImPACT.
+
+
+\subsection{MRI Protocol}
+\label{ssec:meth-mri}
+Description of MRI protocol.
+
+
+\subsection{MRI Data Processing}
+\label{ssec:meth-mri-proc}
+Description of DWI processing.
+
+
+\subsection{GAM specification}
+\label{ssec:meth-gam}
+Description of GAM.
+
+
+\section{Results}
+\label{sec:res}
+
+
+\subsection{Participants}
+\label{ssec:res-participants}
+Demographics and ImPACT.
+
+
+\subsection{DWI Tracts}
+\label{ssec:res-dwi-tract}
+Tract results.
+
+
+\subsection{DWI Tracts Interactions - ImPACT}
+\label{ssec:res-dwi-imp}
+Description of DWI-ImPACT interaction.
+
+\subsection{DWI Tracts Interactions - Time}
+\label{ssec:res-dwi-time}
+Description of DWI-time interaction.
+
+
+\section{Discussion}
+\label{sec:disc}
+Discussion.
+
+
+% acknowledgment page
+\section*{Acknowledgments}
+\label{sec:ack}
+People. Grant.
+
+% write bibliography
+\pagebreak
+%\printbibliography
+\pagebreak
+
+
+% make supplemental
+\section{Supplemental Materials}
+\label{sec:supp-materials}
+\beginsupplement
+Supplemental Materials.
+
+
+
+\subsection{Tables}
+\label{ssec:supp-tables}
+Supplemental Tables.
+
+
+\subsection{Figures}
+\label{ssec:supp-figures}
+Supplemental Figures.
+
+
+\end{document}

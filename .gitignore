@@ -3,3 +3,7 @@ stats/.Rhistory
 adr_dwi.egg-info
 *__pycache__*
 *.DS_Store
+manuscript/dwi_gam_manuscript.aux
+manuscript/dwi_gam_manuscript.log
+manuscript/dwi_gam_manuscript.out
+manuscript/dwi_gam_manuscript.synctex.gz

@@ -574,6 +574,39 @@ draw_is_intx <- function(
 }
 
 
+#' Title.
+#' 
+#' TODO
+export("draw_di_time")
+draw_di_time <- function(plot_obj, tract, x_min = 10, x_max = 89){
+  p <- plot(sm(plot_obj, 4))
+  p_data <- as.data.frame(p$data$fit)
+  colnames(p_data) <- c("fit", "tfit", "time", "nodeID", "se")
+  
+  pp <- ggplot(
+    data = p_data,
+    aes(x = .data$nodeID, y = .data$time, z = .data$fit)
+  ) +
+    geom_tile(aes(fill = fit)) +
+    geom_contour(colour = "black") +
+    scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
+    scale_fill_viridis(
+      option = "D",
+      name = "Est. FA Fit",
+    ) +
+    labs(
+      title = paste("RTP-Post", tract, "FA Change"),
+      y = "Days",
+      x = "Tract Node"
+    ) +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      legend.text = element_text(size = 8),
+      plot.title = element_text(hjust = 0.5)
+    )
+  return(list("time_diff" = pp))
+}
+
 
 #' Assemble a 1x2 grid of plots.
 #'

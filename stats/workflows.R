@@ -609,6 +609,71 @@ gam_delta_rescan_all <- function(df_afq_rs){
 }
 
 
+#' Title.
+#' 
+#' TODO
+export("gam_delta_tract_time")
+gam_delta_tract_time <- function(df_afq, tract){
+  
+  # Tract FA for post, rtp
+  df_tract <- df_afq[which(df_afq$tract_name == tract), ]
+  df_tract <- subset(df_tract, select = -c(dti_md, dti_ad, dti_rd))
+  df_tract <- df_tract[which(df_tract$scan_name != "base"), ]
+  
+  #
+  df <- stats::reshape(
+    df_tract,
+    idvar = c("subj_id", "tract_name", "node_id"),
+    timevar = "scan_name",
+    direction = "wide"
+  )
+  df$days.rtp_post <- df$scan_date.rtp - df$scan_date.post
+  df$delta.rtp_post <- df$dti_fa.rtp - df$dti_fa.post
+  df <- subset(
+    df, 
+    select = c(subj_id, tract_name, node_id, days.rtp_post, delta.rtp_post)
+  )
+  df$days.rtp_post <- as.numeric(df$days.rtp_post)
+  df <- df[complete.cases(df$days.rtp_post), ]
+  rm(df_tract)
+  
+  # hist(df$days.rtp_post)
+  df <- df[which(df$days.rtp_post < 40), ] #
+  
+  #
+  # fit_DI_time <- fit_gams$mod_di_time(df)
+  
+  rda_dir <- paste0(.analysis_dir(), "/stats_gams/rda_objects/DI_time")
+  dir.create(file.path(rda_dir), showWarnings = F)
+  tract_short <- fit_gams$switch_tract(tract)
+  rds_di <- paste0(
+    rda_dir, "/fit_DI_time_", tract_short, "_fa.Rda"
+  )
+  if (!file.exists(rds_di)) {
+    h_gam <- fit_gams$mod_di_time(df)
+    saveRDS(h_gam, file = rds_di)
+    rm(h_gam)
+  }
+  fit_DI_time <- readRDS(rds_di)
+  
+  #
+  plot_obj <- getViz(fit_DI_time)
+  plot_time <- draw_plots$draw_di_time(plot_obj, tract)
+  
+  #
+  plot_dir <- paste0(.analysis_dir(), "/stats_gams/plots/DI_time")
+  dir.create(file.path(plot_dir), showWarnings = F)
+  ggplot2::ggsave(
+    filename = paste0(plot_dir, "/fit_DI_time_", tract_short, "_fa.png"),
+    plot = plot_time$time_diff,
+    units = "in",
+    height = 8,
+    width = 8,
+    dpi = 600
+  )
+}
+
+
 #' TODO
 #' 
 export("gam_fa_rebase_all")

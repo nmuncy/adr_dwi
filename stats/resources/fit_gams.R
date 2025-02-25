@@ -263,6 +263,35 @@ mod_li <- function(df){
 }
 
 
+
+#' Title.
+#' 
+#' TODO
+export("mod_di_time")
+mod_di_time <- function(df, ks_max = 15, ki_max = 20) {
+  
+  # Fit and return model
+  fam_scalar <- .switch_family("delta")
+  fit_DI_time <- bam(
+    delta.rtp_post ~ s(subj_id, bs = "re") +
+      s(node_id, bs = "tp", k = ks_max, m = 2) +
+      s(days.rtp_post, bs = "tp", k = 5) +
+      ti(
+        node_id, days.rtp_post,
+        bs = c("tp", "tp"), k = c(ki_max, 5), m = 1
+      ),
+    data = df,
+    family = fam_scalar,
+    method = "fREML",
+    discrete = T,
+    nthreads = 12
+  )
+  # gam.check(fit_DI_time)
+  # plot(fit_DI_time)
+  return(fit_DI_time)
+}
+
+
 #' Fit longitudinal HGAM with global, group smooths and wiggliness, 
 #' and scalar-impact interaction smooths.
 #' 

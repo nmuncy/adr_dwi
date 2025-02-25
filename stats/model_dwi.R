@@ -57,6 +57,30 @@ for (tract in tract_list) {
 # grid::grid.newpage(); grid::grid.draw(tract_gams$gam_plots$FA)
 
 
+# Account for number of days between Post and RTP ----
+for(tract in tract_list){
+  workflows$gam_delta_tract_time(df_afq, tract)
+}
+
+
+
+# Model AFQ metrics interactions with IMPACT ----
+
+# Fit interaction smooths between tract and Impact measures
+# CCorb, laThal, lCCs, liFO, lArc, raThal, rCCing, riFO, rUnc.
+tract_roi <- c(
+  tract_list[20], tract_list[1], tract_list[5], tract_list[7], tract_list[13],
+  tract_list[3], tract_list[4], tract_list[8], tract_list[16]
+)
+
+# tract <- tract_roi[6]
+for(tract in tract_roi){
+  fit_intx <- workflows$gams_long_tract_intx(df_afq, df_scan_imp, tract)
+}
+
+
+
+
 # Identify thresholds for GAM sensitivity ----
 #
 # Sources of curvature variance are related to (at least) scan-rescan,
@@ -83,18 +107,4 @@ fit_I <- workflows$gam_fa_rebase_all(df_afq)
 workflows$plot_estimates(fit_LDI, fit_DI_rr, fit_LDI_rs)
 
 
-
-# Model AFQ metrics interactions with IMPACT ----
-
-# Fit interaction smooths between tract and Impact measures
-# CCorb, laThal, lCCs, liFO, lArc, raThal, rCCing, riFO, rUnc.
-tract_roi <- c(
-  tract_list[20], tract_list[1], tract_list[5], tract_list[7], tract_list[13],
-  tract_list[3], tract_list[4], tract_list[8], tract_list[16]
-)
-
-# tract <- tract_roi[6]
-for(tract in tract_roi){
-  fit_intx <- workflows$gams_long_tract_intx(df_afq, df_scan_imp, tract)
-}
 

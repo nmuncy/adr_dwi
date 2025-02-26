@@ -19,9 +19,9 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{authblk}
 
-%% bib
-%\usepackage[style=apa,backend=biber]{biblatex}
-%\addbibresource{./Zotero_EmuUnc.bib}
+% bib - uses better biblatex
+\usepackage[style=apa,backend=biber]{biblatex}
+\addbibresource{./Zotero_adr_dwi.bib}
 
 % figures and tables
 \usepackage{graphicx}
@@ -48,17 +48,16 @@
 \usepackage{caption}
 \DeclareCaptionType{equ}[R Code][]
 
-
 % title page info
 \title{Longitudinal study of concussion-related diffusion MRI changes in college athletes: modeling tracts via hierarchical generalized additive models}
 \date{}
 
 \author[1,*]{Nathan M. Muncy}
+\author[1]{Heather C. Bouchard}
 \author[1]{Aron K. Barbey}
 
-\affil[1]{Center for Brain, Behavior \& Biology, University of Nebraska-Lincoln, Lincoln, Nebraska, USA}
+\affil[1]{Center for Brain, Behavior and Biology, University of Nebraska-Lincoln, Lincoln, Nebraska, USA}
 \affil[*]{Corresponding author.	Email: nmuncy2@unl.edu}
-
 
 % start document
 \begin{document}
@@ -70,7 +69,11 @@
 
 % abstract page
 \begin{abstract}
-Abstract here.
+
+% TODO: Update, finalize.
+
+Sports-related traumatic brain injuries affect 1.6-3.8 million individuals in the US each year, and diffusion weighted imaging can measure the complex timeline of resulting axolemmal changes. Such longitudinal data is difficult to model statistically, however, given the high-dimensionality, semi-parametric and interdependent scalar values, and non-linear spatial (within-tract) and temporal (across visit) properties. Proposal: hierarchical generalized additive models (HGAMs) are well-suited to fit such data with the requisite flexibility and sensitivity to investigate (a) the spatial and temporal changes of white matter tracts, and (b) how such changes relate to diagnostic assessments. Methods: we utilized MRI and IMPACT data collected from 67 college athletes (9 female, age=19.43[1.68]) at three visits: start-of-season, post-concussion, and return-to-play. Diffusion tensors were modeled via constrained spherical deconvolution and probabilistic tractography from pyAFQ yielded 100 scalar values per white matter bundle. Results: By fitting the scalar profiles with longitudinal HGAMs we detected within-tract changes as a function of visit, revealing distinct patterns of post-injury disruption and recovery. Critically, it is unlikely that such changes would have been detected with standard techniques given their linear assumptions and limited dimensionality. Further, we examined whether these evolving diffusion metrics correlated with cognitive outcomes using HGAM tensor product interaction smooths and found moderate evidence linking white matter alterations to IMPACT composite scores. Merit: HGAMs offer a powerful framework to capture the complex progression of brain injury. Our findings suggest that HGAMs enhance our understanding of the spatiotemporal dynamics of brain injury and may enable more accurate tracking of injury and recovery.
+
 \end{abstract}
 
 \vfill
@@ -82,62 +85,91 @@ KEYWORDS: DWI, MRI, GAM, TBI\\
 \label{sec:intro}
 Introduction here.
 
+% TODO: (Heather?) Epidemilogic description of TBI in US, athletes
+% TODO: mTBI sequelae description
+% TODO: DWI and mTBI
+% TODO: Modeling DWI, issues
+% TODO: Purpose - (a) extend GAMs for longitudinal DWI, (b) tensor product interaction smooths for multi-modal analyses
+
 
 \section{Methods}
 \label{sec:meth}
-
 
 \subsection{Participants}
 \label{ssec:meth-part}
 Participants here.
 
+% TODO: Description of participants
+% TODO: IRB statement.
+% TODO: PRISMA of participants and ImPACT, showing unequal numbers across sessions and data modalitites.
 
 \subsection{ImPACT}
 \label{ssec:meth-imp}
 Description of ImPACT.
 
+% TODO: (Heather) Description of ImPACT collection and items.
+
 
 \subsection{MRI Protocol}
 \label{ssec:meth-mri}
-Description of MRI protocol.
+
+Magnetic Resonance Imaging (MRI) data was collected on a 3 Tesla Siemens MAGNETOM Skyra scanner at the Center for Brain, Behavior and Biology (University of Nebraska-Lincoln) utilizing a 32-channel coil. For each of three sessions (Base, Post, and RTP), participants contributed T1 and diffusion weighted images (T1w, DWI). T1w Multi-Echo Magnetization Prepared - RApid GRadient Echo (MEMP-RAGE) structural scans were acquired with the following parameters: TR = 2530 ms, TE = 1.69, 3.55, 5.41, and 7.27 ms, flip angle = 7$^{\circ}$, voxel size = 1 mm$^3$, FoV = 256 $\times$ 256, slices = 176 interleaved. DWI scans were acquired via TR = 3000 ms, TE = 95 ms, flip angle = 90$^{\circ}$, voxel size = 1.719 $\times$ 1.719 $\times$ 2.4 mm$^3$, 134 slices, multi-band acceleration factor = 3, directions = 128, bandwidth = 1500 Hz/Px, shells = 1 (b-value = 1000 s/mm$^2$), reference volumes = 6 (b-values = 0 s/mm$^2$). A set of field maps for the DWI scans were collected using the same acquisition direction (anterior-posterior, AP) and reversed (posterior-anterior, PA).
 
 
 \subsection{MRI Data Processing}
 \label{ssec:meth-mri-proc}
 Description of DWI processing.
 
+% TODO: Preprocessing
+% TODO: Modeling via pyAFQ
+
 
 \subsection{GAM specification}
 \label{ssec:meth-gam}
 Description of GAM.
 
+% TODO: Describe HGAMs
+% TODO: Detail various model specifications (ImPACT, LDI, LGIO_intx) across scalars. Emphasis on LDI/LGI - utilize within-subject variance across time. Emphasis on single model - within-subject variance across tract.
+% TODO: Reference github
+
 
 \section{Results}
 \label{sec:res}
 
+\subsection{ImPACT}
+\label{ssec:res-imp}
+Impact results.
 
-\subsection{Participants}
-\label{ssec:res-participants}
-Demographics and ImPACT.
+% TODO: Composite and total symptom GAM
 
 
 \subsection{DWI Tracts}
 \label{ssec:res-dwi-tract}
 Tract results.
 
+% TODO: LDI, LGIO GAMs
 
 \subsection{DWI Tracts Interactions - ImPACT}
 \label{ssec:res-dwi-imp}
 Description of DWI-ImPACT interaction.
 
+% TODO: Motivate select tracts
+% TODO: LGI_intx, LGIO_intx GAMs tracts - vis_mem?
+
 \subsection{DWI Tracts Interactions - Time}
 \label{ssec:res-dwi-time}
 Description of DWI-time interaction.
+
+% TODO: DI_time GAM results - rSLF?
 
 
 \section{Discussion}
 \label{sec:disc}
 Discussion.
+
+% TODO: Summary/recap
+% TODO: Interpret main findings
+% TODO: Advocate HGAMs for mTBI research
 
 
 % acknowledgment page
@@ -145,9 +177,12 @@ Discussion.
 \label{sec:ack}
 People. Grant.
 
+% TODO: ariana for consulting
+
+
 % write bibliography
 \pagebreak
-%\printbibliography
+\printbibliography
 \pagebreak
 
 

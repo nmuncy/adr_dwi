@@ -1,9 +1,8 @@
 # Get resources and data ----
 library("modules")
 workflows <- modules::use("workflows.R")
-draw_plots <- modules::use("resources/draw_plots.R")
 
-df_afq <- workflows$clean_afq("tbl_afq")
+df_afq <- workflows$get_afq("tbl_afq")
 df_scan_imp <- workflows$get_scan_impact()
 
 
@@ -17,7 +16,6 @@ df_scan_imp <- workflows$get_scan_impact()
 demos <- workflows$basic_demographics()
 sess_count <- workflows$prisma_values(df_afq, df_scan_imp)
 imp_gams <- workflows$impact_gams(df_scan_imp)
-
 
 
 # Model AFQ metrics via HGAMs ----

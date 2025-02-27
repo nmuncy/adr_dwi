@@ -5,6 +5,9 @@
 # get_afq: Get AFQ data from requested table.
 
 import("RMySQL")
+import(dplyr)
+import(lubridate)
+
 
 #' Establish connection with db_adr.
 #'
@@ -160,4 +163,59 @@ get_afq <- function(sess_id = NULL, tract_id = NULL, table_name = "tbl_afq") {
   dbClearResult(db_query)
   dbDisconnect(db_con)
   return(df)
+}
+
+
+#' Pull and clean impact data.
+#'
+#' Update impact names and add days post FU1 (diff_post) for
+#' and subsequent impact assessments.
+#' 
+#' @param an_dir Location of directory for analyses.
+#' @returns Dataframe of impact composite scores.
+export("clean_impact")
+clean_impact <- function(an_dir) {
+  # Check for local csv, read-in or pull from db_adr
+  imp_path <- paste(
+    an_dir, "dataframes", "df_impact.csv",
+    sep = "/"
+  )
+  
+  if (!file.exists(imp_path)) {
+    df <- get_user_comp()
+    utils::write.csv(df, imp_path, row.names = F)
+    rm(df)
+  }
+  df_imp <- utils::read.csv(imp_path)
+  
+  # Manage column types, names
+  df_imp$subj_id <- factor(df_imp$subj_id)
+  df_imp$impact_name <- factor(df_imp$impact_name)
+  df_imp$impact_date <- as.POSIXct(
+    df_imp$impact_date,
+    format = "%Y-%m-%d", tz = "UTC"
+  )
+  colnames(df_imp)[5:10] <- c(
+    "mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl", "tot_symp"
+  )
+  
+  # Calculate days since fu1
+  idx_base <- which(df_imp$impact_name == "base")
+  df_base <- df_imp[idx_base, ]
+  df_post <- df_imp[-c(idx_base), ]
+  rm(df_imp)
+  df_post <- df_post %>%
+    group_by(subj_id, num_tbi) %>%
+    mutate(
+      date = ymd(impact_date),
+      diff_post = as.numeric(date - min(date))
+    )
+  df_post <- subset(df_post, select = -c(date))
+  # names(df_post)[names(df_post) == 'date'] <- 'impact_date'
+  
+  # Return combined dfs
+  df_base$diff_post <- NA
+  df_comb <- rbind(df_base, df_post)
+  rm(df_base, df_post)
+  return(df_comb)
 }

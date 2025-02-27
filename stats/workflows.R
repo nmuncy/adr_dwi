@@ -30,59 +30,6 @@ transform_data <- use("resources/transform_data.R")
 }
 
 
-#' Pull and clean impact data.
-#'
-#' Update impact names and add days post FU1 (diff_post) for
-#' and subsequent impact assessments.
-#'
-#' @returns Dataframe of impact composite scores.
-.clean_impact <- function() {
-  # Check for local csv, read-in or pull from db_adr
-  imp_path <- paste(
-    .analysis_dir(), "dataframes", "df_impact.csv",
-    sep = "/"
-  )
-
-  if (!file.exists(imp_path)) {
-    df <- pull_data$get_user_comp()
-    utils::write.csv(df, imp_path, row.names = F)
-    rm(df)
-  }
-  df_imp <- utils::read.csv(imp_path)
-
-  # Manage column types, names
-  df_imp$subj_id <- factor(df_imp$subj_id)
-  df_imp$impact_name <- factor(df_imp$impact_name)
-  df_imp$impact_date <- as.POSIXct(
-    df_imp$impact_date,
-    format = "%Y-%m-%d", tz = "UTC"
-  )
-  colnames(df_imp)[5:10] <- c(
-    "mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl", "tot_symp"
-  )
-
-  # Calculate days since fu1
-  idx_base <- which(df_imp$impact_name == "base")
-  df_base <- df_imp[idx_base, ]
-  df_post <- df_imp[-c(idx_base), ]
-  rm(df_imp)
-  df_post <- df_post %>%
-    group_by(subj_id, num_tbi) %>%
-    mutate(
-      date = ymd(impact_date),
-      diff_post = as.numeric(date - min(date))
-    )
-  df_post <- subset(df_post, select = -c(date))
-  # names(df_post)[names(df_post) == 'date'] <- 'impact_date'
-
-  # Return combined dfs
-  df_base$diff_post <- NA
-  df_comb <- rbind(df_base, df_post)
-  rm(df_base, df_post)
-  return(df_comb)
-}
-
-
 #' Pull and clean AFQ data.
 #'
 #' Clip tail nodes (x<10, x>89).
@@ -90,8 +37,8 @@ transform_data <- use("resources/transform_data.R")
 #' @param table_name (String) Name of table holding pyAFQ metrics, tbl_afq
 #'  or tbl_afq_rerun.
 #' @returns Dataframe of AFQ tract metrics.
-export("clean_afq")
-clean_afq <- function(table_name) {
+export("get_afq")
+get_afq <- function(table_name) {
   # Validate user args
   if (!table_name %in% c("tbl_afq", "tbl_afq_rerun", "tbl_afq_rescan")) {
     stop(paste("Unexpected table_name:", tbl_name))
@@ -176,8 +123,8 @@ clean_afq <- function(table_name) {
 export("get_scan_impact")
 get_scan_impact <- function() {
   # Get cleaned data.
-  df_imp <- .clean_impact()
-  df_afq <- clean_afq("tbl_afq")
+  df_imp <- pull_data$clean_impact(.analysis_dir())
+  df_afq <- get_afq("tbl_afq")
 
   # Extract scan dates and names
   df_afq <- df_afq[
@@ -263,7 +210,7 @@ basic_demographics <- function(){
   df_demo$sex <- factor(df_demo$sex)
   
   #
-  df_afq <- clean_afq("tbl_afq")
+  df_afq <- get_afq("tbl_afq")
   tract_list <- unique(df_afq$tract_name)
   df_afq <- df_afq[which(
     df_afq$node == 10 & df_afq$tract_name == tract_list[1]

@@ -1,39 +1,38 @@
-# Get resources ----
+# Get resources and data ----
 library("modules")
-# library("gridExtra")
-
 workflows <- modules::use("workflows.R")
 draw_plots <- modules::use("resources/draw_plots.R")
 
-
-# Get cleaned data ----
 df_afq <- workflows$clean_afq("tbl_afq")
 df_scan_imp <- workflows$get_scan_impact()
 
 
-# Determine demographics ----
-demos <- workflows$basic_demographics()
-
-
-# Check Impact measures ----
+# Determine demographics and assess Impact measures ----
 #
-# Show composite distributions, subject-level responses, and clustering.
-imp_smooth <- draw_plots$draw_impact_smooths(df_scan_imp)
-print(imp_smooth)
+# Derive general demographics and determine number of participants
+# with scan and ImPACT data for each session.
+#
+# Then model ImPACT composite and total symptoms measures.
 
-# Subject-level responses, cluster for post visit.
-workflows$impact_better_worse(df_scan_imp)
-imp_clust <- workflows$impact_cluster(df_scan_imp, "post")
+demos <- workflows$basic_demographics()
+sess_count <- workflows$prisma_values(df_afq, df_scan_imp)
+imp_gams <- workflows$impact_gams(df_scan_imp)
+# imp_smooth <- draw_plots$draw_impact_smooths(df_scan_imp)
+# print(imp_smooth)
 
-# PCA stats and plots
-print(imp_clust$stats_pc)
-print(imp_clust$plot_pc$plot_eig)
-print(imp_clust$plot_pc$plot_biplot)
-
-# K-means stats and plots
-print(imp_clust$stats_km)
-print(imp_clust$plot_km)
-draw_plots$draw_impact_pairs(imp_clust$df_sik, c(7:10), 3)
+# # Subject-level responses, cluster for post visit.
+# workflows$impact_better_worse(df_scan_imp)
+# imp_clust <- workflows$impact_cluster(df_scan_imp, "post")
+# 
+# # PCA stats and plots
+# print(imp_clust$stats_pc)
+# print(imp_clust$plot_pc$plot_eig)
+# print(imp_clust$plot_pc$plot_biplot)
+# 
+# # K-means stats and plots
+# print(imp_clust$stats_km)
+# print(imp_clust$plot_km)
+# draw_plots$draw_impact_pairs(imp_clust$df_sik, c(7:10), 3)
 
 
 # Model AFQ metrics via HGAMs ----

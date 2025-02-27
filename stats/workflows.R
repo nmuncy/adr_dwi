@@ -305,6 +305,61 @@ basic_demographics <- function(){
 }
 
 
+#' Title
+#' 
+#' TODO
+export("prisma_values")
+prisma_values <- function(df_afq, df_scan_imp){
+  #
+  df_scan <- 
+    df_afq[which(df_afq$node_id == 10 & df_afq$tract_name == "Right Arcuate"),]
+  df_scan <- subset(df_scan, select = c(subj_id, scan_name, dti_fa))
+  df_imp <- subset(df_scan_imp, select = c(subj_id, scan_name, mem_ver))
+  
+  df <- merge(
+    df_scan, df_imp,
+    by = c("subj_id", "scan_name"),
+    all.x = T
+  )
+  rm(df_scan, df_imp)
+  
+  #
+  sess_count <- list()
+  for(sess in c("base", "post", "rtp")){
+    sess_count[paste0(sess, "_scan")] <- 
+      length(which(df$scan_name == sess & ! is.na(df$dti_fa)))
+    sess_count[paste0(sess, "_imp")] <- 
+      length(which(df$scan_name == sess & ! is.na(df$mem_ver)))
+  }
+  return(sess_count)
+  
+  # library(DiagrammeR)
+  # library(glue)
+  # 
+  # grViz(
+  #   diagram = "digraph flowchart {
+  #     node [
+  #       fontname = times, 
+  #       fontsize = 9, 
+  #       shape = rounded, 
+  #       penwidth = 1.0
+  #     ]
+  #     graph[nodesep = 0.5]
+  #     tab1 [label = '@@1']
+  #     tab2 [label = '@@2']
+  #     tab3 [label = '@@3']
+  #     tab1 -> tab2;
+  #     tab2 -> tab3;
+  #   }
+  #   
+  #   [1]: 'Base (N_scan=67N_imp=61)'
+  #   [2]: 'Post (N_scan=65N_imp=48)'
+  #   [3]: 'RTP (N_scan=56N_imp=32)'"
+  # )
+  
+}
+
+
 #' Identify subjects of K-means groups.
 #'
 #' Identify which subjects are classified in the various k-means groups.
@@ -329,6 +384,121 @@ basic_demographics <- function(){
     df_clust[which(df_clust$km_clust == grp_c_lab), ]$km_grp <- 3
   }
   return(df_clust)
+}
+
+
+#' Title.
+#' 
+#' TODO
+export("impact_gams")
+impact_gams <- function(df_scan_imp){
+  # Make continuous x-axis
+  df_scan_imp$scan_count <- 1
+  df_scan_imp[which(df_scan_imp$scan_name == "post"), ]$scan_count <- 2
+  df_scan_imp[which(df_scan_imp$scan_name == "rtp"), ]$scan_count <- 3
+  
+  # Model each impact measure
+  fit_mem_vis <- fit_gams$mod_imp(df_scan_imp, "mem_vis", fit_meth="prop")
+  fit_mem_ver <- fit_gams$mod_imp(
+    df_scan_imp, "mem_ver", fit_meth="prop", adj_value=-0.01
+  )
+  fit_vis_mot <- fit_gams$mod_imp(df_scan_imp, "vis_mot") # Fit could be better
+  fit_rx_time <- fit_gams$mod_imp(df_scan_imp, "rx_time") # Fit could be better
+  fit_imp_ctl <- fit_gams$mod_imp(df_scan_imp, "imp_ctl", fit_meth="negbin")
+  fit_tot_symp <- fit_gams$mod_imp(df_scan_imp, "tot_symp", fit_meth="negbin")
+  
+  # Draw combined plot
+  grDevices::png(
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/fit_impact.png"
+    ),
+    units = "in",
+    height = 4,
+    width = 6,
+    res = 600
+  )
+  draw_plots$grid_impact_gam(
+    fit_mem_vis, fit_mem_ver, fit_vis_mot, 
+    fit_rx_time, fit_imp_ctl, fit_tot_symp
+  )
+  grDevices::dev.off()
+  
+  return(list(
+    "mem_vis" = fit_mem_vis,
+    "mem_ver" = fit_mem_ver,
+    "vis_mot" = fit_vis_mot,
+    "rx_time" = fit_rx_time,
+    "imp_ctl" = fit_imp_ctl,
+    "tot_symp" = fit_tot_symp
+  ))
+  
+
+  #
+  # beh_list <- colnames(df_scan_imp)[7:12]
+  # beh <- beh_list[3]
+  # 
+  # library(mgcv)
+  # library(fitdistrplus)
+  # library(itsadug)
+  # descdist(df_scan_imp[, beh])
+  # 
+  # hist(df_scan_imp[, beh], breaks=30)
+  # 
+  # fit_beh <- bam(
+  #   tot_symp ~ s(scan_count, bs = "tp", k = 3) +
+  #     s(subj_id, bs = "re"),
+  #   data = df_scan_imp,
+  #   family = gaussian(),
+  #   method = "fREML",
+  #   discrete = T
+  # )
+  # gam.check(fit_beh)
+  # summary(fit_beh)
+  # plot(fit_beh)
+  # 
+  # # Transform all
+  # df_scan_imp$imp_tx <- NA
+  # df_scan_imp$imp_tx <- log(df_scan_imp[, beh])
+  # hist(df_scan_imp$imp_tx)
+  # 
+  # df_scan_imp$imp_tx <- df_scan_imp[, beh]/100
+  # df_scan_imp$imp_tx <- df_scan_imp$imp_tx + 0.01
+  # 
+  # df_scan_imp$imp_tx <- df_scan_imp[, beh] + 0.5
+  # 
+  # hist(df_scan_imp$imp_tx, breaks=30)
+  # descdist(df_scan_imp$imp_tx)
+  # 
+  # fit_tx <- bam(
+  #   tot_symp ~ s(scan_count, bs = "tp", k = 3) +
+  #     s(subj_id, bs = "re"),
+  #   data = df_scan_imp,
+  #   family = nb(),
+  #   method = "fREML",
+  #   discrete = T
+  # )
+  # gam.check(fit_tx)
+  # summary(fit_tx)
+  # plot(fit_tx)
+  # 
+  # fit_tx2 <- bam(
+  #   imp_ctl ~ s(scan_count, bs = "tp", k = 3) +
+  #     s(subj_id, bs = "re"),
+  #   data = df_scan_imp,
+  #   family = poisson(),
+  #   method = "fREML",
+  #   discrete = T
+  # )
+  # gam.check(fit_tx2)
+  # summary(fit_tx2)
+  # plot(fit_tx2)
+  # 
+  # 
+  # library(itsadug)
+  # compareML(fit_beh, fit_tx)
+  # compareML(fit_beh, fit_tx2)
+  # compareML(fit_tx, fit_tx2)
+
 }
 
 

@@ -86,6 +86,51 @@ write_gam_stats <- function(gam_obj, out_file) {
 }
 
 
+#' Title.
+#' 
+#' TODO
+export("mod_imp")
+mod_imp <- function(df, beh, fit_meth="None", adj_value=FALSE){
+  
+  if(fit_meth == "prop"){
+    df$beh_tx <- df[, beh]/100
+    link_fam <- "betar(link = \"logit\")"
+    if(adj_value){df$beh_tx <- df$beh_tx + adj_value}
+  }
+  
+  if(fit_meth == "log"){
+    df$beh_tx <- log(df[, beh])
+    link_fam <- "gaussian()"
+  }
+  
+  if(fit_meth == "gamma"){
+    df$beh_tx <- df[, beh]
+    link_fam <- "Gamma(link = \"log\")"
+    if(adj_value){df$beh_tx <- df$beh_tx + adj_value}
+  }
+  
+  if(fit_meth == "negbin"){
+    df$beh_tx <- df[, beh]
+    link_fam <- "nb()"
+  }
+  
+  if(fit_meth == "None"){
+    df$beh_tx <- df[, beh]
+    link_fam <- "gaussian()"
+  }
+  
+  fit_beh <- bam(
+    beh_tx ~ s(scan_count, bs = "tp", k = 3) +
+      s(subj_id, bs = "re"),
+    data = df,
+    family = link_fam,
+    method = "fREML",
+    discrete = T
+  )
+  return(fit_beh)
+}
+
+
 #' Fit longitudinal HGAM with global, group smooths and wiggliness.
 #' 
 #' Pool within subject across multiple scans. Models scalar name of a single

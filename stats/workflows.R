@@ -349,17 +349,17 @@ impact_gams <- function(df_scan_imp) {
   ))
 
 
-  #
+  # #
   # beh_list <- colnames(df_scan_imp)[7:12]
-  # beh <- beh_list[3]
-  #
+  # beh <- beh_list[6]
+  # 
   # library(mgcv)
   # library(fitdistrplus)
   # library(itsadug)
   # descdist(df_scan_imp[, beh])
-  #
+  # 
   # hist(df_scan_imp[, beh], breaks=30)
-  #
+  # 
   # fit_beh <- bam(
   #   tot_symp ~ s(scan_count, bs = "tp", k = 3) +
   #     s(subj_id, bs = "re"),
@@ -371,20 +371,20 @@ impact_gams <- function(df_scan_imp) {
   # gam.check(fit_beh)
   # summary(fit_beh)
   # plot(fit_beh)
-  #
+  # 
   # # Transform all
   # df_scan_imp$imp_tx <- NA
   # df_scan_imp$imp_tx <- log(df_scan_imp[, beh])
   # hist(df_scan_imp$imp_tx)
-  #
+  # 
   # df_scan_imp$imp_tx <- df_scan_imp[, beh]/100
   # df_scan_imp$imp_tx <- df_scan_imp$imp_tx + 0.01
-  #
+  # 
   # df_scan_imp$imp_tx <- df_scan_imp[, beh] + 0.5
-  #
+  # 
   # hist(df_scan_imp$imp_tx, breaks=30)
   # descdist(df_scan_imp$imp_tx)
-  #
+  # 
   # fit_tx <- bam(
   #   tot_symp ~ s(scan_count, bs = "tp", k = 3) +
   #     s(subj_id, bs = "re"),
@@ -396,7 +396,7 @@ impact_gams <- function(df_scan_imp) {
   # gam.check(fit_tx)
   # summary(fit_tx)
   # plot(fit_tx)
-  #
+  # 
   # fit_tx2 <- bam(
   #   imp_ctl ~ s(scan_count, bs = "tp", k = 3) +
   #     s(subj_id, bs = "re"),
@@ -408,8 +408,8 @@ impact_gams <- function(df_scan_imp) {
   # gam.check(fit_tx2)
   # summary(fit_tx2)
   # plot(fit_tx2)
-  #
-  #
+  # 
+  # 
   # library(itsadug)
   # compareML(fit_beh, fit_tx)
   # compareML(fit_beh, fit_tx2)

@@ -30,64 +30,6 @@ transform_data <- use("resources/transform_data.R")
 }
 
 
-#' Pull and clean AFQ data.
-#'
-#' Clip tail nodes (x<10, x>89).
-#'
-#' @param table_name (String) Name of table holding pyAFQ metrics, tbl_afq
-#'  or tbl_afq_rerun.
-#' @returns Dataframe of AFQ tract metrics.
-export("get_afq")
-get_afq <- function(table_name) {
-  # Validate user args
-  if (!table_name %in% c("tbl_afq", "tbl_afq_rerun", "tbl_afq_rescan")) {
-    stop(paste("Unexpected table_name:", tbl_name))
-  }
-
-  # Check for local csv, read-in data or pull from db_adr.
-  afq_name <- strsplit(table_name, "tbl_")[[1]][2]
-  afq_path <- paste(
-    .analysis_dir(), "dataframes", paste0("df_", afq_name, ".csv"), sep = "/"
-  )
-
-  if (!file.exists(afq_path)) {
-    df <- pull_data$get_afq(table_name = table_name)
-    utils::write.csv(df, afq_path, row.names = F)
-    rm(df)
-  }
-  df_afq <- utils::read.csv(afq_path)
-
-  # Drop specific tracts
-  drop_tracts <- c(
-    "Left Posterior Arcuate",
-    "Right Posterior Arcuate",
-    "Left Vertical Occipital",
-    "Right Vertical Occipital"
-  )
-  df_afq <- df_afq[-which(df_afq$tract_name %in% drop_tracts), ]
-  row.names(df_afq) <- NULL
-
-  # Manage column types, clip tails
-  df_afq$subj_id <- factor(df_afq$subj_id)
-  df_afq$tract_name <- factor(df_afq$tract_name)
-  
-  if (table_name != "tbl_afq_rescan"){
-    df_afq$scan_name <- factor(df_afq$scan_name)
-    df_afq$scan_date <- as.POSIXct(
-      df_afq$scan_date,
-      format = "%Y-%m-%d", tz = "UTC"
-    )
-  } else{
-    colnames(df_afq)[2] <- "scan_id"
-    df_afq$scan_id <- as.character(as.numeric(df_afq$scan_id) + 1)
-    df_afq$scan_id <- factor(df_afq$scan_id)
-  }
-  
-  df_afq <- df_afq[which(df_afq$node_id > 9 & df_afq$node_id < 90), ]
-  return(df_afq)
-}
-
-
 #' Minimize date distance between dfs A, B.
 #'
 #' Identify which date in df B is closest to date
@@ -114,19 +56,76 @@ get_afq <- function(table_name) {
 }
 
 
-#' Get clean Impact and AFQ data.
+#' Pull and clean AFQ data.
+#'
+#' Clip tail nodes (x<10, x>89).
+#'
+#' @param table_name (String) Name of table holding pyAFQ metrics, tbl_afq
+#'  or tbl_afq_rerun.
+#' @returns Dataframe of AFQ tract metrics.
+export("get_data_afq")
+get_data_afq <- function(table_name) {
+  # Validate user args
+  if (!table_name %in% c("tbl_afq", "tbl_afq_rerun", "tbl_afq_rescan")) {
+    stop(paste("Unexpected table_name:", tbl_name))
+  }
+
+  # Check for local csv, read-in data or pull from db_adr.
+  afq_name <- strsplit(table_name, "tbl_")[[1]][2]
+  afq_path <- paste(
+    .analysis_dir(), "dataframes", paste0("df_", afq_name, ".csv"),
+    sep = "/"
+  )
+
+  if (!file.exists(afq_path)) {
+    df <- pull_data$get_afq(table_name = table_name)
+    utils::write.csv(df, afq_path, row.names = F)
+    rm(df)
+  }
+  df_afq <- utils::read.csv(afq_path)
+
+  # Drop specific tracts
+  drop_tracts <- c(
+    "Left Posterior Arcuate",
+    "Right Posterior Arcuate",
+    "Left Vertical Occipital",
+    "Right Vertical Occipital"
+  )
+  df_afq <- df_afq[-which(df_afq$tract_name %in% drop_tracts), ]
+  row.names(df_afq) <- NULL
+
+  # Manage column types, clip tails
+  df_afq$subj_id <- factor(df_afq$subj_id)
+  df_afq$tract_name <- factor(df_afq$tract_name)
+
+  if (table_name != "tbl_afq_rescan") {
+    df_afq$scan_name <- factor(df_afq$scan_name)
+    df_afq$scan_date <- as.POSIXct(
+      df_afq$scan_date,
+      format = "%Y-%m-%d", tz = "UTC"
+    )
+  } else {
+    colnames(df_afq)[2] <- "scan_id"
+    df_afq$scan_id <- as.character(as.numeric(df_afq$scan_id) + 1)
+    df_afq$scan_id <- factor(df_afq$scan_id)
+  }
+
+  df_afq <- df_afq[which(df_afq$node_id > 9 & df_afq$node_id < 90), ]
+  return(df_afq)
+}
+
+
+#' Get clean Impact and combine wtih AFQ data.
 #'
 #' Identify relevant impact visit for scan,
 #' add composites for scan.
 #'
+#' @param df_afq Dataframe containing AFQ data.
 #' @returns Tidy dataframe of Impact and AFQ data.
-export("get_scan_impact")
-get_scan_impact <- function() {
-  # Get cleaned data.
+export("get_data_scan_impact")
+get_data_scan_impact <- function(df_afq) {
+  # Get cleaned impact data, simply AFQ data.
   df_imp <- pull_data$clean_impact(.analysis_dir())
-  df_afq <- get_afq("tbl_afq")
-
-  # Extract scan dates and names
   df_afq <- df_afq[
     which(
       df_afq$node_id == 10 & df_afq$tract_name == "Callosum Anterior Frontal"
@@ -169,7 +168,8 @@ get_scan_impact <- function() {
   )
 
   # Calculate days between scan date and impact date
-  df_post <- df_post[, c(1, 5:6, 2, 4, 3, 7:13)] # Match col order to df_base
+  # df_post <- df_post[, c(1, 5:6, 2, 4, 3, 7:13)] # Match col order to df_base
+  df_post <- df_post[names(df_base)]
   df_scan_imp <- rbind(df_base, df_post)
 
   df_scan_imp <- df_scan_imp %>%
@@ -180,13 +180,12 @@ get_scan_impact <- function() {
     )
   df_scan_imp <- subset(df_scan_imp, select = -c(i_date, s_date))
 
-  # Check for local csv, ead-in data or pull for db_adr.
+  # Check for local csv, read-in data or pull for db_adr.
   out_path <- paste(
     .analysis_dir(), "dataframes", "df_impact_scan.csv",
     sep = "/"
   )
   utils::write.csv(df_scan_imp, out_path, row.names = F)
-
   return(df_scan_imp)
 }
 
@@ -194,12 +193,13 @@ get_scan_impact <- function() {
 
 #' Title.
 #' TODO
-export("basic_demographics")
-basic_demographics <- function(){
+export("get_demographics")
+get_demographics <- function() {
   demo_path <- paste(
-    .analysis_dir(), "dataframes", "df_demographics.csv", sep = "/"
+    .analysis_dir(), "dataframes", "df_demographics.csv",
+    sep = "/"
   )
-  
+
   if (!file.exists(demo_path)) {
     df <- pull_data$get_demographics()
     utils::write.csv(df, demo_path, row.names = F)
@@ -208,21 +208,21 @@ basic_demographics <- function(){
   df_demo <- utils::read.csv(demo_path)
   df_demo$subj_id <- factor(as.character(df_demo$subj_id))
   df_demo$sex <- factor(df_demo$sex)
-  
+
   #
   df_afq <- get_afq("tbl_afq")
   tract_list <- unique(df_afq$tract_name)
   df_afq <- df_afq[which(
     df_afq$node == 10 & df_afq$tract_name == tract_list[1]
   ), ]
-  
+
   #
   df <- merge(
     x = df_afq, y = df_demo, by = "subj_id", all.x = T
   )
   rm(df_afq, df_demo)
   df <- subset(df, select = c("subj_id", "scan_name", "sex", "age_base"))
-  
+
   #
   return(list(
     "sex_scan" = table(df$sex, df$scan_name),
@@ -233,42 +233,42 @@ basic_demographics <- function(){
 
 
 #' Title
-#' 
+#'
 #' TODO
-export("prisma_values")
-prisma_values <- function(df_afq, df_scan_imp){
+export("count_scan_impact")
+count_scan_impact <- function(df_afq, df_scan_imp) {
   #
-  df_scan <- 
-    df_afq[which(df_afq$node_id == 10 & df_afq$tract_name == "Right Arcuate"),]
+  df_scan <-
+    df_afq[which(df_afq$node_id == 10 & df_afq$tract_name == "Right Arcuate"), ]
   df_scan <- subset(df_scan, select = c(subj_id, scan_name, dti_fa))
   df_imp <- subset(df_scan_imp, select = c(subj_id, scan_name, mem_ver))
-  
+
   df <- merge(
     df_scan, df_imp,
     by = c("subj_id", "scan_name"),
     all.x = T
   )
   rm(df_scan, df_imp)
-  
+
   #
   sess_count <- list()
-  for(sess in c("base", "post", "rtp")){
-    sess_count[paste0(sess, "_scan")] <- 
-      length(which(df$scan_name == sess & ! is.na(df$dti_fa)))
-    sess_count[paste0(sess, "_imp")] <- 
-      length(which(df$scan_name == sess & ! is.na(df$mem_ver)))
+  for (sess in c("base", "post", "rtp")) {
+    sess_count[paste0(sess, "_scan")] <-
+      length(which(df$scan_name == sess & !is.na(df$dti_fa)))
+    sess_count[paste0(sess, "_imp")] <-
+      length(which(df$scan_name == sess & !is.na(df$mem_ver)))
   }
   return(sess_count)
-  
+
   # library(DiagrammeR)
   # library(glue)
-  # 
+  #
   # grViz(
   #   diagram = "digraph flowchart {
   #     node [
-  #       fontname = times, 
-  #       fontsize = 9, 
-  #       shape = rounded, 
+  #       fontname = times,
+  #       fontsize = 9,
+  #       shape = rounded,
   #       penwidth = 1.0
   #     ]
   #     graph[nodesep = 0.5]
@@ -278,35 +278,51 @@ prisma_values <- function(df_afq, df_scan_imp){
   #     tab1 -> tab2;
   #     tab2 -> tab3;
   #   }
-  #   
+  #
   #   [1]: 'Base (N_scan=67N_imp=61)'
   #   [2]: 'Post (N_scan=65N_imp=48)'
   #   [3]: 'RTP (N_scan=56N_imp=32)'"
   # )
-  
 }
 
 
 #' Title.
-#' 
+#'
 #' TODO
 export("impact_gams")
-impact_gams <- function(df_scan_imp){
+impact_gams <- function(df_scan_imp) {
   # Make continuous x-axis
   df_scan_imp$scan_count <- 1
   df_scan_imp[which(df_scan_imp$scan_name == "post"), ]$scan_count <- 2
   df_scan_imp[which(df_scan_imp$scan_name == "rtp"), ]$scan_count <- 3
-  
-  # Model each impact measure
-  fit_mem_vis <- fit_gams$mod_imp(df_scan_imp, "mem_vis", fit_meth="prop")
+
+  # Model each impact measure, capture summary
+  out_dir <- paste0(.analysis_dir(), "/stats_gams/gam_summaries/G_impact")
+  dir.create(file.path(out_dir), showWarnings = F)
+  out_pref <- paste0(out_dir, "/fit_G_impact_")
+
+  fit_mem_vis <- fit_gams$mod_imp(df_scan_imp, "mem_vis", fit_meth = "prop")
+  fit_gams$write_gam_stats(fit_mem_vis, paste0(out_pref, "mem_vis.txt"))
+
   fit_mem_ver <- fit_gams$mod_imp(
-    df_scan_imp, "mem_ver", fit_meth="prop", adj_value=-0.01
+    df_scan_imp, "mem_ver",
+    fit_meth = "prop", adj_value = -0.01
   )
+  fit_gams$write_gam_stats(fit_mem_ver, paste0(out_pref, "mem_ver.txt"))
+
   fit_vis_mot <- fit_gams$mod_imp(df_scan_imp, "vis_mot") # Fit could be better
+  fit_gams$write_gam_stats(fit_vis_mot, paste0(out_pref, "vis_mot.txt"))
+
   fit_rx_time <- fit_gams$mod_imp(df_scan_imp, "rx_time") # Fit could be better
-  fit_imp_ctl <- fit_gams$mod_imp(df_scan_imp, "imp_ctl", fit_meth="negbin")
-  fit_tot_symp <- fit_gams$mod_imp(df_scan_imp, "tot_symp", fit_meth="negbin")
-  
+  fit_gams$write_gam_stats(fit_rx_time, paste0(out_pref, "rx_time.txt"))
+
+  fit_imp_ctl <- fit_gams$mod_imp(df_scan_imp, "imp_ctl", fit_meth = "negbin")
+  fit_gams$write_gam_stats(fit_imp_ctl, paste0(out_pref, "imp_ctl.txt"))
+
+  fit_tot_symp <- fit_gams$mod_imp(df_scan_imp, "tot_symp", fit_meth = "negbin")
+  fit_gams$write_gam_stats(fit_tot_symp, paste0(out_pref, "tot_symp.txt"))
+
+
   # Draw combined plot
   grDevices::png(
     filename = paste0(
@@ -318,11 +334,11 @@ impact_gams <- function(df_scan_imp){
     res = 600
   )
   draw_plots$grid_impact_gam(
-    fit_mem_vis, fit_mem_ver, fit_vis_mot, 
+    fit_mem_vis, fit_mem_ver, fit_vis_mot,
     fit_rx_time, fit_imp_ctl, fit_tot_symp
   )
   grDevices::dev.off()
-  
+
   return(list(
     "mem_vis" = fit_mem_vis,
     "mem_ver" = fit_mem_ver,
@@ -331,19 +347,19 @@ impact_gams <- function(df_scan_imp){
     "imp_ctl" = fit_imp_ctl,
     "tot_symp" = fit_tot_symp
   ))
-  
+
 
   #
   # beh_list <- colnames(df_scan_imp)[7:12]
   # beh <- beh_list[3]
-  # 
+  #
   # library(mgcv)
   # library(fitdistrplus)
   # library(itsadug)
   # descdist(df_scan_imp[, beh])
-  # 
+  #
   # hist(df_scan_imp[, beh], breaks=30)
-  # 
+  #
   # fit_beh <- bam(
   #   tot_symp ~ s(scan_count, bs = "tp", k = 3) +
   #     s(subj_id, bs = "re"),
@@ -355,20 +371,20 @@ impact_gams <- function(df_scan_imp){
   # gam.check(fit_beh)
   # summary(fit_beh)
   # plot(fit_beh)
-  # 
+  #
   # # Transform all
   # df_scan_imp$imp_tx <- NA
   # df_scan_imp$imp_tx <- log(df_scan_imp[, beh])
   # hist(df_scan_imp$imp_tx)
-  # 
+  #
   # df_scan_imp$imp_tx <- df_scan_imp[, beh]/100
   # df_scan_imp$imp_tx <- df_scan_imp$imp_tx + 0.01
-  # 
+  #
   # df_scan_imp$imp_tx <- df_scan_imp[, beh] + 0.5
-  # 
+  #
   # hist(df_scan_imp$imp_tx, breaks=30)
   # descdist(df_scan_imp$imp_tx)
-  # 
+  #
   # fit_tx <- bam(
   #   tot_symp ~ s(scan_count, bs = "tp", k = 3) +
   #     s(subj_id, bs = "re"),
@@ -380,7 +396,7 @@ impact_gams <- function(df_scan_imp){
   # gam.check(fit_tx)
   # summary(fit_tx)
   # plot(fit_tx)
-  # 
+  #
   # fit_tx2 <- bam(
   #   imp_ctl ~ s(scan_count, bs = "tp", k = 3) +
   #     s(subj_id, bs = "re"),
@@ -392,13 +408,12 @@ impact_gams <- function(df_scan_imp){
   # gam.check(fit_tx2)
   # summary(fit_tx2)
   # plot(fit_tx2)
-  # 
-  # 
+  #
+  #
   # library(itsadug)
   # compareML(fit_beh, fit_tx)
   # compareML(fit_beh, fit_tx2)
   # compareML(fit_tx, fit_tx2)
-
 }
 
 
@@ -411,8 +426,8 @@ impact_gams <- function(df_scan_imp){
 #' @param df_afq Dataframe containing AFQ data.
 #' @param make_plots Logical, whether to draw all tract grids.
 #' @returns mgcv::bam fit object.
-export("gam_delta_long_all")
-gam_delta_long_all <- function(df_afq, make_plots = T) {
+export("dwi_gam_delta_all")
+dwi_gam_delta_all <- function(df_afq, make_plots = T) {
   analysis_dir <- .analysis_dir()
 
   # Calculate delta and run model
@@ -424,9 +439,9 @@ gam_delta_long_all <- function(df_afq, make_plots = T) {
     rm(h_gam)
   }
   fit_LDI <- readRDS(rds_ldi)
-  
+
   # Generate grids of post-base and rtp-base.
-  if(make_plots == FALSE){
+  if (make_plots == FALSE) {
     return(fit_LDI)
   }
 
@@ -438,7 +453,7 @@ gam_delta_long_all <- function(df_afq, make_plots = T) {
 
   # Get indices of tract smooths and their names
   idx_smooths <- transform_data$idx_ldi_smooths(fit_LDI)
-  
+
   # Draw combined plot
   grDevices::png(
     filename = paste0(
@@ -453,7 +468,7 @@ gam_delta_long_all <- function(df_afq, make_plots = T) {
     fit_LDI, idx_smooths$post, idx_smooths$rtp, idx_smooths$names
   )
   grDevices::dev.off()
-  
+
   # Identify max deflections from zero
   df_max <- quick_stats$max_deflect(fit_LDI, idx_smooths$all)
   out_csv <- paste0(
@@ -461,8 +476,9 @@ gam_delta_long_all <- function(df_afq, make_plots = T) {
   )
   utils::write.csv(df_max, out_csv, row.names = F)
 
+  # Draw individual tract smooths
   c <- 1 # Use counter to align name with post and rtp tract smooths
-  while (c < length(idx_smooths$names)) {
+  while (c <= length(idx_smooths$names)) {
     h_tract <- fit_gams$switch_tract(idx_smooths$names[c])
     grDevices::png(
       filename = paste0(
@@ -474,7 +490,7 @@ gam_delta_long_all <- function(df_afq, make_plots = T) {
       res = 600
     )
     draw_plots$grid_ldi(
-      fit_LDI, idx_smooths$names[c], "FA", 
+      fit_LDI, idx_smooths$names[c], "FA",
       idx_smooths$post[c], idx_smooths$rtp[c]
     )
     grDevices::dev.off()
@@ -484,19 +500,16 @@ gam_delta_long_all <- function(df_afq, make_plots = T) {
 }
 
 
-
-
 #' Title.
-#' 
+#'
 #' TODO
-export("gam_delta_tract_time")
-gam_delta_tract_time <- function(df_afq, tract){
-  
+export("dwi_gam_delta_time")
+dwi_gam_delta_time <- function(df_afq, tract) {
   # Tract FA for post, rtp
   df_tract <- df_afq[which(df_afq$tract_name == tract), ]
   df_tract <- subset(df_tract, select = -c(dti_md, dti_ad, dti_rd))
   df_tract <- df_tract[which(df_tract$scan_name != "base"), ]
-  
+
   #
   df <- stats::reshape(
     df_tract,
@@ -507,19 +520,19 @@ gam_delta_tract_time <- function(df_afq, tract){
   df$days.rtp_post <- df$scan_date.rtp - df$scan_date.post
   df$delta.rtp_post <- df$dti_fa.rtp - df$dti_fa.post
   df <- subset(
-    df, 
+    df,
     select = c(subj_id, tract_name, node_id, days.rtp_post, delta.rtp_post)
   )
   df$days.rtp_post <- as.numeric(df$days.rtp_post)
   df <- df[complete.cases(df$days.rtp_post), ]
   rm(df_tract)
-  
+
   # hist(df$days.rtp_post)
   df <- df[which(df$days.rtp_post < 40), ] #
-  
+
   #
   # fit_DI_time <- fit_gams$mod_di_time(df)
-  
+
   rda_dir <- paste0(.analysis_dir(), "/stats_gams/rda_objects/DI_time")
   dir.create(file.path(rda_dir), showWarnings = F)
   tract_short <- fit_gams$switch_tract(tract)
@@ -532,11 +545,11 @@ gam_delta_tract_time <- function(df_afq, tract){
     rm(h_gam)
   }
   fit_DI_time <- readRDS(rds_di)
-  
+
   #
   plot_obj <- getViz(fit_DI_time)
   plot_time <- draw_plots$draw_di_time(plot_obj, tract)
-  
+
   #
   plot_dir <- paste0(.analysis_dir(), "/stats_gams/plots/DI_time")
   dir.create(file.path(plot_dir), showWarnings = F)
@@ -549,9 +562,6 @@ gam_delta_tract_time <- function(df_afq, tract){
     dpi = 600
   )
 }
-
-
-
 
 
 #' Fit and coordinate plotting of longitudinal HGAMs.
@@ -640,8 +650,8 @@ gam_delta_tract_time <- function(df_afq, tract){
 #' @param tract String, name of AFQ tract (corresponds to df_afq$tract_name).
 #' @returns Nested named with FA, AD, RD, MD objects for GAM fit (gam_LGI),
 #'    ordered GAM fit (gam_LGIO), and LGIO plots (gam_plots).
-export("gams_long_tract")
-gams_long_tract <- function(df_afq, tract) {
+export("dwi_gam_long_tract")
+dwi_gam_long_tract <- function(df_afq, tract) {
   # Subset dataframe by tract
   df <- df_afq[which(df_afq$tract_name == tract), ]
 
@@ -724,15 +734,13 @@ gams_long_tract <- function(df_afq, tract) {
 #' Fit DWI scalars X Impact with longitudinal HGAMs.
 #'
 #' TODO
-export("gams_long_tract_intx")
-gams_long_tract_intx <- function(df_afq, df_scan_imp, tract) {
-  # # Validate user args
-  # if (!impact_meas %in%
-  #     c("mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl", "tot_symp")
-  # ) {
-  #   stop("Unexpected impact_meas")
-  # }
-  impact_meas <- .tract_impact(as.character(tract))
+export("dwi_gam_long_impact")
+dwi_gam_long_impact <- function(
+    df_afq, df_scan_imp, tract, impact_meas = "planned") {
+  # Manage pre-planned or user-specified impact measure
+  if (impact_meas == "planned") {
+    impact_meas <- .tract_impact(as.character(tract))
+  }
 
   #  Subset tract data and add impact measure
   df <- df_afq[which(df_afq$tract_name == tract), ]
@@ -815,4 +823,3 @@ gams_long_tract_intx <- function(df_afq, df_scan_imp, tract) {
     gam_LGIO_intx = fit_LGIO_intx
   ))
 }
-

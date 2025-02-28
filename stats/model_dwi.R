@@ -2,8 +2,8 @@
 library("modules")
 workflows <- modules::use("workflows.R")
 
-df_afq <- workflows$get_afq("tbl_afq")
-df_scan_imp <- workflows$get_scan_impact()
+df_afq <- workflows$get_data_afq("tbl_afq")
+df_scan_imp <- workflows$get_data_scan_impact(df_afq)
 
 
 # Determine demographics and assess Impact measures ----
@@ -13,8 +13,8 @@ df_scan_imp <- workflows$get_scan_impact()
 #
 # Then model ImPACT composite and total symptoms measures.
 
-demos <- workflows$basic_demographics()
-sess_count <- workflows$prisma_values(df_afq, df_scan_imp)
+demos <- workflows$get_demographics()
+sess_count <- workflows$count_scan_impact(df_afq, df_scan_imp)
 imp_gams <- workflows$impact_gams(df_scan_imp)
 
 
@@ -22,38 +22,33 @@ imp_gams <- workflows$impact_gams(df_scan_imp)
 #
 # Conduct longitudinal HGAM of tract FA differences (LDI), longitudinal
 # HGAM of scalars for each tract (LGI, LGIO), and then interactions
-# with impact measures.
-#
-# TODO GAMs of scalars for post by k-means group?
+# with time and ImPACT measures.
 
-# Fit FA differences between scan times for all tracts
-fit_LDI <- workflows$gam_delta_long_all(df_afq, make_plots = F)
+fit_LDI <- workflows$dwi_gam_delta_all(df_afq, make_plots = F)
 
-
-# Fit LGAM (LGI, LGIO) of individual tracts for FA, MD, RD, AD scalars
 tract_list <- unique(df_afq$tract_name)
 for (tract in tract_list) {
-  tract_gams <- workflows$gams_long_tract(df_afq, tract)
+  tract_gams <- workflows$dwi_gam_long_tract(df_afq, tract)
 }
 
-
-
-# Account for number of days between Post and RTP ----
 for(tract in tract_list){
-  workflows$gam_delta_tract_time(df_afq, tract)
+  workflows$dwi_gam_delta_time(df_afq, tract)
 }
 
-
-
-# Model AFQ metrics interactions with IMPACT ----
-
-# Fit interaction smooths between tract and Impact measures
-# CCorb, laThal, lCCs, liFO, lArc, raThal, rCCing, riFO, rUnc.
+# Select specific tracts: CCorb, laThal, lCCs, 
+#  liFO, lArc, raThal, rCCing, riFO, rUnc.
 tract_roi <- c(
   tract_list[20], tract_list[1], tract_list[5], tract_list[7], tract_list[13],
   tract_list[3], tract_list[4], tract_list[8], tract_list[16]
 )
 for(tract in tract_roi){
-  fit_intx <- workflows$gams_long_tract_intx(df_afq, df_scan_imp, tract)
+  fit_intx <- workflows$dwi_gam_long_impact(df_afq, df_scan_imp, tract)
 }
 
+# Only test for CC and vis_mem interactions
+tract_roi <- tract_list[17:24]
+for(tract in tract_roi){
+  fit_intx <- workflows$dwi_gam_long_impact(
+    df_afq, df_scan_imp, tract, impact_meas="mem_vis"
+  )
+}

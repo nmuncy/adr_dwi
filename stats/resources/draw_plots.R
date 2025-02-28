@@ -118,6 +118,90 @@ draw_impact_smooths <- function(df_scan_imp) {
 }
 
 
+#' TItle.
+#' 
+#' TODO
+export("draw_impact_gam")
+draw_impact_gam <- function(plot_obj, imp_meas, write_x=FALSE, tx_meth="None"){
+  p <- plot(sm(plot_obj, 1))
+  p_data <- as.data.frame(p$data$fit)
+  
+  # if(tx_meth == "log"){
+  #   p_data$mem_vis_utx <- exp(p_data$mem_vis)
+  #   p_data$lb <- exp(p_data$mem_vis-2*p_data$se)
+  #   p_data$ub <- exp(p_data$mem_vis+2*p_data$se)
+  # }
+
+  pp <- ggplot(
+    data = p_data,
+    aes(x = .data$x, y = .data$y)
+  ) +
+    geom_ribbon(
+      aes(ymin=.data$y-2*.data$se, ymax=.data$y+2*.data$se), 
+      alpha=0.25
+    ) +
+    geom_line(aes(y=.data$y)) +
+    geom_hline(yintercept = 0) +
+    scale_x_continuous(breaks = 1:3) +
+    scale_y_continuous(labels = scales::number_format(accuracy = 0.01)) +
+    labs(title = .meas_short_names(imp_meas)) +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      legend.text = element_text(size = 8),
+      plot.title = element_text(hjust = 0.5, size=10),
+      axis.title.y = element_blank()
+    )
+  
+  if(write_x){
+    pp <- pp + labs(x = "Assessment Number") + theme(axis.title.x = element_text(size=10))
+  } else {
+    pp <- pp + theme(axis.title.x = element_blank())
+  }
+  return(pp)
+}
+
+
+#' Title.
+#' 
+#' TODO
+export("grid_impact_gam")
+grid_impact_gam <- function(
+    fit_mem_vis, fit_mem_ver, fit_vis_mot, 
+    fit_rx_time, fit_imp_ctl, fit_tot_symp
+  ){
+  
+  plot_mem_vis <- draw_impact_gam(getViz(fit_mem_vis), "mem_vis")
+  plot_mem_ver <- draw_impact_gam(getViz(fit_mem_ver), "mem_ver")
+  plot_vis_mot <- draw_impact_gam(getViz(fit_vis_mot), "vis_mot")
+  plot_rx_time <- draw_impact_gam(getViz(fit_rx_time), "rx_time", write_x=TRUE)
+  plot_imp_ctl <- draw_impact_gam(getViz(fit_imp_ctl), "imp_ctl", write_x=TRUE)
+  plot_tot_symp <- draw_impact_gam(getViz(fit_tot_symp), "tot_symp", write_x=TRUE)
+  
+  # 
+  col1_name <- col3_name <- text_grob("", size = 12, family = "Times New Roman")
+  col2_name <- text_grob("ImPACT Composite Scores", size = 12, family = "Times New Roman")
+  bot1_name <- bot2_name <- bot3_name <- 
+    text_grob("", size = 10, family = "Times New Roman")
+  l2_name <- l3_name <- text_grob("", size = 12, family = "Times New Roman")
+  l1_name <- text_grob("Est. Fit", size = 10, family = "Times New Roman", rot=90)
+  
+  pOut <- grid.arrange(
+    arrangeGrob(plot_mem_vis, top = col1_name, left = l1_name),
+    arrangeGrob(plot_mem_ver, top = col2_name, left = l2_name),
+    arrangeGrob(plot_vis_mot, top = col3_name, left = l3_name),
+    arrangeGrob(plot_rx_time, bottom = bot1_name, left = l1_name),
+    arrangeGrob(plot_imp_ctl, bottom = bot2_name, left = l2_name),
+    arrangeGrob(plot_tot_symp, bottom = bot3_name, left = l3_name),
+    nrow = 2,
+    ncol = 3,
+    widths = c(1, 1, 1),
+    heights = c(1, 1)
+  )
+  print(pOut)
+  
+}
+
+
 #' Draw PCA eigenvector, biplots.
 #'
 #' @param stats_pc Object returned by stats::prcomp.
@@ -573,6 +657,39 @@ draw_is_intx <- function(
   return(list("group" = pp))
 }
 
+
+#' Title.
+#' 
+#' TODO
+export("draw_di_time")
+draw_di_time <- function(plot_obj, tract, x_min = 10, x_max = 89){
+  p <- plot(sm(plot_obj, 4))
+  p_data <- as.data.frame(p$data$fit)
+  colnames(p_data) <- c("fit", "tfit", "time", "nodeID", "se")
+  
+  pp <- ggplot(
+    data = p_data,
+    aes(x = .data$nodeID, y = .data$time, z = .data$fit)
+  ) +
+    geom_tile(aes(fill = fit)) +
+    geom_contour(colour = "black") +
+    scale_x_continuous(breaks = c(seq(x_min, x_max, by = 10), x_max)) +
+    scale_fill_viridis(
+      option = "D",
+      name = "Est. FA Fit",
+    ) +
+    labs(
+      title = paste("RTP-Post", tract, "FA Change"),
+      y = "Days",
+      x = "Tract Node"
+    ) +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      legend.text = element_text(size = 8),
+      plot.title = element_text(hjust = 0.5)
+    )
+  return(list("time_diff" = pp))
+}
 
 
 #' Assemble a 1x2 grid of plots.

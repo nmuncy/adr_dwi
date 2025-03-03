@@ -49,7 +49,7 @@
 \DeclareCaptionType{equ}[R Code][]
 
 % title page info
-\title{Longitudinal study of concussion-related diffusion MRI changes in college athletes: modeling tracts via hierarchical generalized additive models}
+\title{Longitudinal study of concussion-related diffusion MRI changes in college athletes}
 \date{}
 
 \author[1,*]{Nathan M. Muncy}
@@ -97,11 +97,8 @@ Introduction here.
 
 \subsection{Participants}
 \label{ssec:meth-part}
-Participants here.
+Participants were recruited from men's football and women's soccer programs at the University of Nebraska-Lincoln, which resulted in a total of 69 (9 female, age = 19.36 $\pm$1.67, range = 17-24) National Collegiate Athletic Association (NCAA) athletes. Due to the limited number of females, and the sport-sex interaction confound, we combined all participants into a single group. Institutional Review Board approval was obtained at the outset of the study, and prior to beginning experimental procedures participants completed informed consent and assent. Magnetic Resonant Imaging (MRI) and clinical assessment (ImPACT, described below) data were acquired at three sessions: enrollment at the beginning of the season (baseline, Base), within 48 hours of diagnosed concussion (post-concussion, Post), and prior to return-to-play (RTP). A number of participants did not contribute data for Base, Post, and/or RTP sessions yielding final counts of Base = 67 (9 female), Post = 65 (8 female), and RTP = 56 (7 female).
 
-% TODO: Description of participants
-% TODO: IRB statement.
-% TODO: PRISMA of participants and ImPACT, showing unequal numbers across sessions and data modalitites.
 
 \subsection{ImPACT}
 \label{ssec:meth-imp}
@@ -113,15 +110,17 @@ Description of ImPACT.
 \subsection{MRI Protocol}
 \label{ssec:meth-mri}
 
-Magnetic Resonance Imaging (MRI) data was collected on a 3 Tesla Siemens MAGNETOM Skyra scanner at the Center for Brain, Behavior and Biology (University of Nebraska-Lincoln) utilizing a 32-channel coil. For each of three sessions (Base, Post, and RTP), participants contributed T1 and diffusion weighted images (T1w, DWI). T1w Multi-Echo Magnetization Prepared - RApid GRadient Echo (MEMP-RAGE) structural scans were acquired with the following parameters: TR = 2530 ms, TE = 1.69, 3.55, 5.41, and 7.27 ms, flip angle = 7$^{\circ}$, voxel size = 1 mm$^3$, FoV = 256 $\times$ 256, slices = 176 interleaved. DWI scans were acquired via TR = 3000 ms, TE = 95 ms, flip angle = 90$^{\circ}$, voxel size = 1.719 $\times$ 1.719 $\times$ 2.4 mm$^3$, 134 slices, multi-band acceleration factor = 3, directions = 128, bandwidth = 1500 Hz/Px, shells = 1 (b-value = 1000 s/mm$^2$), reference volumes = 6 (b-values = 0 s/mm$^2$). A set of field maps for the DWI scans were collected using the same acquisition direction (anterior-posterior, AP) and reversed (posterior-anterior, PA).
+Magnetic Resonance Imaging data were collected on a 3 Tesla Siemens MAGNETOM Skyra scanner at the Center for Brain, Behavior and Biology (University of Nebraska-Lincoln) utilizing a 32-channel coil. For each of three sessions (Base, Post, and RTP), participants contributed T1 and diffusion weighted images (T1w, DWI). T1w Multi-Echo Magnetization Prepared - RApid GRadient Echo (MEMP-RAGE) structural scans were acquired with the following parameters: TR = 2530 ms, TE = 1.69, 3.55, 5.41, and 7.27 ms, flip angle = 7$^{\circ}$, voxel size = 1 mm$^3$, FoV = 256 $\times$ 256, slices = 176 interleaved. DWI scans were acquired via TR = 3000 ms, TE = 95 ms, flip angle = 90$^{\circ}$, voxel size = 1.719 $\times$ 1.719 $\times$ 2.4 mm$^3$, 134 slices, multi-band acceleration factor = 3, directions = 128, bandwidth = 1500 Hz/Px, shells = 1 (b-value = 1000 s/mm$^2$), reference volumes = 6 (b-values = 0 s/mm$^2$; b$_0$). A set of field maps for the DWI scans were collected using the same acquisition direction (anterior-posterior, AP) and reversed (posterior-anterior, PA).
 
 
 \subsection{MRI Data Processing}
 \label{ssec:meth-mri-proc}
-Description of DWI processing.
+Preprocessing and modeling of the DWI data were conducted using FSL v6.0 \parencite{jenkinson2012Fsl} and PyAFQ v1.3.6 \parencite{kruper2021EvaluatingReliabilityHuman,yeatman2012TractProfilesWhite}. First, b$_0$ volumes from A$>>$P and P$>>$A field map files were extracted and combined, as were their acquisition parameters. Next, \lstinline{topup} calculated a distortion correction matrix from the AP-PA b$_0$ file. A brain mask was generated via \lstinline{bet}, and an index file was generated to describe the relationship between the DWI volumes and their acquisition parameters. Preprocessing of DWI was then conducted via \lstinline{eddy_openmp}, which generated motion- and distortion-corrected diffusion images.
 
-% TODO: Preprocessing
-% TODO: Modeling via pyAFQ
+Whole-brain tractography was computed from the preprocessed DWI by PyAFQ. Constrained spherical deconvolution was used to derive the fiber orientation distribution function of each voxel, and probabilistic tractography modeled fiber paths using one seed per voxel for each dimension, a maximum turning angle of 30$^\circ$, step size = 0.5 mm, and a length range = 50-250 mm. The resulting fibers were then parcellated into individual tracts via \textit{a priori} inclusion (waypoint) and exclusion regions of interest (ROIs); waypoint and exclusion ROIs are moved from MNI atlas into participant space via a symmetric, non-linear diffeomorphic transformation \parencite{wakana2007ReproducibilityQuantitativeTractography}. Resulting tracts are then compared to fiber probability maps \parencite{hua2008TractProbabilityMaps}, and any fibers which traverse low-probability spaces are removed from the tract. Further, any fibers with a length 4+ standard deviations from the tract average, or 5+ standard deviations from the average path centroid, are removed as well. Lastly, each tract was then resampled into 100 equidistant nodes (according to a Mahalanobis distance metric) for which averaged diffusion values and scalars were calculated. Specifically, for each tract node we extracted averaged axial diffusivity ($\lambda_\parallel$; AD), radial diffusivity ($(\lambda_{\perp1}+\lambda_{\perp2})/2$; RD), mean diffusivity ($(\lambda_\parallel+\lambda_{\perp1}+\lambda_{\perp2})/3$; MD), and fractional anisotropy (FA).
+
+% TODO: Cite that CSD, prob tract are better for TBI?
+
 
 
 \subsection{GAM specification}
@@ -151,7 +150,7 @@ Tract results.
 
 \subsection{DWI Tracts Interactions - ImPACT}
 \label{ssec:res-dwi-imp}
-Description of DWI-ImPACT interaction.
+Description of DWI - ImPACT interaction.
 
 % TODO: Motivate select tracts
 % TODO: LGI_intx, LGIO_intx GAMs tracts - vis_mem?

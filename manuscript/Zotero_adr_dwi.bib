@@ -1,3 +1,40 @@
+@article{hua2008TractProbabilityMaps,
+  title = {Tract Probability Maps in Stereotaxic Spaces: Analyses of White Matter Anatomy and Tract-Specific Quantification},
+  shorttitle = {Tract Probability Maps in Stereotaxic Spaces},
+  author = {Hua, Kegang and Zhang, Jiangyang and Wakana, Setsu and Jiang, Hangyi and Li, Xin and Reich, Daniel S. and Calabresi, Peter A. and Pekar, James J. and {van Zijl}, Peter CM and Mori, Susumu},
+  year = {2008},
+  journal = {Neuroimage},
+  volume = {39},
+  number = {1},
+  pages = {336--347}
+}
+
+@article{jenkinson2012Fsl,
+  title = {Fsl},
+  author = {Jenkinson, Mark and Beckmann, Christian F. and Behrens, Timothy EJ and Woolrich, Mark W. and Smith, Stephen M.},
+  year = {2012},
+  journal = {NeuroImage},
+  volume = {62},
+  number = {2},
+  pages = {782--790},
+  issn = {1053-8119}
+}
+
+@article{kruper2021EvaluatingReliabilityHuman,
+  title = {Evaluating the {{Reliability}} of {{Human Brain White Matter Tractometry}}},
+  author = {Kruper, John and Yeatman, Jason D. and {Richie-Halford}, Adam and Bloom, David and Grotheer, Mareike and Caffarra, Sendy and Kiar, Gregory and Karipidis, Iliana I. and Roy, Ethan and Chandio, Bramsh Q. and Garyfallidis, Eleftherios and Rokem, Ariel},
+  year = {2021},
+  journal = {Aperture neuro},
+  volume = {1},
+  number = {1},
+  pages = {10.52294/e6198273-b8e3-4b63-babb-6e6b0da10669},
+  doi = {10.52294/e6198273-b8e3-4b63-babb-6e6b0da10669},
+  urldate = {2025-01-15},
+  abstract = {The validity of research results depends on the reliability of analysis methods. In recent years, there have been concerns about the validity of research that uses diffusion-weighted MRI (dMRI) to understand human brain white matter connections in vivo, in part based on the reliability of analysis methods used in this field. We defined and assessed three dimensions of reliability in dMRI-based tractometry, an analysis technique that assesses the physical properties of white matter pathways: (1) reproducibility, (2) test-retest reliability, and (3) robustness. To facilitate reproducibility, we provide software that automates tractometry (https://yeatmanlab.github.io/pyAFQ). In measurements from the Human Connectome Project, as well as clinical-grade measurements, we find that tractometry has high test-retest reliability that is comparable to most standardized clinical assessment tools. We find that tractometry is also robust: showing high reliability with different choices of analysis algorithms. Taken together, our results suggest that tractometry is a reliable approach to analysis of white matter connections. The overall approach taken here both demonstrates the specific trustworthiness of tractometry analysis and outlines what researchers can do to establish the reliability of computational analysis pipelines in neuroimaging.},
+  pmcid = {PMC8785971},
+  pmid = {35079748}
+}
+
 @article{muncy2022GeneralAdditiveModels,
   title = {General Additive Models Address Statistical Issues in Diffusion {{MRI}}: {{An}} Example with Clinically Anxious Adolescents},
   shorttitle = {General Additive Models Address Statistical Issues in Diffusion {{MRI}}},
@@ -31,4 +68,32 @@
   urldate = {2022-02-01},
   abstract = {In this paper, we discuss an extension to two popular approaches to modeling complex structures in ecological data: the generalized additive model (GAM) and the hierarchical model (HGLM). The hierarchical GAM (HGAM), allows modeling of nonlinear functional relationships between covariates and outcomes where the shape of the function itself varies between different grouping levels. We describe the theoretical connection between HGAMs, HGLMs, and GAMs, explain how to model different assumptions about the degree of intergroup variability in functional response, and show how HGAMs can be readily fitted using existing GAM software, the mgcv package in R. We also discuss computational and statistical issues with fitting these models, and demonstrate how to fit HGAMs on example data. All code and data used to generate this paper are available at: github.com/eric-pedersen/mixed-effect-gams.},
   langid = {english}
+}
+
+@article{wakana2007ReproducibilityQuantitativeTractography,
+  title = {Reproducibility of Quantitative Tractography Methods Applied to Cerebral White Matter},
+  author = {Wakana, Setsu and Caprihan, Arvind and Panzenboeck, Martina M. and Fallon, James H. and Perry, Michele and Gollub, Randy L. and Hua, Kegang and Zhang, Jiangyang and Jiang, Hangyi and Dubey, Prachi},
+  year = {2007},
+  journal = {Neuroimage},
+  volume = {36},
+  number = {3},
+  pages = {630--644}
+}
+
+@article{yeatman2012TractProfilesWhite,
+  title = {Tract {{Profiles}} of {{White Matter Properties}}: {{Automating Fiber-Tract Quantification}}},
+  shorttitle = {Tract {{Profiles}} of {{White Matter Properties}}},
+  author = {Yeatman, Jason D. and Dougherty, Robert F. and Myall, Nathaniel J. and Wandell, Brian A. and Feldman, Heidi M.},
+  year = {2012},
+  month = nov,
+  journal = {PLOS ONE},
+  volume = {7},
+  number = {11},
+  pages = {e49790},
+  issn = {1932-6203},
+  doi = {10.1371/journal.pone.0049790},
+  urldate = {2021-02-02},
+  abstract = {Tractography based on diffusion weighted imaging (DWI) data is a method for identifying the major white matter fascicles (tracts) in the living human brain. The health of these tracts is an important factor underlying many cognitive and neurological disorders. In vivo, tissue properties may vary systematically along each tract for several reasons: different populations of axons enter and exit the tract, and disease can strike at local positions within the tract. Hence quantifying and understanding diffusion measures along each fiber tract (Tract Profile) may reveal new insights into white matter development, function, and disease that are not obvious from mean measures of that tract. We demonstrate several novel findings related to Tract Profiles in the brains of typically developing children and children at risk for white matter injury secondary to preterm birth. First, fractional anisotropy (FA) values vary substantially within a tract but the Tract FA Profile is consistent across subjects. Thus, Tract Profiles contain far more information than mean diffusion measures. Second, developmental changes in FA occur at specific positions within the Tract Profile, rather than along the entire tract. Third, Tract Profiles can be used to compare white matter properties of individual patients to standardized Tract Profiles of a healthy population to elucidate unique features of that patient's clinical condition. Fourth, Tract Profiles can be used to evaluate the association between white matter properties and behavioral outcomes. Specifically, in the preterm group reading ability is positively correlated with FA measured at specific locations on the left arcuate and left superior longitudinal fasciculus and the magnitude of the correlation varies significantly along the Tract Profiles. We introduce open source software for automated fiber-tract quantification (AFQ) that measures Tract Profiles of MRI parameters for 18 white matter tracts. With further validation, AFQ Tract Profiles have potential for informing clinical management and decision-making.},
+  langid = {english},
+  keywords = {Adolescent,Axons,Brain,Central nervous system,Child,Child Preschool,Developmental Disabilities,Diffusion Magnetic Resonance Imaging,Diffusion weighted imaging,Dyslexia,Female,Frontal lobe,Functional Neuroimaging,Humans,Infant,Infant Newborn,Infant Premature,Magnetic resonance imaging,Male,Nerve fibers,Nerve Fibers,Neural Pathways,Open source software,Spinal Cord,Tractography}
 }

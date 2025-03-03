@@ -13,7 +13,7 @@ df_scan_imp <- workflows$get_data_scan_impact(df_afq)
 #
 # Then model ImPACT composite and total symptoms measures.
 
-demos <- workflows$get_demographics()
+demos <- workflows$get_demographics(df_afq)
 sess_count <- workflows$count_scan_impact(df_afq, df_scan_imp)
 imp_gams <- workflows$impact_gams(df_scan_imp)
 

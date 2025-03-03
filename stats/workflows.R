@@ -194,7 +194,7 @@ get_data_scan_impact <- function(df_afq) {
 #' Title.
 #' TODO
 export("get_demographics")
-get_demographics <- function() {
+get_demographics <- function(df_afq) {
   demo_path <- paste(
     .analysis_dir(), "dataframes", "df_demographics.csv",
     sep = "/"
@@ -210,7 +210,6 @@ get_demographics <- function() {
   df_demo$sex <- factor(df_demo$sex)
 
   #
-  df_afq <- get_afq("tbl_afq")
   tract_list <- unique(df_afq$tract_name)
   df_afq <- df_afq[which(
     df_afq$node == 10 & df_afq$tract_name == tract_list[1]
@@ -222,13 +221,34 @@ get_demographics <- function() {
   )
   rm(df_afq, df_demo)
   df <- subset(df, select = c("subj_id", "scan_name", "sex", "age_base"))
+  
+  #
+  idx_subj <- match(unique(df$subj_id), df$subj_id)
+  df_subj <- df[idx_subj,]
 
   #
+  idx_post <- which(df$scan_name == "post")
+  idx_base <- which(df$scan_name == "base")
   return(list(
+    "num_tot" = length(df_subj$subj_id),
+    "num_male" = length(which(df_subj$sex == "M")),
+    "num_female" = length(which(df_subj$sex == "F")),
+    "num_post_no_base" = dim(anti_join(df[idx_post,], df[idx_base,], by="subj_id"))[1],
+    "num_base_no_post" = dim(anti_join(df[idx_base,], df[idx_post,], by="subj_id"))[1],
     "sex_scan" = table(df$sex, df$scan_name),
-    "age_avg" = round(mean(df$age_base), 2),
-    "age_std" = round(stats::sd(df$age_base), 2)
+    "age_avg" = round(mean(df_subj$age_base), 2),
+    "age_std" = round(stats::sd(df_subj$age_base), 2),
+    "age_min" = min(df$age_base),
+    "age_max" = max(df$age_base)
   ))
+  
+  # library(dplyr)
+  # anti_join(df[which(df$scan_name == "base"),], df[which(df$scan_name == "post"),], by="subj_id")
+  # anti_join(df[which(df$scan_name == "post"),], df[which(df$scan_name == "base"),], by="subj_id")
+  # df %>% group_by(sex) %>% summarise(n_distinct(subj_id))
+  
+  
+  
 }
 
 

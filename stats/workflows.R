@@ -57,11 +57,17 @@ transform_data <- use("resources/transform_data.R")
 
 
 #' Pull and clean AFQ data.
+#' 
+#' Get data from db_adr according to user request, where tbl_afq = 3 sessions
+#' of ADR data (main dataset), tbl_afq_rerun = ADR baseline rerun through
+#' pyAFQ (algorithimic reliability), or tbl_afq_rescan = single subject
+#' scanned and processed multiple times (scan-rescan reliability).
 #'
-#' Clip tail nodes (x<10, x>89).
+#' Notes:
+#' - Clip tail nodes (x<10, x>89).
 #'
-#' @param table_name (String) Name of table holding pyAFQ metrics, tbl_afq
-#'  or tbl_afq_rerun.
+#' @param table_name (String) Name of table holding pyAFQ metrics, tbl_afq,
+#'  tbl_afq_rerun, or tbl_afq_rescan.
 #' @returns Dataframe of AFQ tract metrics.
 export("get_data_afq")
 get_data_afq <- function(table_name) {
@@ -115,12 +121,12 @@ get_data_afq <- function(table_name) {
 }
 
 
-#' Get clean Impact and combine wtih AFQ data.
+#' Get clean Impact and combine with AFQ data.
 #'
-#' Identify relevant impact visit for scan,
-#' add composites for scan.
+#' Identify relevant impact visit for scan and then add composite
+#' and total symptom metrics.
 #'
-#' @param df_afq Dataframe containing AFQ data.
+#' @param df_afq Dataframe output of get_data_afq().
 #' @returns Tidy dataframe of Impact and AFQ data.
 export("get_data_scan_impact")
 get_data_scan_impact <- function(df_afq) {
@@ -191,15 +197,23 @@ get_data_scan_impact <- function(df_afq) {
 
 
 
-#' Title.
-#' TODO
-export("get_demographics")
-get_demographics <- function(df_afq) {
+#' Determine subject sex and participation.
+#' 
+#' Identify subjects with scan data and add demographic
+#' and ImpACT values where available. Determine age
+#' metrics, supply session counts for scan and impact.
+#' 
+#' @param df_afq Dataframe output of get_data_afq().
+#' @param df_scan_imp Dataframe output of get_data_scan_impact().
+#' @returns Named list containing demographic metrics and counts.
+export("get_demo_counts")
+get_demo_counts <- function(df_afq, df_scan_imp) {
+  
+  # Get demographic data
   demo_path <- paste(
     .analysis_dir(), "dataframes", "df_demographics.csv",
     sep = "/"
   )
-
   if (!file.exists(demo_path)) {
     df <- pull_data$get_demographics()
     utils::write.csv(df, demo_path, row.names = F)
@@ -209,100 +223,56 @@ get_demographics <- function(df_afq) {
   df_demo$subj_id <- factor(as.character(df_demo$subj_id))
   df_demo$sex <- factor(df_demo$sex)
 
-  #
+  # Identify subjs with scan data
   tract_list <- unique(df_afq$tract_name)
-  df_afq <- df_afq[which(
+  df_afq_sub <- df_afq[which(
     df_afq$node == 10 & df_afq$tract_name == tract_list[1]
   ), ]
 
-  #
+  # Combine demo, scan info
   df <- merge(
-    x = df_afq, y = df_demo, by = "subj_id", all.x = T
+    x = df_afq_sub, y = df_demo, by = "subj_id", all.x = T
   )
-  rm(df_afq, df_demo)
-  df <- subset(df, select = c("subj_id", "scan_name", "sex", "age_base"))
+  rm(df_afq_sub, df_demo)
+  df <- subset(
+    df, 
+    select = c("subj_id", "scan_name", "sex", "age_base", "dti_fa")
+  )
   
-  #
+  # Add impact
+  df_imp <- subset(df_scan_imp, select = c(subj_id, scan_name, mem_ver))
+  df <- merge(
+    df, df_imp,
+    by = c("subj_id", "scan_name"),
+    all.x = T
+  )
+  rm(df_imp)
+  
+  # Identify unique subjects
   idx_subj <- match(unique(df$subj_id), df$subj_id)
   df_subj <- df[idx_subj,]
+  
+  # Identify subjects with scan, impact data
+  idx_scan <- which(!is.na(df$dti_fa))
+  idx_imp <- which(!is.na(df$mem_ver))
 
-  #
-  idx_post <- which(df$scan_name == "post")
-  idx_base <- which(df$scan_name == "base")
+  # # Identify subjs with post but no base (and converse)
+  # idx_post <- which(df$scan_name == "post")
+  # idx_base <- which(df$scan_name == "base")
+  
   return(list(
     "num_tot" = length(df_subj$subj_id),
     "num_male" = length(which(df_subj$sex == "M")),
     "num_female" = length(which(df_subj$sex == "F")),
-    "num_post_no_base" = dim(anti_join(df[idx_post,], df[idx_base,], by="subj_id"))[1],
-    "num_base_no_post" = dim(anti_join(df[idx_base,], df[idx_post,], by="subj_id"))[1],
-    "sex_scan" = table(df$sex, df$scan_name),
+    "sex_scan" = table(df[idx_scan,]$sex, df[idx_scan,]$scan_name),
+    "sex_imp" = table(df[idx_imp,]$sex, df[idx_imp,]$scan_name),
+    # "num_post_no_base" = dim(anti_join(df[idx_post,], df[idx_base,], by="subj_id"))[1],
+    # "num_base_no_post" = dim(anti_join(df[idx_base,], df[idx_post,], by="subj_id"))[1],
     "age_avg" = round(mean(df_subj$age_base), 2),
     "age_std" = round(stats::sd(df_subj$age_base), 2),
     "age_min" = min(df$age_base),
     "age_max" = max(df$age_base)
   ))
-  
-  # library(dplyr)
-  # anti_join(df[which(df$scan_name == "base"),], df[which(df$scan_name == "post"),], by="subj_id")
-  # anti_join(df[which(df$scan_name == "post"),], df[which(df$scan_name == "base"),], by="subj_id")
-  # df %>% group_by(sex) %>% summarise(n_distinct(subj_id))
-  
-  
-  
-}
-
-
-#' Title
-#'
-#' TODO
-export("count_scan_impact")
-count_scan_impact <- function(df_afq, df_scan_imp) {
-  #
-  df_scan <-
-    df_afq[which(df_afq$node_id == 10 & df_afq$tract_name == "Right Arcuate"), ]
-  df_scan <- subset(df_scan, select = c(subj_id, scan_name, dti_fa))
-  df_imp <- subset(df_scan_imp, select = c(subj_id, scan_name, mem_ver))
-
-  df <- merge(
-    df_scan, df_imp,
-    by = c("subj_id", "scan_name"),
-    all.x = T
-  )
-  rm(df_scan, df_imp)
-
-  #
-  sess_count <- list()
-  for (sess in c("base", "post", "rtp")) {
-    sess_count[paste0(sess, "_scan")] <-
-      length(which(df$scan_name == sess & !is.na(df$dti_fa)))
-    sess_count[paste0(sess, "_imp")] <-
-      length(which(df$scan_name == sess & !is.na(df$mem_ver)))
-  }
-  return(sess_count)
-
-  # library(DiagrammeR)
-  # library(glue)
-  #
-  # grViz(
-  #   diagram = "digraph flowchart {
-  #     node [
-  #       fontname = times,
-  #       fontsize = 9,
-  #       shape = rounded,
-  #       penwidth = 1.0
-  #     ]
-  #     graph[nodesep = 0.5]
-  #     tab1 [label = '@@1']
-  #     tab2 [label = '@@2']
-  #     tab3 [label = '@@3']
-  #     tab1 -> tab2;
-  #     tab2 -> tab3;
-  #   }
-  #
-  #   [1]: 'Base (N_scan=67N_imp=61)'
-  #   [2]: 'Post (N_scan=65N_imp=48)'
-  #   [3]: 'RTP (N_scan=56N_imp=32)'"
-  # )
 }
 
 

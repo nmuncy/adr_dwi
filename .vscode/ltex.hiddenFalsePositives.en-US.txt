@@ -1,0 +1,6 @@
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\Qlanguage=R, basicstyle=, otherkeywords=0,1,2,3,4,5,6,7,8,9, morekeywords=TRUE,FALSE, deletekeywords=data,frame,length,as,character, autogobble=true R Code\\E$"}
+{"rule":"UPPERCASE_SENTENCE_START","sentence":"^\\Qlanguage=R, basicstyle=, otherkeywords=0,1,2,3,4,5,6,7,8,9, morekeywords=TRUE,FALSE, deletekeywords=data,frame,length,as,character, autogobble=true R Code\\E$"}
+{"rule":"COMMA_PARENTHESIS_WHITESPACE","sentence":"^\\Qlanguage=R, basicstyle=, otherkeywords=0,1,2,3,4,5,6,7,8,9, morekeywords=TRUE,FALSE, deletekeywords=data,frame,length,as,character, autogobble=true R Code\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QSupplemental Tables.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QSupplemental Figures.\\E$"}
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\Qequ[R Code][]\\E$"}

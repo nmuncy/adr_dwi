@@ -4,3 +4,4 @@
 {"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QSupplemental Tables.\\E$"}
 {"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QSupplemental Figures.\\E$"}
 {"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\Qequ[R Code][]\\E$"}
+{"rule":"ALL_TIME_HYPHEN","sentence":"^\\QFinally, and critically, HGAMs facilitate conducting longitudinal, whole-brain analyses on tractometric profiles as data from all tracts and across all time points can be included in the same model.\\E$"}

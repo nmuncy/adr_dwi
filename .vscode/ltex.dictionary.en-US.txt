@@ -25,3 +25,15 @@ fODF
 fODFs
 GAMs
 hypersurface
+underfit
+hypersurfaces
+Ctl
+wiggliness
+tractometric
+fREML
+logit
+itsadug
+mgcv
+compareML
+gam
+colinearity

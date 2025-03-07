@@ -79,7 +79,7 @@ get_data_afq <- function(table_name) {
   # Check for local csv, read-in data or pull from db_adr.
   afq_name <- strsplit(table_name, "tbl_")[[1]][2]
   afq_path <- paste(
-    .analysis_dir(), "dataframes", paste0("df_", afq_name, ".csv"),
+    .analysis_dir(), "dataframes", paste0("df_", afq_name, ".csv"), 
     sep = "/"
   )
 
@@ -407,11 +407,11 @@ impact_gams <- function(df_scan_imp) {
 }
 
 
-
 #' Model all tracts for post-base and rtp-base differences (delta).
 #'
 #' Conduct longitudinal HGAM with all tracts and scan times so subject variance
-#' is pooled across tracts and scans.
+#' is pooled across tracts and scans. Delta values are used as ordered factors
+#' become difficult across factor interactions.
 #'
 #' @param df_afq Dataframe containing AFQ data.
 #' @param make_plots Logical, whether to draw all tract grids.
@@ -487,6 +487,76 @@ dwi_gam_delta_all <- function(df_afq, make_plots = T) {
     c <- c + 1
   }
   return(fit_LDI)
+}
+
+
+
+#' Title.
+#' TODO
+export("dwi_gam_delta_rerun")
+dwi_gam_delta_rerun <- function(df_afq, df_afq_rr){
+  # Subset df_afq for relevant values
+  df_afq_base <- df_afq[which(df_afq$scan_name == "base"), ]
+  df_afq_base <- subset(
+    df_afq_base, select = c("subj_id", "tract_name", "node_id", "dti_fa")
+  )
+  colnames(df_afq_base)[4] <- "fa_base1"
+  row.names(df_afq_base) <- NULL
+  
+  # Match df_afq_rr for merging
+  df_rerun_base <- subset(
+    df_afq_rr, select = c("subj_id", "tract_name", "node_id", "dti_fa")
+  )
+  colnames(df_rerun_base)[4] <- "fa_base2"
+  row.names(df_rerun_base) <- NULL
+  
+  # Get difference of FAs between runs
+  df <- merge(
+    df_afq_base, df_rerun_base, 
+    by = c("subj_id", "tract_name", "node_id"), 
+    all = T
+  )
+  rm(df_afq_base, df_rerun_base)
+  df$delta <- df$fa_base2 - df$fa_base1 # Similar comparison to post-base
+  
+  # Run model
+  analysis_dir <- .analysis_dir()
+  rds_di <- paste0(analysis_dir, "/stats_gams/rda_objects/fit_DI_rerun_fa.Rda")
+  if (!file.exists(rds_di)) {
+    h_gam <- fit_gams$mod_di(df)
+    saveRDS(h_gam, file = rds_di)
+    rm(h_gam)
+  }
+  fit_DI <- readRDS(rds_di)
+  
+  # Mine, print summary stats
+  sum_di <- paste0(analysis_dir, "/stats_gams/gam_summaries/fit_DI_rerun_fa.txt")
+  if (!file.exists(sum_di)) {
+    fit_gams$write_gam_stats(fit_DI, sum_di)
+  }
+  
+  # Identify max deflections from zero
+  idx_smooths <- transform_data$idx_di_smooths(fit_DI)
+  df_max <- quick_stats$max_deflect(fit_DI, idx_smooths$all)
+  df_max$comp <- "run-rerun"
+  out_csv <- paste0(
+    .analysis_dir(), "/stats_gams/gam_summaries/fit_DI_rerun_fa_max.csv"
+  )
+  utils::write.csv(df_max, out_csv, row.names = F)
+  
+  # Draw combined plot
+  grDevices::png(
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/DI_all/fit_DI_rerun_all.png"
+    ),
+    units = "in",
+    height = 6,
+    width = 12,
+    res = 600
+  )
+  draw_plots$grid_di_comb(fit_DI, idx_smooths$all, idx_smooths$names)
+  grDevices::dev.off()
+  return(fit_DI)
 }
 
 

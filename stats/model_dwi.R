@@ -25,6 +25,12 @@ imp_gams <- workflows$impact_gams(df_scan_imp)
 
 fit_LDI <- workflows$dwi_gam_delta_all(df_afq, make_plots = F)
 
+# Changes in FA resulting from rerunning pyAFQ on ADR base data
+df_afq_rr <- workflows$get_data_afq("tbl_afq_rerun")
+fit_DI_rr <- workflows$dwi_gam_delta_rerun(df_afq, df_afq_rr)
+
+
+#
 tract_list <- unique(df_afq$tract_name)
 for (tract in tract_list) {
   tract_gams <- workflows$dwi_gam_long_tract(df_afq, tract)

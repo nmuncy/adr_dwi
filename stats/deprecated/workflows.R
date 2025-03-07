@@ -144,69 +144,6 @@ gam_fa_rebase_all <- function(df_afq){
 
 #' Title.
 #' TODO
-export("gam_delta_rerun_all")
-gam_delta_rerun_all <- function(df_afq, df_afq_rr){
-  # Subset df_afq for relevant values
-  df_afq_base <- df_afq[which(df_afq$scan_name == "base"), ]
-  df_afq_base <- subset(
-    df_afq_base, select = c("subj_id", "tract_name", "node_id", "dti_fa")
-  )
-  colnames(df_afq_base)[4] <- "fa_base1"
-  row.names(df_afq_base) <- NULL
-  
-  # Match df_afq_rr for merging
-  df_rerun_base <- subset(
-    df_afq_rr, select = c("subj_id", "tract_name", "node_id", "dti_fa")
-  )
-  colnames(df_rerun_base)[4] <- "fa_base2"
-  row.names(df_rerun_base) <- NULL
-  
-  # Get difference of FAs between runs
-  df <- merge(
-    df_afq_base, df_rerun_base, 
-    by = c("subj_id", "tract_name", "node_id"), 
-    all = T
-  )
-  rm(df_afq_base, df_rerun_base)
-  df$delta <- df$fa_base2 - df$fa_base1 # Similar comparison to post-base
-  
-  # Run model
-  analysis_dir <- .analysis_dir()
-  rds_di <- paste0(analysis_dir, "/stats_gams/rda_objects/fit_DI_rerun_fa.Rda")
-  if (!file.exists(rds_di)) {
-    h_gam <- fit_gams$mod_di(df)
-    saveRDS(h_gam, file = rds_di)
-    rm(h_gam)
-  }
-  fit_DI <- readRDS(rds_di)
-  idx_smooths <- transform_data$idx_di_smooths(fit_DI)
-  
-  # Identify max deflections from zero
-  df_max <- quick_stats$max_deflect(fit_DI, idx_smooths$all)
-  df_max$comp <- "run-rerun"
-  out_csv <- paste0(
-    .analysis_dir(), "/stats_gams/gam_summaries/fit_DI_rerun_fa_max.csv"
-  )
-  utils::write.csv(df_max, out_csv, row.names = F)
-  
-  # Draw combined plot
-  grDevices::png(
-    filename = paste0(
-      .analysis_dir(), "/stats_gams/plots/DI_all/fit_DI_rerun_all.png"
-    ),
-    units = "in",
-    height = 6,
-    width = 12,
-    res = 600
-  )
-  draw_plots$grid_di_comb(fit_DI, idx_smooths$all, idx_smooths$names)
-  grDevices::dev.off()
-  return(fit_DI)
-}
-
-
-#' Title.
-#' TODO
 export("gam_delta_rescan_all")
 gam_delta_rescan_all <- function(df_afq_rs){
   analysis_dir <- .analysis_dir()
@@ -520,9 +457,7 @@ plot_estimates <- function(fit_LDI, fit_DI_rr, fit_LDI_rs){
 # # TODO Scan-rescan - use HCP data.
 # # TODO Concussion - split base into two groups, look for group differences.
 # 
-# # Changes in FA resulting from rerunning pyAFQ on ADR base data
-# df_afq_rr <- workflows$clean_afq("tbl_afq_rerun")
-# fit_DI_rr <- workflows$gam_delta_rerun_all(df_afq, df_afq_rr)
+
 # 
 # # Changes in FA resulting from rescanning subj
 # # Note - no longer using due to significant scan-rescan variance for

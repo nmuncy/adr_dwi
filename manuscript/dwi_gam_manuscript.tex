@@ -126,15 +126,18 @@ Whole-brain tractography was computed from the preprocessed DWI by PyAFQ. Constr
 \subsection{GAM specification}
 \label{ssec:meth-gam}
 
-% TODO: are these two paragraphs better in the intro?
+% TODO: are these two paragraphs better in the intro? Maybe a brief description goes in intro.
+
 Generalized additive models (GAM) are an extension of general linear models capable of modeling high-dimensional data which contain non-linear relationships. Where regression models fit data with a linear (or higher-order polynomial) function, GAMs construct a smooth curve to fit data from a set of basis functions (i.e. splines). Such a smooth can capture complex X-Y relationships that would be underfit by models with linear assumptions. Further, high dimensional relationships can be modeled via 3-dimensional smooths (i.e. membrane), termed a `tensor product interaction smooth', or with hypersurfaces for higher dimensions \parencite{baayen2020IntroductionGeneralizedAdditive}. Such capabilities have made GAMs useful in fields such as ecology ([CITE]) and linguistics ([CITE]), which often model complex data in high dimensions or across multiple factors, and researchers using MRI techniques are beginning to adopt the method ([CITE]). We recently demonstrated their applicability to modeling DWI scalar data \parencite{muncy2022GeneralAdditiveModels}, and here we extend GAMs to model high-dimensional, longitudinal, multimodal data.
 
-Hierarchical GAMs (HGAMs; \cite{pedersen2019HierarchicalGeneralizedAdditive}) allow for model fits at both global and group levels. That is, it is possible to model both the X-Y relationship that is shared across all levels of a factor (global smooth) and differences that factor levels (group smooths) may have from the global smooth. Further, it is not required that each level of smooth (global, group) contain the same `wiggliness' in the X-Y relationships. Separate smooth curves and wiggliness terms at different factor levels of HGAMs is highly relevant in modeling concussion-related changes within white matter tracts, as the global smooth of the tractometric profile (i.e. scalar values across all nodes) can effectively be held constant when modeling potential changes across session, and independent wiggliness terms may capture scalar changes unique to one time point. Further, tensor product interaction terms can be utilized to build multimodal models, investigating the relationship of the tractometric profile with independent metrics such as the ImPACT composite scores. Accordingly, such a model would be capable not only of detecting changes within a tract that result from concussion, but also how such changes relate to clinical assessments. Finally, and critically, HGAMs facilitate conducting longitudinal, whole-brain analyses on tractometric profiles as data from all tracts and across all time points can be included in the same model. Such a specification allows for within-subject pooling of variance across both tract and time. Where modeling individual tracts results in a creeping Type-I error and the corresponding corrections, injury (and subsequent recovery) may affect multiple tracts within a subject and such shared variance would be lost when investigating tracts individually. By including all tracts and time points, HGAMs have the capability to not only reduce Type-I but also Type-II errors.
+Hierarchical GAMs (HGAMs; \cite{pedersen2019HierarchicalGeneralizedAdditive}) allow for model fits at both global and group levels. That is, it is possible to model both the X-Y relationship that is shared across all levels of a factor (global smooth) and differences that factor levels (group smooths) may have from the global smooth. Further, it is not required that each level of smooth (global, group) contain the same `wiggliness' in the X-Y relationships. Separate smooth curves and wiggliness terms at different factor levels of HGAMs is highly relevant in modeling concussion-related changes within white matter tracts, as the global smooth of the tractometric profile (i.e. scalar values across all nodes) can effectively be held constant when modeling potential changes across session, and independent wiggliness terms may capture scalar changes unique to one time point. Further, tensor product interaction terms can be utilized to build multimodal models, investigating the relationship of the tractometric profile with independent metrics such as the ImPACT composite scores. Accordingly, such a model would be capable not only of detecting changes within a tract that result from concussion, but also how such changes relate to clinical assessments. Finally, and critically, HGAMs facilitate conducting longitudinal, whole-brain analyses on tractometric profiles as data from all tracts and across all time points can be included in the same model. Such a specification allows for within-subject pooling of variance across both tract and time. Where modeling individual tracts results in a creeping Type-I error and the corresponding corrections, injury (and subsequent recovery) may affect multiple tracts within a subject and such shared variance would be lost when investigating tracts individually. By including all tracts and time points, HGAMs have the capability to not only reduce Type-I but also Type-II errors. All GAMs were specified using the \lstinline{mgcv} package version 1.9-1 \parencite{wood2017GeneralizedAdditiveModels} in R version 4.3.3 \parencite{rcoreteam2023LanguageEnvironmentStatistical}.
 
 % TODO: include DWI scalar distribution (and plot) to visualize tractometric profile? Cite a yeatman tractometry paper?
 
 % LDI model
-\textit{Longitudinal omnibus difference model.} To investigate within-tract injury- and recovery-related FA changes, we specified an HGAM to test for Post and RTP tract FA differences from Base. To this end, we first calculated the Post-Base and RTP-Base changes in FA ($\Delta$FA). While including original FA values would be ideal, propagating ordered factors (Base $<$ Post $<$ RTP) across an interaction with another factor (tract) loses the original ordered structure. Next, we calculated the interaction term (\lstinline{tract_scan}) to provide an equivalent of \lstinline{by=sess_comp:tract_name}, where \lstinline{sess_comp} = session comparison for generating $\Delta$FA values (Post-Base, RTP-Base) and \lstinline{tract_name} = white matter tract names. In terms of model specification (R Code \ref{code:gam-ldi}), the distribution of the $\Delta$FA was determined to be normal, so a Gaussian distribution with an identity link function (default for the family) was used. $\Delta$FA values were modeled as a function of node using thin-plate regression splines, and a basis dimensionality of 15 (\lstinline{bs="tp", k=15}) was determined sufficient to fit the tract curves (\lstinline{gam.check(fit_LDI)}). Subjects were treated as a random effect, thereby allowing each subject to have their own intercept across all levels of the factors, fast residual error of maximum likelihood (fREML) was used as the smoothing parameter estimation method, and 12 threads were used in the computation (run time $\approx$ 45 minutes). Input data consisted of the 24 tracts with good segmentation across all subjects and sessions were included in the model. Notably, we did not include a global smooth for this model as the $\Delta$FA profile would differ for each tract, and we allowed for individual tract wiggliness via \lstinline{s(node_id, by=tract_name)} instead of assuming equal wiggliness across all tracts (\lstinline{s(node_id, tract_scan)}); essentially this is a longitudinal model of FA differences which references model `I' in \textcite{pedersen2019HierarchicalGeneralizedAdditive}.
+\subsubsection{Longitudinal difference model}
+\label{sssec:meth-gam-ldi}
+To investigate within-tract injury- and recovery-related FA changes we specified an HGAM to test for Post and RTP tract FA differences from Base. First, we calculated the Post-Base and RTP-Base changes in FA ($\Delta$FA). While including original FA values would be ideal, propagating ordered factors (Base $<$ Post $<$ RTP) across an interaction with another factor (tract) loses the original ordered structure; ordered factors would be necessary to investigate differences from baseline instead of merely the interaction with session. Next, we calculated the session comparison $\times$ tract interaction term as \lstinline{mgcv::bam} does not currently support modeling smooths by factor interactions. $\Delta$FA values were modeled as a function of tract node using thin-plate regression splines (R Code \ref{code:gam-ldi}) and a basis dimensionality of 15 was determined sufficient to fit the tract curves (\lstinline{gam.check(fit_LDI)}). Subjects were treated as a random effect, thereby allowing each subject to have their own intercept across all levels of the factors, the $\Delta$FA distribution was well-fit by a Gaussian distribution with an identity link function, fast Residual Error of Maximum Likelihood (fREML) was used as the smoothing parameter estimation method, and 12 threads were used in the computation (run time $\approx$ 45 minutes). Input data consisted of the 24 tracts with good segmentation across all subjects. Notably, we did not include a global smooth for this model, as the $\Delta$FA profile would differ for each tract, and we specified that each tract would have its own wiggliness term; essentially this is a longitudinal model of FA differences which references model `I' in \textcite{pedersen2019HierarchicalGeneralizedAdditive}.
 
 \begin{equ}[H]
 	\begin{lstlisting}
@@ -148,16 +151,18 @@ Hierarchical GAMs (HGAMs; \cite{pedersen2019HierarchicalGeneralizedAdditive}) al
 		  nthreads=12
 		)
 	\end{lstlisting}
-	\caption{Fit node $\times$ $\Delta$FA smooths accounting for within-subject factors of tract and session and separate wiggliness terms for each tract.}
+	\caption{$\Delta$FA values are modeled as a function of tract node with thin-plate regression smooths for each tract, accounting for the within-subject factors of tract and session and using separate wiggliness terms for each tract. \lstinline{delta_fa} = RTP-Base and Post-Base FA differences, \lstinline{subj_id} = subject identifier factor, \lstinline{node_id} = node identifier integer, \lstinline{tract_name} = tract identifier factor, \lstinline{sess_comp} = session comparison factor (RTP-Base, Post-Base), and \lstinline{tract_scan} = interaction of \lstinline{tract_name} and \lstinline{sess_comp}.}
 	\label{code:gam-ldi}
 \end{equ}
 
 % LGI, LGIO models
-\textit{Longitudinal tract model.} The HGAM of R Code \ref{code:gam-ldi} effectively models the entire longitudinal dataset of $\Delta$FA values, allowing for pooling for variance within a subject across tract and session, not requiring a multiple comparison correction for modeling all tracts. But as the $\Delta$FA calculation required data at time points A and B, the analysis was restricted to participants with data at both A and B sessions. As essentially a post-hoc analysis to further interrogate tract differences across session, and what change in scalar (e.g. increased RD) drove the change in FA, individual tracts were modeled with a longitudinal HGAM with terms for global and group smooths (R Code \ref{code:gam-lgi}). A beta distribution with logit link function was used to fit FA values, a Gaussian distribution with an identity link function to fit RD and AD values, and a gamma distribution with a logit link function to fit MD values. Subjects were again treated as a random effect, with separate intercepts for each scan (Base, Post, RTP), and group smooths were allowed their own wiggliness parameter. Additionally, the colinearity of global and group smooths is controlled by the `m' parameter. Such a model is similar to model `GI' in \textcite{pedersen2019HierarchicalGeneralizedAdditive}. Further, converting the session factor (\lstinline{scan_name}) to an ordered factor was used in a separate model to test for differences in Post and RTP scalar values from Base (Supplemental R Code \ref{supp-code:gam-lgio}). Such a model is particularly useful as the fit statistic, which describes the flatness of the smooth, provides information about changes from Base values rather than deflections about zero.
+\subsubsection{Longitudinal tract model}
+\label{sssec:meth-gam-lgi}
+The model specified in R Code \ref{code:gam-ldi} effectively models the entire longitudinal dataset of $\Delta$FA values, allowing for pooling for variance within a subject across tract and session, not requiring a multiple comparison correction for modeling all tracts. But as the $\Delta$FA calculation required data at time points A and B, the analysis was restricted by missing data. As essentially a post-hoc analysis to further interrogate tract differences across session, and also what change in scalar (e.g. increased RD) drove the difference in FA, individual tracts were modeled with a longitudinal HGAM with terms for global and group smooths (R Code \ref{code:gam-lgi}). Tract FA values were fit by a beta distribution with a logit link function, AD and RD values were fit with a Gaussian distribution and identity link function, and a gamma distribution with a logit link function fit the MD values. Subjects were again treated as a random effect, with separate intercepts for each scan (Base, Post, RTP), group smooths were allowed their own wiggliness parameter, and the colinearity of global and group smooths was controlled by the `m' parameter. Such a model is similar to model `GI' in \textcite{pedersen2019HierarchicalGeneralizedAdditive}. Additionally, converting the session factor to an ordered factor was used in a separate model to test for differences in Post and RTP scalar values from Base (Supplemental R Code \ref{supp-code:gam-lgio}). Such a model is particularly useful as the test statistic, which describes the flatness of the smooth, provides information about changes from Base values rather than deflections from zero.
 
 \begin{equ}[H]
 	\begin{lstlisting}
-		fit_LGI <- bam(
+		fit_LGI <- mgcv::bam(
 		  <scalar> ~ s(subj_id, scan_name, bs="re") +
 		    s(node_id, bs="tp", k=15, m=2) +
 		    s(node_id, by=scan_name, bs="tp", k=15, m=1),
@@ -167,36 +172,41 @@ Hierarchical GAMs (HGAMs; \cite{pedersen2019HierarchicalGeneralizedAdditive}) al
 		  nthreads=4
 		)
 	\end{lstlisting}
-	\caption{Fit node scalar smooths using both global and group smooths and allowing for group wiggliness.}
+	\caption{Tract scalars are modeled as a function of tract node with thin-plate regression splines using both global and group (\lstinline{scan_name}) smooths as well as individual group wiggliness. \lstinline{<scalar>} = relevant DWI metric (AD, RD, MD, or FA), \lstinline{scan_name} = session identifier factor (Base, Post, RTP), \lstinline{<family>} = relevant family and link function for scalar distribution.}
 	\label{code:gam-lgi}
 \end{equ}
 
-% LGI_intx, LGIO_intx models - introduce relevance for multimodal analyses
-\textit{Longitudinal tract interaction model.} As noted above, GAMs are not constrained to modeling the non-linear relationship between two variables, but can investigate the relationship of 3+ variables using tensor product interaction smooths and hypersurfaces. Here, we test whether changes in tract scalar values as a function of session share variance with corresponding ImPACT composite and total symptom scores (R code \ref{code:gam-lgi-intx}). This is accomplished by specifying smooths for both tract and the ImPACT measure (\lstinline{imp_meas}) as well as their interaction via the tensor interaction term. We also note the decrease in basis dimensionality for the ImPACT measures thin-plate regression splines from the default value of 10 in order to fit the data. Fitting the tensor product interaction smooth also benefited from a slightly higher basis dimensions term for the \lstinline{node_id} term. Finally, a model using ordered factors was also specified so that the fit statistic was a test against Base rather than zero (Supplemental R Code \ref{supp-code:gam-lgio-intx}).
+% LGI_intx, LGIO_intx models
+\subsubsection{Longitudinal tract interaction model}
+\label{sssec:meth-gam-lgi-intx}
+As noted above, GAMs are capable of modeling higher-dimensional, non-linear interactions through tensor product interaction smooths and hypersurfaces, a property which make them particularly relevant for multimodal research. We used such a model to test whether concussion- and recovery-related changes in tract scalars related to changes in ImPACT composite and total symptom scores (R code \ref{code:gam-lgi-intx}), thereby potentially linking damage within a specific region of a tract to changes in assessment metrics. Tract scalars were modeled as a function of both tract node and ImPACT measure, and the node-ImPACT interaction term was specified such that each session (Base, Post, RTP) would have a different scalar-node-ImpACT interaction surface. We note the decrease in basis dimensionality for the ImPACT measures thin-plate regression splines from the default value, and that fitting the tensor product interaction smooth also benefited from a slightly higher basis dimensions term for the tract node term. Finally, a model using ordered factors was also specified to derive a test statistic against Base rather than zero (Supplemental R Code \ref{supp-code:gam-lgio-intx}).
 
 \begin{equ}[H]
 	\begin{lstlisting}
-		fit_LGI_intx <- bam(
+		fit_LGI_intx <- mgcv::bam(
 		  <scalar> ~ s(subj_id, scan_name, bs="re") +
 		    s(node_id, bs="tp", k=15, m=2) +
-			s(imp_meas, by=scan_name, bs="tp", k=5) +
-			ti(
-			  node_id, imp_meas, by=scan_name,
-			  bs=c("tp","tp"), k=c(20,5), m=1
-			)
+		    s(imp_meas, by=scan_name, bs="tp", k=5) +
+		    ti(
+		      node_id, imp_meas, by=scan_name,
+		      bs=c("tp","tp"), k=c(20,5), m=1
+		    ),
 		  data=df,
 		  family=<family>,
 		  method="fREML",
 		  nthreads=4
 		)
 	\end{lstlisting}
-	\caption{Fit node-scalar-ImPACT smooths, modeling the smooths of node and ImPACT as well as their tensor interaction term.}
+	\caption{Tract scalars are modeled as a function of separate 2D node and ImPACT smooths as well as a 3D tensor product interaction surface. \lstinline{imp_meas} = ImPACT composite or total symptom measure.}
 	\label{code:gam-lgi-intx}
 \end{equ}
 
-% TODO: Detail model selection, as was done in 2022 paper
-% TODO: Detail GAM specification for ImPACT?
-% TODO: Reference github
+% ImPACT model
+\subsubsection{ImPACT model}
+\label{sssec:meth-gam-impact}
+The relationship between session (Base, Post, RTP) and ImPACT composite metrics (verbal memory, visual memory, visual motor, impulse control, and reaction time) and total symptom scores were modeled with GAMs to test for changes across assessment session. As with tract scalar profiles, GAMs were employed as (a) non-linear trends are expected in such metrics, and (b) they can model the semi-parametric distributions encountered in several of the metrics. Each ImPACT metric was fit as a function of assessment number, using integer values rather than categorical Base, Post, and RTP (Supplemental R Code \ref{supp-code:gam-impact}); such a specification allowed for modeling evolving changes in assessment metrics rather than comparing main effects across factor levels. Verbal and visual memory composites were converted to proportion scores and modeled with a beta distribution and logit link function, visual motor and reaction time were best fit with Gaussian distributions and identity link functions (despite the skewness), and a negative binomial distribution with log link function fit the impulse control and total symptoms well.
+
+When specifying models, whether with ImPACT or DWI data, model fits were reviewed and assessed via \lstinline{mgcv:gam.check()}, and the selection of competing models was aided by \lstinline{itsadug::compareML()}. Pipeline and statistical code, information about their respective environments, and curated data are available at the project repository: \url{https://github.com/nmuncy/adr_dwi}.
 
 
 \section{Results}
@@ -204,7 +214,7 @@ Hierarchical GAMs (HGAMs; \cite{pedersen2019HierarchicalGeneralizedAdditive}) al
 
 \subsection{ImPACT}
 \label{ssec:res-imp}
-The relationship between session (Base, Post, RTP) and ImPACT composite metrics (verbal memory, visual memory, visual motor, impulse control, and reaction time) and total symptom scores were modeled with GAMs to test for changes across assessment session (Figure \ref{fig:imp-gam}). GAMs are particularly useful as (a) non-linear trends are expected in such metrics, and (b) they can model the semi-parametric distributions encountered in several of the metrics. Specifically, verbal and visual composites were converted to proportion scores and modeled with a beta distribution, visual motor and reaction time were best fit with Gaussian distributions (despite the skewness), and impulse control and total symptoms were best fit with a negative binomial distribution. Model preference was determined via \lstinline{itsadug::compareML()} as well as a review and comparison of model fits via \lstinline{mgcv:gam.check()}.
+ImPACT assessment smooths (Section \ref{sssec:meth-gam-impact}) were exctracted and plotted for visualization purposes (Figure \ref{fig:imp-gam}). All models except for impulse control detected a significant interaction between ImPACT metric and assessment number. Visual memory, reaction time, and total symptoms had patterns consistent with concussion-related deficits at Post and subsequent recovery at RTP (visual memory: $F_{(1.94, 1.99)}$ = 8.59, \textit{p} $<$ .001; reaction time: $F_{(1.91, 1.99)}$ = 6.18, \textit{p} $<$ .01; total symptoms: $F_{(1.98, 1.99)}$ = 28.74, \textit{p} $<$ .0001). We also note that total symptoms at RTP were much lower than at Base (Figure \ref{fig:imp-gam}, bottom right). Conversely, while verbal memory and visual motor tests indicate significant non-flatness (verbal memory: $F_{(1.82, 1.96)}$ = 4.34, \textit{p} = .028; visual motor: $F_{(1.86, 1.97)}$ = 8.19, \textit{p} $<$ .001), their values did not differ between Base and Post while RTP scores were significantly better. This pattern possibly reflects a lack of sensitivity at Base and/or practice effects. Finally, impulse control was unchanged (i.e. flat) as a function of assessment ($F_{(1.0, 1)}$ = .003, \textit{p} = .95).
 
 \begin{figure}[H]
 	\centering
@@ -212,8 +222,6 @@ The relationship between session (Base, Post, RTP) and ImPACT composite metrics 
 	\caption{GAM smooths for ImPACT composite and total symptom scores. Assessment numbers where the confidence interval does not include 0 indicate significant changes. Visual memory, reaction time, and total symptoms showed worsening and then recovery (U-shapes) while verbal memory and visual motor scores were better at assessment 3. Impulse control did not change across assessments. Assessment number 1=Base, 2=Post, 3=RTP. Rx Time = reaction time, Impulse Ctl = impulse control.}
 	\label{fig:imp-gam}
 \end{figure}
-
-All models except for impulse control detected a significant interaction between ImPACT metric and assessment number. Visual memory, reaction time, and total symptoms had patterns consistent with concussion-related deficits at Post and subsequent recovery at RTP (visual memory: $F_{(1.94, 1.99)}$ = 8.59, \textit{p} $<$ .001; reaction time: $F_{(1.91, 1.99)}$ = 6.18, \textit{p} $<$ .01; total symptoms: $F_{(1.98, 1.99)}$ = 28.74, \textit{p} $<$ .0001). We also note that total symptoms at RTP were much lower than at Base (Figure \ref{fig:imp-gam}, bottom right). Conversely, while verbal memory and visual motor tests indicate significant non-flatness (verbal memory: $F_{(1.82, 1.96)}$ = 4.34, \textit{p} = .028; visual motor: $F_{(1.86, 1.97)}$ = 8.19, \textit{p} $<$ .001), their values did not differ between Base and Post while RTP scores were significantly better. This pattern possibly reflects a lack of sensitivity at Base and/or practice effects. Finally, impulse control was unchanged (i.e. flat) as a function of assessment ($F_{(1.0, 1)}$ = .003, \textit{p} = .95).
 
 
 \subsection{DWI Tracts}
@@ -271,7 +279,7 @@ Supplemental Materials.
 \begin{equ}[H]
 	\begin{lstlisting}
 		df$scanOF <- factor(df$scan_name, ordered=T)
-		fit_LGIO <- bam(
+		fit_LGIO <- mgcv::bam(
 		  <scalar> ~ s(subj_id, scan_name, bs="re") +
 		    s(node_id, bs="tp", k=15, m=2) +
 		    s(node_id, by=scanOF, bs="tp", k=15, m=1),
@@ -281,7 +289,7 @@ Supplemental Materials.
 		  nthreads=4
 		)
 	\end{lstlisting}
-	\caption{Fit node scalar smooths using both global and ordered group smooths, allowing for group wiggliness when comparing Post and RTP to Base.}
+	\caption{Tract scalars are modeled as a function of tract node with thin-plate regression splines using both global and group smooths, individual wiggliness terms for groups, and ordered factors to compare Post and RTP group smooths to Base.}
 	\label{supp-code:gam-lgio}
 \end{equ}
 
@@ -289,23 +297,38 @@ Supplemental Materials.
 \begin{equ}[H]
 	\begin{lstlisting}
 		df$scanOF <- factor(df$scan_name, ordered=T)
-		fit_LGIO_intx <- bam(
+		fit_LGIO_intx <- mgcv::bam(
 		  <scalar> ~ s(subj_id, scan_name, bs="re") +
 		    s(node_id, bs="tp", k=15, m=2) +
-			s(imp_meas, by=scan_name, bs="tp", k=5) +
-			ti(node_id, imp_meas, bs=c"tp","tp"), k=c(20,5), m=1) +
-			ti(
-			  node_id, imp_meas, by=scanOF,
-			  bs=c("tp","tp"), k=c(20,5), m=1
-			)
+		    s(imp_meas, by=scan_name, bs="tp", k=5) +
+		    ti(node_id, imp_meas, bs=c"tp","tp"), k=c(20,5), m=1) +
+		    ti(
+		      node_id, imp_meas, by=scanOF,
+		      bs=c("tp","tp"), k=c(20,5), m=1
+		    ),
 		  data=df,
 		  family=<family>,
 		  method="fREML",
 		  nthreads=4
 		)
 	\end{lstlisting}
-	\caption{Fit node-scalar-impact smooths, modeling the smooths of node and impact as well as their tensor interaction term with ordered session factors to compare Post and RTP to Base.}
+	\caption{Tract scalars are modeled as a function of separate 2D node and ImPACT smooths as well as a 3D tensor product interaction surface, with ordered factors used to compare Post and RTP surfaces to Base.}
 	\label{supp-code:gam-lgio-intx}
+\end{equ}
+
+
+\begin{equ}[H]
+	\begin{lstlisting}
+		fit_G <- mgcv::bam(
+		  imp_meas ~ s(subj_id, bs="re") +
+		    s(num_assess, bs="tp", k=3),
+		  data=df,
+		  family=<family>,
+		  method="fREML"
+		)
+	\end{lstlisting}
+	\caption{ImPACT metrics modeled as a function of number of assessments using a single global smooth. \lstinline{imp_meas} = ImPACT composite or total symptom score, \lstinline{num_assess} = assessment number (1=Base, 2=Post, 3=RTP).}
+	\label{supp-code:gam-impact}
 \end{equ}
 
 \subsection{Tables}

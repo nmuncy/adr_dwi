@@ -4,6 +4,7 @@ import(lubridate)
 import("stats", "complete.cases")
 import(mgcViz)
 import(data.table)
+import(gridExtra)
 
 draw_plots <- use("resources/draw_plots.R")
 fit_gams <- use("resources/fit_gams.R")
@@ -557,6 +558,36 @@ dwi_gam_delta_rerun <- function(df_afq, df_afq_rr){
   draw_plots$grid_di_comb(fit_DI, idx_smooths$all, idx_smooths$names)
   grDevices::dev.off()
   return(fit_DI)
+}
+
+
+#' Title.
+#' 
+#' TODO
+export("plot_dwi_gam_all_rerun")
+plot_dwi_gam_all_rerun <- function(fit_LDI, fit_DI_rr){
+  
+  # 
+  idx_ldi <- transform_data$idx_ldi_smooths(fit_LDI)
+  grid_ldi <- draw_plots$grid_ldi_comb(
+    fit_LDI, idx_ldi$post, idx_ldi$rtp, idx_ldi$names
+  )
+  
+  #
+  idx_di <- transform_data$idx_di_smooths(fit_DI_rr)
+  grid_di <- draw_plots$grid_di_comb(fit_DI_rr, idx_di$all, idx_di$names)
+  
+  grDevices::png(
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/fit_LDI_DI_rerun.png"
+    ),
+    units = "in",
+    height = 8,
+    width = 12,
+    res = 600
+  )
+  grid.arrange(grid_ldi, grid_di, heights=c(1, 0.5))
+  grDevices::dev.off()
 }
 
 

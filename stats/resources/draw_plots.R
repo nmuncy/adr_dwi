@@ -979,14 +979,21 @@ grid_di_comb <- function(
   )
   
   # draw grid
+  top2_name <- text_grob(
+    "Run-Rerun difference FA tract smooths",
+    size = 14, family = "Times New Roman"
+  )
+  top1_name <- top3_name <- text_grob(
+    "", size = 14, family = "Times New Roman"
+  )
   left1_name <- text_grob(
     "Diff: Run-Rerun",
     size = 12, family = "Times New Roman", rot = 90
   )
   plot_grid <- grid.arrange(
-    arrangeGrob(p_cc, left = left1_name),
-    arrangeGrob(p_left),
-    arrangeGrob(p_right),
+    arrangeGrob(p_cc, left = left1_name, top = top1_name),
+    arrangeGrob(p_left, top = top2_name),
+    arrangeGrob(p_right, top = top3_name),
     nrow = 1,
     ncol = 3,
     widths = c(1, 1, 1),
@@ -1048,7 +1055,7 @@ grid_impact_gam <- function(
 }
 
 
-#' Draw smooth grid for LDI models.
+#' Draw tract smooth grid for LDI models.
 #'
 #' @param fit_LDI mgcv::gam object.
 #' @param tract String tract name for title.
@@ -1134,6 +1141,12 @@ grid_ldi_comb <- function(
   )
 
   # draw grid
+  top2_name <- text_grob(
+    "Longitudinal difference FA tract smooths",
+    size = 14, family = "Times New Roman"
+  )
+  top1_name <- top3_name <- 
+    text_grob("", size = 14, family = "Times New Roman")
   left1_name <- text_grob(
     paste("Diff:", comp_a),
     size = 12, family = "Times New Roman", rot = 90
@@ -1143,9 +1156,9 @@ grid_ldi_comb <- function(
     size = 12, family = "Times New Roman", rot = 90
   )
   plot_grid <- grid.arrange(
-    arrangeGrob(p_post_cc, left = left1_name),
-    arrangeGrob(p_post_left),
-    arrangeGrob(p_post_right),
+    arrangeGrob(p_post_cc, left = left1_name, top=top1_name),
+    arrangeGrob(p_post_left, top=top2_name),
+    arrangeGrob(p_post_right, top=top3_name),
     arrangeGrob(p_rtp_cc, left = left2_name),
     arrangeGrob(p_rtp_left),
     arrangeGrob(p_rtp_right),
@@ -1156,9 +1169,6 @@ grid_ldi_comb <- function(
   )
   return(plot_grid)
 }
-
-
-
 
 
 #' Draw smooth grid for LGI models, containing global and group smooths.

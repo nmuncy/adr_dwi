@@ -28,7 +28,7 @@ fit_LDI <- workflows$dwi_gam_delta_all(df_afq, make_plots = F)
 # Changes in FA resulting from rerunning pyAFQ on ADR base data
 df_afq_rr <- workflows$get_data_afq("tbl_afq_rerun")
 fit_DI_rr <- workflows$dwi_gam_delta_rerun(df_afq, df_afq_rr)
-
+workflows$plot_dwi_gam_all_rerun(fit_LDI, fit_DI_rr)
 
 #
 tract_list <- unique(df_afq$tract_name)

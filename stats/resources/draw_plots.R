@@ -928,9 +928,10 @@ draw_pca <- function(stats_pc) {
 #' @param plot_MD Plot object of MD smooths.
 #' @param plot_AD Plot object of AD smooths.
 #' @param plot_RD Plot object of RD smooths.
+#' @returns Object returned by grid.arrange.
 export("draw_scalar_grid")
 draw_scalar_grid <- function(plot_FA, plot_MD, plot_AD, plot_RD) {
-  grid.arrange(
+  plot_grid <- grid.arrange(
     arrangeGrob(plot_FA),
     arrangeGrob(plot_MD),
     arrangeGrob(plot_AD),
@@ -940,6 +941,7 @@ draw_scalar_grid <- function(plot_FA, plot_MD, plot_AD, plot_RD) {
     widths = c(1, 1),
     heights = c(1, 1)
   )
+  return(plot_grid)
 }
 
 

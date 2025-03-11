@@ -751,9 +751,30 @@ dwi_gam_long_tract <- function(df_afq, tract) {
   obj_MD <- .fit_plot_long_tract(df, tract, "dti_md")
   obj_RD <- .fit_plot_long_tract(df, tract, "dti_rd")
   obj_AD <- .fit_plot_long_tract(df, tract, "dti_ad")
-
-  # Assemble and write LGIO plots
+  
+  # Make LGIO stat table
+  sum_to_table <- function(fit_obj, scalar){
+    sum_table <- summary(fit_obj)
+    table_lgio <- as.data.frame(sum_table$s.table)
+    table_lgio <- cbind(smooth = rownames(table_lgio), table_lgio)
+    rownames(table_lgio) <- 1:nrow(table_lgio)
+    table_lgio$scalar <- scalar
+    table_lgio[2:5] <- round(table_lgio[2:5], 2)
+    return(table_lgio)
+  }
+  stat_table <- sum_to_table(obj_FA$fit_LGIO, "FA")
+  stat_table <- rbind(stat_table, sum_to_table(obj_MD$fit_LGIO, "MD"))
+  stat_table <- rbind(stat_table, sum_to_table(obj_AD$fit_LGIO, "AD"))
+  stat_table <- rbind(stat_table, sum_to_table(obj_RD$fit_LGIO, "RD"))
+  
   h_tract <- fit_gams$switch_tract(tract)
+  out_table <- paste0(
+    .analysis_dir(), 
+    "/stats_gams/gam_summaries/LGIO_tract/summary_LGIO_", h_tract, ".csv"
+  )
+  utils::write.csv(stat_table, out_table, row.names = F)
+  
+  # Assemble and write LGIO plots
   grDevices::png(
     filename = paste0(
       .analysis_dir(), "/stats_gams/plots/LGIO_tract/fit_LGIO_", h_tract, ".png"
@@ -763,7 +784,7 @@ dwi_gam_long_tract <- function(df_afq, tract) {
     width = 8,
     res = 600
   )
-  draw_plots$draw_scalar_grid(
+  plot_grid <- draw_plots$draw_scalar_grid(
     obj_FA$plots_LGIO, obj_MD$plots_LGIO,
     obj_AD$plots_LGIO, obj_RD$plots_LGIO
   )
@@ -797,7 +818,8 @@ dwi_gam_long_tract <- function(df_afq, tract) {
     gam_plots = list(
       "FA" = obj_FA$plots_LGIO, "RD" = obj_RD$plots_LGIO,
       "AD" = obj_AD$plots_LGIO, "MD" = obj_MD$plots_LGIO
-    )
+    ),
+    plot_grid = plot_grid
   ))
 }
 
@@ -808,10 +830,11 @@ dwi_gam_long_tract <- function(df_afq, tract) {
 #' @returns String, name of impact measure.
 .tract_impact <- function(tract) {
   map_beh <- switch(tract,
-    "Callosum Anterior Frontal" = "mem_vis",
+    "Callosum Anterior Frontal" = "tot_symp",
     "Callosum Orbital" = "tot_symp",
     "Callosum Motor" = "rx_time",
     "Callosum Superior Parietal" = "mem_vis",
+    "Callosum Posterior Parietal" = "mem_vis",
     "Callosum Occipital" = "mem_vis",
     "Left Anterior Thalamic" = "mem_vis",
     "Left Arcuate" = "mem_vis",

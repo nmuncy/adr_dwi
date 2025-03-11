@@ -157,38 +157,41 @@ To investigate within-tract injury- and recovery-related FA changes we specified
 
 
 \subsubsection{Longitudinal tract model}
-\label{sssec:meth-gam-lgi}
-The model specified in R Code \ref{code:gam-ldi} effectively models the entire longitudinal dataset of $\Delta$FA values, allowing for pooling for variance within a subject across tract and session, not requiring a multiple comparison correction for modeling all tracts. But as the $\Delta$FA calculation required data at time points A and B, the analysis was restricted by missing data. As essentially a post-hoc analysis to further interrogate tract differences across session, and also what change in scalar (e.g. increased RD) drove the difference in FA, individual tracts were modeled with a longitudinal HGAM with terms for global and group smooths (R Code \ref{code:gam-lgi}). Tract FA values were fit by a beta distribution with a logit link function, AD and RD values were fit with a Gaussian distribution and identity link function, and a gamma distribution with a logit link function fit the MD values. Subjects were again treated as a random effect, with separate intercepts for each scan (Base, Post, RTP), group smooths were allowed their own wiggliness parameter, and the colinearity of global and group smooths was controlled by the `m' parameter. Such a model is similar to model `GI' in \textcite{pedersen2019HierarchicalGeneralizedAdditive}. Additionally, converting the session factor to an ordered factor was used in a separate model to test for differences in Post and RTP scalar values from Base (Supplemental R Code \ref{supp-code:gam-lgio}). Such a model is particularly useful as the test statistic, which describes the flatness of the smooth, provides information about changes from Base values rather than deflections from zero.
+\label{sssec:meth-gam-lgio}
+The model specified in R Code \ref{code:gam-ldi} effectively models the entire longitudinal dataset of $\Delta$FA values, allowing for pooling for variance within a subject across tract and session, not requiring a multiple comparison correction for modeling all tracts. But as the $\Delta$FA calculation required data at time points A and B, the analysis was restricted by missing data. As essentially a post-hoc analysis to further interrogate tract differences across session, and also what change in scalar (e.g. increased RD) drove the difference in FA, individual tracts were modeled with a longitudinal HGAM with terms for global and group smooths (R Code \ref{code:gam-lgio}). Tract FA values were fit by a beta distribution with a logit link function, AD and RD values were fit with a Gaussian distribution and identity link function, and a gamma distribution with a logit link function fit the MD values. Subjects were again treated as a random effect, with separate intercepts for each scan (Base, Post, RTP), group smooths were allowed their own wiggliness parameter, and the colinearity of global and group smooths was controlled by the `m' parameter. Such a model is similar to model `GI' in \textcite{pedersen2019HierarchicalGeneralizedAdditive}. Finally, an ordered session factor was included to test for difference in Post and RTP scalar values from Base. Such a model is particularly useful as the test statistic, which describes the flatness of the smooth, provides information about changes from Base values rather than deflections from zero. A model which fits group smooths for each session is provided in Supplemental Materials (Supplemental R code \ref{supp-code:gam-lgi}).
 
 \begin{equ}[H]
 	\begin{lstlisting}
-		fit_LGI <- mgcv::bam(
+		df$scanOF <- factor(df$scan_name, ordered=T)
+		fit_LGIO <- mgcv::bam(
 		  <scalar> ~ s(subj_id, scan_name, bs="re") +
 		    s(node_id, bs="tp", k=15, m=2) +
-		    s(node_id, by=scan_name, bs="tp", k=15, m=1),
+		    s(node_id, by=scanOF, bs="tp", k=15, m=1),
 		  data=df,
 		  family=<family>,
 		  method="fREML",
 		  nthreads=4
 		)
 	\end{lstlisting}
-	\caption{Tract scalars are modeled as a function of tract node with thin-plate regression splines using both global and group (\lstinline{scan_name}) smooths as well as individual group wiggliness. \lstinline{<scalar>} = relevant DWI metric (AD, RD, MD, or FA), \lstinline{scan_name} = session identifier factor (Base, Post, RTP), \lstinline{<family>} = relevant family and link function for scalar distribution.}
-	\label{code:gam-lgi}
+	\caption{Tract scalars are modeled as a function of tract node with thin-plate regression splines using both global and group (\lstinline{scan_name}) smooths as well as individual group wiggliness. An ordered factor of scan session was used to compare Post and RTP to Base. \lstinline{<scalar>} = relevant DWI metric (AD, RD, MD, or FA), \lstinline{scan_name} = session identifier factor (Base, Post, RTP), \lstinline{scanOf} = ordered factor of \lstinline{scan_name}, \lstinline{<family>} = relevant family and link function for scalar distribution.}
+	\label{code:gam-lgio}
 \end{equ}
 
 
 \subsubsection{Longitudinal tract interaction model}
-\label{sssec:meth-gam-lgi-intx}
-As noted above, GAMs are capable of modeling higher-dimensional, non-linear interactions through tensor product interaction smooths and hypersurfaces, a property which make them particularly relevant for multimodal research. We used such a model to test whether concussion- and recovery-related changes in tract scalars related to changes in ImPACT composite and total symptom scores (R code \ref{code:gam-lgi-intx}), thereby potentially linking damage within a specific region of a tract to changes in assessment metrics. Tract scalars were modeled as a function of both tract node and ImPACT measure, and the node-ImPACT interaction term was specified such that each session (Base, Post, RTP) would have a different scalar-node-ImpACT interaction surface. We note the decrease in basis dimensionality for the ImPACT measures thin-plate regression splines from the default value, and that fitting the tensor product interaction smooth also benefited from a slightly higher basis dimensions term for the tract node term. Finally, a model using ordered factors was also specified to derive a test statistic against Base rather than zero (Supplemental R Code \ref{supp-code:gam-lgio-intx}).
+\label{sssec:meth-gam-lgio-intx}
+As noted above, GAMs are capable of modeling higher-dimensional, non-linear interactions through tensor product interaction smooths and hypersurfaces, a property which make them particularly relevant for multimodal research. We used such a model to test whether concussion- and recovery-related changes in tract scalars related to changes in ImPACT composite and total symptom scores (R code \ref{code:gam-lgio-intx}), thereby potentially linking damage within a specific region of a tract to changes in assessment metrics. Tract scalars were modeled as a function of both tract node and ImPACT measure, and the node-ImPACT interaction term was specified such that each session (Base, Post, RTP) would have a different scalar-node-ImpACT interaction surface. We note the decrease in basis dimensionality for the ImPACT measures thin-plate regression splines from the default value, and that fitting the tensor product interaction smooth also benefited from a slightly higher basis dimensions term for the tract node term. Finally, as above (Section \ref{sssec:meth-gam-lgio}), an ordered factor for session was included in order to test whether the Post and RTP interaction surfaces differed from that of Base; a model with separate interaction surfaces is provided in Supplemental Materials (Supplemental R code \ref{supp-code:gam-lgi-intx}).
 
 \begin{equ}[H]
 	\begin{lstlisting}
-		fit_LGI_intx <- mgcv::bam(
+		df$scanOF <- factor(df$scan_name, ordered=T)
+		fit_LGIO_intx <- mgcv::bam(
 		  <scalar> ~ s(subj_id, scan_name, bs="re") +
 		    s(node_id, bs="tp", k=15, m=2) +
 		    s(imp_meas, by=scan_name, bs="tp", k=5) +
+		    ti(node_id, imp_meas, bs=c"tp","tp"), k=c(20,5), m=1) +
 		    ti(
-		      node_id, imp_meas, by=scan_name,
+		      node_id, imp_meas, by=scanOF,
 		      bs=c("tp","tp"), k=c(20,5), m=1
 		    ),
 		  data=df,
@@ -197,8 +200,8 @@ As noted above, GAMs are capable of modeling higher-dimensional, non-linear inte
 		  nthreads=4
 		)
 	\end{lstlisting}
-	\caption{Tract scalars are modeled as a function of separate 2D node and ImPACT smooths as well as a 3D tensor product interaction surface. \lstinline{imp_meas} = ImPACT composite or total symptom measure.}
-	\label{code:gam-lgi-intx}
+	\caption{Tract scalars are modeled as a function of separate 2D node and ImPACT smooths as well as a 3D tensor product interaction surface, with ordered factors used to compare Post and RTP surfaces to Base. \lstinline{imp_meas} = ImPACT composite or total symptom measure.}
+	\label{code:gam-lgio-intx}
 \end{equ}
 
 
@@ -226,6 +229,9 @@ ImPACT assessment smooths (Section \ref{sssec:meth-gam-impact}) were extracted a
 
 \subsection{DWI Tracts}
 \label{ssec:res-dwi-tract}
+
+\subsubsection{Whole-Brain Analyses}
+\label{sssec:res-dwi-tract-wba}
 The longitudinal, whole-brain difference model (Section \ref{sssec:meth-gam-ldi}) produced tract difference smooths for Post-Base and RTP-Base $\Delta$FA values (Figure \ref{fig:ldi-gam}, top and middle). Surprisingly, test statistics for all smooths indicate significant non-flatness, suggesting that at least some regions of each tract differed significantly between Base and Post as well as Base and RTP. We note that in interpreting GAM coefficients, the magnitude of the effect is equally relevant to the test statistic of non-flatness (F-stat). For instance, the corpus callosum orbital (CCorb, left, green) had a much larger magnitude compared to another, equally `significant' tract (corpus callosum temporal (CCtemp), pink). Nevertheless, it is well established that mTBI is associated with negative diagnostic readings \parencite[e.g.][]{klein2019PrevalencePotentiallyClinically}, and we expected to only find changes to scalar values in regions commonly associate with traumatic axonal injury (e.g. splenium of corpus callosum, left of midline (CCsp, CCpp)).
 
 \begin{figure}[H]
@@ -235,10 +241,30 @@ The longitudinal, whole-brain difference model (Section \ref{sssec:meth-gam-ldi}
 	\label{fig:ldi-gam}
 \end{figure}
 
-As tractometry was conducted on each session via PyAFQ, one potential source of variance is algorithmic (i.e. pipeline) run-rerun (test-retest) stability, particularly given our use of probabilistic tractography. Previous work has demonstrated high test-retest reliability metrics for PyAFQ \parencite{kruper2021EvaluatingReliabilityHuman}, which also noted tract-dependent reliability metrics that averaged around 86\%. We note that concussion-related scalar changes may not be as large as 14\%, particularly at the group level due to injury heterogeneity. To quantify the amount of algorithmic variance in our data, we reran tractography on the Base session and calculated Run-Rerun $\Delta$FA values for each subject's tract profiles. The Run-Rerun $\Delta$FA were modeled with a non-longitudinal variant of R Code \ref{code:gam-ldi} (Supplemental R Code \ref{supp-code:gam-di}). Resulting smooths (Figure \ref{fig:ldi-gam}, bottom) illustrate the amount of algorithmic variance that can be expected for each tract, where some tracts have demonstrably high variance (e.g. CCorb) while others are more stable (CCsf). Corresponding test statistics identified a number of tracts which did not significantly differ between run and rerun (CCaf, CCmot, CCocc, CCsp, lArc, lCS, and lSL) and for the remaining tracts we considered any difference to be related to concussion or recovery if the magnitude of the effect was larger than that of scan-rescan.
+As tractometry was conducted on each session via PyAFQ, one potential source of variance is algorithmic (i.e. pipeline) run-rerun (test-retest) stability, particularly given our use of probabilistic tractography. Previous work has demonstrated high test-retest reliability metrics for PyAFQ \parencite{kruper2021EvaluatingReliabilityHuman}, which also noted tract-dependent reliability metrics that averaged around 86\%. We note that concussion-related scalar changes may not be as large as 14\%, particularly at the group level due to injury heterogeneity. To quantify the amount of algorithmic variance in our data, we reran tractography on the Base session and calculated Run-Rerun $\Delta$FA values for each subject's tract profiles. The Run-Rerun $\Delta$FA were modeled with a non-longitudinal variant of R Code \ref{code:gam-ldi} (Supplemental R Code \ref{supp-code:gam-di}). Resulting smooths (Figure \ref{fig:ldi-gam}, bottom) illustrate the amount of algorithmic variance that can be expected for each tract, where some tracts have demonstrably high variance (e.g. CCorb) while others are more stable (CCsf). Corresponding test statistics identified a number of tracts which did not significantly differ between run and rerun (CCaf, CCmot, CCocc, CCsp, lArc, lCS, and lSL) and for the remaining tracts we considered any difference to be related to concussion or recovery if the magnitude of the effect was larger than that of run-rerun.
 
-% TODO: Specify which tracts show change? Focus only on tracts that did not change?
-% TODO: LGI, LGIO GAM
+% TODO: analyses just focus one stable tracts?
+% TODO: Supplemental table of LDI, DI stats.
+
+\subsubsection{Tract-Specific Analyses}
+\label{sssec:res-dwi-tract-tsa}
+
+% TODO: Table of tract statistics
+% TODO: for table, detail \lstinline{s(node_id):scanOFpost} and \lstinline{s(node_id):scanOFrtp}
+
+As a selection of tracts did not show significant algorithmic variance, we selected to focus on a subset commonly implicated in sports-related concussion, specifically the splenium (superior parietal corpus callosum; CCsp), forceps minor (anterior frontal corpus callosum, CCaf), left corticospinal tracts (lCS), and left arcuate (lArc). Individual models were used to fit the FA, MD, AD, and RD scalars for each tract to test for Post and RTP differences from Base (R Code \ref{code:gam-lgio}). Test statistics for Post  and RTP difference smooths [REF TABLE] indicate that all smooths differed significantly from Base in at least one region of nodes, save for lCS AD smooth (both Post and RTP were identical to Base) as well as the lArc Post FA smooth (Figure \ref{fig:lgio-gam}).
+
+\begin{figure}[H]
+	\centering
+	\fbox{\includegraphics[scale=0.10]{fig_lgio_smooths.png}}
+	\caption{Longitudinal HGAM smooths modeling DWI scalar as a function of node. Each model fit both the global tractometric profile (global smooths) and how sessions differed from the global (group smooths). Specifically, session was treated as an ordered factor so resulting session smooths are a `difference from Base' smooth. For example, left arcuate Post FA values did not differ from Base (D, top right) while RTP had lower FA values than base around node 65. Each quadrant contains global and session smooths for FA (top left), MD (top right), AD (bottom left), and RD (bottom right). A: Corpus Callosum Anterior Frontal (forceps minor), B: Corpus Callosum Superior Parietal, C: left Corticospinal, D: left Uncinate tract. Red boxes indicate nodes where smooths differ statistically from the reference group (Base).}
+	\label{fig:lgio-gam}
+\end{figure}
+
+At Post, both callosal tracts (CCaf, CCsp) showed changes to FA values left of midline (approximate nodes 50-60), changes which were driven in large part by RD. Increased RD in CCaf, without changes in RD, resulted in a lower FA value relative to Base at Post. Conversely, decreased RD values were associated with increased FA values in CCsp.
+
+
+% TODO: detail rx bx FA and o/scalars
 
 
 \subsection{DWI Tracts Interactions - ImPACT}
@@ -289,32 +315,29 @@ Supplemental Materials.
 
 \begin{equ}[H]
 	\begin{lstlisting}
-		df$scanOF <- factor(df$scan_name, ordered=T)
-		fit_LGIO <- mgcv::bam(
+		fit_LGI <- mgcv::bam(
 		  <scalar> ~ s(subj_id, scan_name, bs="re") +
 		    s(node_id, bs="tp", k=15, m=2) +
-		    s(node_id, by=scanOF, bs="tp", k=15, m=1),
+		    s(node_id, by=scan_name, bs="tp", k=15, m=1),
 		  data=df,
 		  family=<family>,
 		  method="fREML",
 		  nthreads=4
 		)
 	\end{lstlisting}
-	\caption{Tract scalars are modeled as a function of tract node with thin-plate regression splines using both global and group smooths, individual wiggliness terms for groups, and ordered factors to compare Post and RTP group smooths to Base.}
-	\label{supp-code:gam-lgio}
+	\caption{Tract scalars are modeled as a function of tract node with thin-plate regression splines using both global and group (\lstinline{scan_name}) smooths as well as individual group wiggliness. \lstinline{<scalar>} = relevant DWI metric (AD, RD, MD, or FA), \lstinline{scan_name} = session identifier factor (Base, Post, RTP), \lstinline{<family>} = relevant family and link function for scalar distribution.}
+	\label{supp-code:gam-lgi}
 \end{equ}
 
 
 \begin{equ}[H]
 	\begin{lstlisting}
-		df$scanOF <- factor(df$scan_name, ordered=T)
-		fit_LGIO_intx <- mgcv::bam(
+		fit_LGI_intx <- mgcv::bam(
 		  <scalar> ~ s(subj_id, scan_name, bs="re") +
 		    s(node_id, bs="tp", k=15, m=2) +
 		    s(imp_meas, by=scan_name, bs="tp", k=5) +
-		    ti(node_id, imp_meas, bs=c"tp","tp"), k=c(20,5), m=1) +
 		    ti(
-		      node_id, imp_meas, by=scanOF,
+		      node_id, imp_meas, by=scan_name,
 		      bs=c("tp","tp"), k=c(20,5), m=1
 		    ),
 		  data=df,
@@ -323,8 +346,8 @@ Supplemental Materials.
 		  nthreads=4
 		)
 	\end{lstlisting}
-	\caption{Tract scalars are modeled as a function of separate 2D node and ImPACT smooths as well as a 3D tensor product interaction surface, with ordered factors used to compare Post and RTP surfaces to Base.}
-	\label{supp-code:gam-lgio-intx}
+	\caption{Tract scalars are modeled as a function of separate 2D node and ImPACT smooths as well as a 3D tensor product interaction surface. \lstinline{imp_meas} = ImPACT composite or total symptom measure.}
+	\label{supp-code:gam-lgi-intx}
 \end{equ}
 
 

@@ -19,41 +19,61 @@ imp_gams <- workflows$impact_gams(df_scan_imp)
 
 # Model AFQ metrics via HGAMs ----
 #
-# Conduct longitudinal HGAM of tract FA differences (LDI), longitudinal
-# HGAM of scalars for each tract (LGI, LGIO), and then interactions
-# with time and ImPACT measures.
+# Conduct whole-brain longitudinal HGAM of tract FA differences (LDI),
+# and then model run-rerun tract FA differences (DI) to identify tracts
+# that have stable run-reun metrics.
 
 fit_LDI <- workflows$dwi_gam_delta_all(df_afq, make_plots = F)
 
-# Changes in FA resulting from rerunning pyAFQ on ADR base data
 df_afq_rr <- workflows$get_data_afq("tbl_afq_rerun")
 fit_DI_rr <- workflows$dwi_gam_delta_rerun(df_afq, df_afq_rr)
 workflows$plot_dwi_gam_all_rerun(fit_LDI, fit_DI_rr)
 
+
+# Model interactions between AFQ metrics and ImPACT, time. ----
 #
-tract_list <- unique(df_afq$tract_name)
+# Conduct longitudinal HGAM of tract scalars (LGI, LGIO).
+#
+# Select tracts that had stable metrics between run and rerun, and select
+# other tracts of interest. Test their interactions with planned ImPACT
+# metrics.
+#
+# Also model FA changes between Post and RTP as a function of number of days
+# as an attempt to quantify recovery (or worsening of injury).
+#
+# Tracts with no run-reun difference: CCaf, CCmot, CCocc, CCsp, lArc, lCS, lSL
+# Other tracts of interest: laThal, lIFO, raThal, rCCing, riFO, rUnc
+
+tract_all <- unique(df_afq$tract_name)
+
+# Stable tracts
+tract_list <- c(
+  tract_all[17],tract_all[18],tract_all[19],tract_all[23],
+  tract_all[13],tract_all[5],tract_all[11]
+)
+
+# Tracts of interest
+tract_list <- c(
+  tract_list, tract_all[1], tract_all[7], tract_all[2], 
+  tract_all[4], tract_all[8], tract_all[16]
+)
+
+# Plot tracts changes in scalars
 for (tract in tract_list) {
   tract_gams <- workflows$dwi_gam_long_tract(df_afq, tract)
 }
 
+# Interactions with ImPACT, time
 for(tract in tract_list){
+  fit_intx <- workflows$dwi_gam_long_impact(df_afq, df_scan_imp, tract)
   workflows$dwi_gam_delta_time(df_afq, tract)
 }
 
-# Select specific tracts: CCorb, laThal, lCCs, 
-#  liFO, lArc, raThal, rCCing, riFO, rUnc.
-tract_roi <- c(
-  tract_list[20], tract_list[1], tract_list[5], tract_list[7], tract_list[13],
-  tract_list[3], tract_list[4], tract_list[8], tract_list[16]
-)
-for(tract in tract_roi){
-  fit_intx <- workflows$dwi_gam_long_impact(df_afq, df_scan_imp, tract)
-}
 
-# Only test for CC and vis_mem interactions
-tract_roi <- tract_list[17:24]
-for(tract in tract_roi){
-  fit_intx <- workflows$dwi_gam_long_impact(
-    df_afq, df_scan_imp, tract, impact_meas="mem_vis"
-  )
-}
+# # Only test for CC and vis_mem interactions
+# tract_roi <- tract_all[17:24]
+# for(tract in tract_roi){
+#   fit_intx <- workflows$dwi_gam_long_impact(
+#     df_afq, df_scan_imp, tract, impact_meas="mem_vis"
+#   )
+# }

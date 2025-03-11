@@ -808,12 +808,18 @@ dwi_gam_long_tract <- function(df_afq, tract) {
 #' @returns String, name of impact measure.
 .tract_impact <- function(tract) {
   map_beh <- switch(tract,
+    "Callosum Anterior Frontal" = "mem_vis",
     "Callosum Orbital" = "tot_symp",
-    "Left Anterior Thalamic" = "tot_symp",
-    "Left Arcuate" = "mem_ver",
+    "Callosum Motor" = "rx_time",
+    "Callosum Superior Parietal" = "mem_vis",
+    "Callosum Occipital" = "mem_vis",
+    "Left Anterior Thalamic" = "mem_vis",
+    "Left Arcuate" = "mem_vis",
     "Left Cingulum Cingulate" = "mem_vis",
     "Left Corticospinal" = "rx_time",
     "Left Inferior Fronto-occipital" = "mem_vis",
+    "Left Superior Longitudinal" = "mem_vis",
+    "Right Anterior Thalamic" = "mem_vis",
     "Right Cingulum Cingulate" = "mem_vis",
     "Right Inferior Fronto-occipital" = "mem_vis",
     "Right Uncinate" = "tot_symp"

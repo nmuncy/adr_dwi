@@ -5,3 +5,7 @@
 {"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QSupplemental Figures.\\E$"}
 {"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\Qequ[R Code][]\\E$"}
 {"rule":"ALL_TIME_HYPHEN","sentence":"^\\QFinally, and critically, HGAMs facilitate conducting longitudinal, whole-brain analyses on tractometric profiles as data from all tracts and across all time points can be included in the same model.\\E$"}
+{"rule":"UPPERCASE_SENTENCE_START","sentence":"^\\Qdelta_fa = RTP-Base and Post-Base FA differences, subj_id = subject identifier factor, node_id = node identifier integer, tract_name = tract identifier factor, sess_comp = session comparison factor (RTP-Base, Post-Base), and tract_scan = interaction of tract_name and sess_comp.\\E$"}
+{"rule":"UPPERCASE_SENTENCE_START","sentence":"^\\Qimp_meas = ImPACT composite or total symptom measure.\\E$"}
+{"rule":"CC_VERB","sentence":"^\\QArc = arcuate, aThal = anterior thalamic, CCing = cingulum (cingulate portion), CS = corticospinal, IFO = inferior fronto-occipital, IL = inferior lateral, SL = superior lateral, Unc = uncinate.\\E$"}
+{"rule":"UPPERCASE_SENTENCE_START","sentence":"^\\Qimp_meas = ImPACT composite or total symptom score, num_assess = assessment number (1=Base, 2=Post, 3=RTP).\\E$"}

@@ -257,7 +257,7 @@ From the whole-brain analysis, we identified a subset of tracts that showed conc
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[scale=0.09]{fig_lgio_smooths.png}}
+	\fbox{\includegraphics[scale=0.09]{fig_LGIO_smooths.png}}
 	\caption{Longitudinal HGAM smooths modeling DWI scalar as a function of node. Each model fit both the global tractometric profile (global smooths) and how sessions differed from the global (group smooths). Specifically, session was treated as an ordered factor so resulting session smooths are a `difference from Base' smooth. For example, left arcuate (A) Post FA values did not differ from Base while RTP had lower FA values than base around node 65. Each section (A-F) consists of global and session smooths for FA (top left), MD (top right), AD (bottom left), and RD (bottom right). Red boxes indicate nodes where smooths differ statistically from the reference group (Base). Group smooths are plotted in the domain of the global smooth to show their fit contribution. LGIO = Longitudinal HGAM with Global and group (I) smooths, and an Ordered group factor. High-resolution version available online.}
 	\label{fig:lgio-gam}
 \end{figure}
@@ -272,12 +272,26 @@ Description of DWI - ImPACT interaction.
 % TODO: Motivate ImPACT metric selections
 % TODO: LGIO_intx GAMs
 
+\begin{figure}[H]
+	\centering
+	\fbox{\includegraphics{fig_LGIO_intx_lCS_rx_time.png}}
+	\caption{Caption.}
+	\label{fig:lgio-imp-lcs}
+\end{figure}
+
 
 \subsection{DWI Tracts Interactions - Time}
 \label{ssec:res-dwi-time}
 Description of DWI-time interaction.
 
-% TODO: DI_time GAM results - rSLF?
+% TODO: DI_time GAM results - lCS node 45.
+
+\begin{figure}[H]
+	\centering
+	\fbox{\includegraphics[scale=0.75]{fig_DI_time_lCS_fa.png}}
+	\caption{Caption.}
+	\label{fig:di-time-lcs}
+\end{figure}
 
 
 \section{Discussion}

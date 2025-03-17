@@ -31,6 +31,7 @@
 \usepackage{url}
 \usepackage{float}
 \usepackage{longtable}
+\usepackage{rotating}
 
 % code
 \usepackage{listings,lstautogobble}
@@ -110,9 +111,7 @@ Description of ImPACT.
 
 \subsection{MRI Protocol}
 \label{ssec:meth-mri}
-Magnetic Resonance Imaging data were collected on a 3-Tesla Siemens MAGNETOM Skyra scanner at the Center for Brain, Behavior and Biology (University of Nebraska-Lincoln) utilizing a 32-channel coil. For each of three sessions (Base, Post, and RTP), participants contributed T1 and diffusion weighted images (T1w, DWI). T1w Multi-Echo Magnetization Prepared - RApid GRadient Echo (MEMP-RAGE) structural scans were acquired with the following parameters: TR = 2530 ms, TE = 1.69, 3.55, 5.41, and 7.27 ms, flip angle = 7$^{\circ}$, voxel size = 1 mm$^3$, FoV = 256 $\times$ 256, slices = 176 interleaved. DWI scans were acquired via TR = 3000 ms, TE = 95 ms, flip angle = 90$^{\circ}$, voxel size = 1.719 $\times$ 1.719 $\times$ 2.4 mm$^3$, 134 slices, multi-band acceleration factor = 3, directions = 128, bandwidth = 1500 Hz/Px, shells = 1 (b-value = 1000 s/mm$^2$), reference volumes = 6 (b-values = 0 s/mm$^2$; b$_0$). A set of field maps for the DWI scans were collected using the same acquisition direction (anterior-posterior; AP) and reversed (posterior-anterior; PA).
-
-% TODO verify coil type
+Magnetic Resonance Imaging data were collected on a 3-Tesla Siemens MAGNETOM Skyra scanner at the Center for Brain, Behavior and Biology (University of Nebraska-Lincoln) utilizing a 20-channel coil. For each of three sessions (Base, Post, and RTP), participants contributed T1 and diffusion weighted images (T1w, DWI). T1w Multi-Echo Magnetization Prepared - RApid GRadient Echo (MEMP-RAGE) structural scans were acquired with the following parameters: TR = 2530 ms, TE = 1.69, 3.55, 5.41, and 7.27 ms, flip angle = 7$^{\circ}$, voxel size = 1 mm$^3$, FoV = 256 $\times$ 256, slices = 176 interleaved. DWI scans were acquired via TR = 3000 ms, TE = 95 ms, flip angle = 90$^{\circ}$, voxel size = 1.719 $\times$ 1.719 $\times$ 2.4 mm$^3$, 134 slices, multi-band acceleration factor = 3, directions = 128, bandwidth = 1500 Hz/Px, shells = 1 (b-value = 1000 s/mm$^2$), reference volumes = 6 (b-values = 0 s/mm$^2$; b$_0$). A set of field maps for the DWI scans were collected using the same acquisition direction (anterior-posterior; AP) and reversed (posterior-anterior; PA).
 
 
 \subsection{MRI Data Processing}
@@ -129,7 +128,7 @@ Whole-brain tractography was computed from the preprocessed DWI by PyAFQ. Constr
 
 % TODO: are these two paragraphs better in the intro? Maybe a brief description goes in intro.
 
-Generalized additive models (GAM) are an extension of general linear models capable of modeling high-dimensional data which contain non-linear relationships. Where regression models fit data with a linear (or higher-order polynomial) function, GAMs construct a smooth curve to fit data from a set of basis functions (i.e. splines). Such a smooth can capture complex X-Y relationships that would be underfit by models with linear assumptions. Further, high dimensional relationships can be modeled via 3-dimensional smooths (i.e. membrane), termed a `tensor product interaction smooth', or with hypersurfaces for higher dimensions \parencite{baayen2020IntroductionGeneralizedAdditive}. Such capabilities have made GAMs useful in fields such as ecology ([CITE]), paleontology \parencite{simpson2018ModellingPalaeoecologicalTime}, and linguistics ([CITE]), which often model complex data in high dimensions or across multiple factors, and researchers using MRI techniques are beginning to adopt the method ([CITE]). We recently demonstrated their applicability to modeling DWI scalar data \parencite{muncy2022GeneralAdditiveModels}, and here we extend GAMs to model high-dimensional, longitudinal, multimodal data.
+Generalized additive models (GAM) are an extension of general linear models capable of modeling high-dimensional data which contain non-linear relationships. Where regression models fit data with a linear (and higher-order polynomials) function, GAMs construct a smooth curve to fit data from a set of basis functions (i.e. splines). Such a smooth can capture complex X-Y relationships that would be underfit by models with linear assumptions. Further, non-linear three-way relationships can be modeled via surfaces, termed a `tensor product interaction smooth', and hypersurfaces can model even higher dimensional interactions \parencite{baayen2020IntroductionGeneralizedAdditive}. Such capabilities have made GAMs useful in fields such as ecology ([CITE]), paleontology \parencite{simpson2018ModellingPalaeoecologicalTime}, and linguistics ([CITE]), which often model complex data in high dimensions and/or across multiple factors, and researchers using MRI techniques are beginning to adopt the method ([CITE]). We recently demonstrated their applicability to modeling DWI scalar data \parencite{muncy2022GeneralAdditiveModels} and here we extend GAMs to model high-dimensional, longitudinal, multimodal data.
 
 Hierarchical GAMs (HGAMs; \cite{pedersen2019HierarchicalGeneralizedAdditive}) allow for model fits at both global and group levels. That is, it is possible to model both the X-Y relationship that is shared across all levels of a factor (global smooth) and differences that factor levels (group smooths) may have from the global smooth. Further, it is not required that each level of smooth (global, group) contain the same `wiggliness' in the X-Y relationships. Separate smooth curves and wiggliness terms at different factor levels of HGAMs is highly relevant in modeling concussion-related changes within white matter tracts, as the global smooth of the tractometric profile (i.e. scalar values across all nodes) can effectively be held constant when modeling potential changes across session, and independent wiggliness terms may capture scalar changes unique to one time point. Further, tensor product interaction terms can be utilized to build multimodal models, investigating the relationship of the tractometric profile with independent metrics such as the ImPACT composite scores. Accordingly, such a model would be capable not only of detecting changes within a tract that result from concussion, but also how such changes relate to clinical assessments. Finally, and critically, HGAMs facilitate conducting longitudinal, whole-brain analyses on tractometric profiles as data from all tracts and across all time points can be included in the same model. Such a specification allows for within-subject pooling of variance across both tract and time. Where modeling individual tracts results in a creeping Type-I error and the corresponding corrections, injury (and subsequent recovery) may affect multiple tracts within a subject and such shared variance would be lost when investigating tracts individually. By including all tracts and time points, HGAMs have the capability to not only reduce Type-I but also Type-II errors. All GAMs were specified using the \lstinline{mgcv} package version 1.9-1 \parencite{wood2017GeneralizedAdditiveModels} in R version 4.3.3 \parencite{rcoreteam2023LanguageEnvironmentStatistical}.
 
@@ -201,7 +200,7 @@ As noted above, GAMs are capable of modeling higher-dimensional, non-linear inte
 		  nthreads=4
 		)
 	\end{lstlisting}
-	\caption{Tract scalars are modeled as a function of separate 2D node and ImPACT smooths as well as a 3D tensor product interaction surface, with ordered factors used to compare Post and RTP surfaces to Base. \lstinline{imp_meas} = ImPACT composite or total symptom measure.}
+	\caption{Tract scalars are modeled as a function of separate 1D node and ImPACT smooths as well as a 2D tensor product interaction surface, with ordered factors used to compare Post and RTP surfaces to Base. \lstinline{imp_meas} = ImPACT composite or total symptom measure.}
 	\label{code:gam-lgio-intx}
 \end{equ}
 
@@ -244,25 +243,38 @@ The longitudinal, whole-brain difference model (Section \ref{sssec:meth-gam-ldi}
 
 As tractometry was conducted on each session via PyAFQ, one potential source of variance is algorithmic (i.e. pipeline) run-rerun (test-retest) stability, particularly given our use of probabilistic tractography. Previous work has demonstrated high test-retest reliability metrics for PyAFQ \parencite{kruper2021EvaluatingReliabilityHuman}, which also noted tract-dependent reliability metrics that averaged around 86\%. We note that concussion-related scalar changes may not be as large as 14\%, particularly at the group level due to injury heterogeneity. To quantify the amount of algorithmic variance in our data, we reran tractography on the Base session and calculated Run-Rerun $\Delta$FA values for each subject's tract profiles. The Run-Rerun $\Delta$FA were modeled with a non-longitudinal variant of R Code \ref{code:gam-ldi} (Supplemental R Code \ref{supp-code:gam-di}). Resulting smooths (Figure \ref{fig:ldi-gam}, bottom) illustrate the amount of algorithmic variance that can be expected for each tract, where some tracts have demonstrably high variance (e.g. CCorb) while others are more stable (CCsf). Corresponding test statistics identified a number of tracts which did not significantly differ between run and rerun ([REF TABLE]); subsequent analyses were only conducted on tracts that demonstrated a larger effect of session than run-rerun.
 
-% TODO: analyses just focus one stable tracts?
 % TODO: Supplemental table of LDI, DI stats.
+
 
 \subsubsection{Tract-Specific Analyses}
 \label{sssec:res-dwi-tract-tsa}
 
+\textit{Corpus Callosum Results}. The corpus callosum is divided into eight main tracts by PyAFQ: anterior forceps (CCaf), motor (CCmot), occipital (CCocc), orbital (CCorb), posterior parietal (CCpp), superior frontal (CCsf), superior parietal (CCsp), and temporal (CCtemp). We investigated whether these tracts would have concussion- and recovery-related scalar changes, with particular interest in the posterior regions (CCsp, CCpp). As an increase in FA can result from an increase in AD \textit{or} decrease in RD, we next modeled FA, MD, AD, and RD for each tract, testing for Post and RTP differences from Base (R Code \ref{code:gam-lgio}).
+
+Figure \ref{fig:lgio-gam-cc} illustrates the scalar smooths for each of these tracts, including smooths for both the global tract profile and Post and RTP differences from Base. Inspection of these smooths reveals a number of patterns. First, despite significant test statistics against flatness, four tracts show relatively little FA change from Base: CCaf, CCocc, CCpp, and CCtemp (Figure \ref{fig:lgio-gam-cc}, A, C, E, \& H); such small difference magnitudes give little evidence of practical significance. Second, the Post-Base and RTP-Base FA differences appear to be constant for the CCsp (Figure \ref{fig:lgio-gam-cc}, G), where FA values about nodes 50-60 have increased relative to Base, seemingly driven by a decreased RD. Such a pattern recovery is consistent with axonal edema, particularly given the lack of change in AD. Third, evidence of recovery is apparent in the CCsf (Figure \ref{fig:lgio-gam-cc}, F). At Post, CCsf FA values around node 50 are elevated with respect to Base, but this magnitude of change is decreased by RTP. A similar pattern is also found in RD about the same nodes, and this pattern is again consistent with axonal swelling at the time of injury, but with the added evidence of decreased edema by the time of RTP. Finally, two tracts appear to worsen between Post and RTP: the CCmot and CCorb (Figure \ref{fig:lgio-gam-cc}, B \& D). As with the other tracts, the CCmot appears to have inflated FA values relative to Base about node 50, driven by decreased RD. Instead of constancy or recovery, however, the difference in scalar values spreads rightward (nodes 40-50). Conversely, CCorb has a decrease in FA values around node 60 (and increased RD) in Post relative to Base, a difference which increases in magnitude by RTP.
+
+
+\begin{sidewaysfigure}
+	\centering
+	\fbox{\includegraphics[scale=0.085]{fig_LGIO_callosal_smooths.png}}
+	\caption{HGAMs fitting the global (top) and session difference from Base (Post, RTP; middle, bottom) smooths. Each subplot (A-H) consists smooths for FA (top left), MD (top right), AD (bottom left), and RD (bottom right). `Diff: Post-Base' = Post difference relative to Base. `Diff: RTP-Base' = RTP difference relative to base. Red boxes indicate nodes where smooths differ statistically from the reference group (Base). Group smooths are plotted in the domain of the global smooth to show their fit contribution. LGIO = Longitudinal HGAM with Global and group (I) smooths, and an Ordered group factor. High-resolution version available online.}
+	\label{fig:lgio-gam-cc}
+\end{sidewaysfigure}
+
+
 % TODO: Table of tract statistics
 % TODO: for table, detail \lstinline{s(node_id):scanOFpost} and \lstinline{s(node_id):scanOFrtp}
 
-From the whole-brain analysis, we identified a subset of tracts that showed concussion- and/or recovery-related scalar changes with magnitudes larger than were expected from algorithmic variance: left arcuate (lArc), left corticospinal (lCS), right anterior thalamic (raThal), right cingulum cingulate (rCCing), right inferior fronto-occipital (rIFO), and right uncinate (rUnc) (Figure \ref{fig:lgio-gam}). As an increase in FA can result from an increase in AD \textit{or} decrease in RD (and the converse for FA decreases), we next modeled FA, MD, AD, and RD for each tract, testing for Post and RTP differences from Base (R Code \ref{code:gam-lgio}). Test statistics ([REF TABLE]) indicated that all smooths differed significantly from Base in at least one region of nodes, save for the lArc Post FA smooth as well as the AD smooths (Figure \ref{fig:lgio-gam}, A \& B).
+\textit{Select Tract Results}. In addition to the corpus callosum, we identified a subset of tracts that showed concussion- and/or recovery-related scalar changes with magnitudes larger than were expected from algorithmic variance: left arcuate (lArc), left corticospinal (lCS), right anterior thalamic (raThal), right cingulum cingulate (rCCing), right inferior fronto-occipital (rIFO), and right uncinate (rUnc) (Figure \ref{fig:lgio-gam-sel}). Test statistics ([REF TABLE]) indicated that all smooths differed significantly from Base in at least one region of nodes, save for the lArc Post FA smooth as well as the AD smooths (Figure \ref{fig:lgio-gam-sel}, A \& B).
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[scale=0.09]{fig_LGIO_smooths.png}}
+	\fbox{\includegraphics[scale=0.09]{fig_LGIO_select_smooths.png}}
 	\caption{Longitudinal HGAM smooths modeling DWI scalar as a function of node. Each model fit both the global tractometric profile (global smooths) and how sessions differed from the global (group smooths). Specifically, session was treated as an ordered factor so resulting session smooths are a `difference from Base' smooth. For example, left arcuate (A) Post FA values did not differ from Base while RTP had lower FA values than base around node 65. Each section (A-F) consists of global and session smooths for FA (top left), MD (top right), AD (bottom left), and RD (bottom right). Red boxes indicate nodes where smooths differ statistically from the reference group (Base). Group smooths are plotted in the domain of the global smooth to show their fit contribution. LGIO = Longitudinal HGAM with Global and group (I) smooths, and an Ordered group factor. High-resolution version available online.}
-	\label{fig:lgio-gam}
+	\label{fig:lgio-gam-sel}
 \end{figure}
 
-Within the selected tracts, three patterns are visible. First, the lCS, raThal, and rIFO appear to have stable FA changes relative to Base. For the lCS, increases in FA (Figure \ref{fig:lgio-gam}B, node 65) are driven by decreases in RD for the same region, and this pattern is also found for rIFO (Figure \ref{fig:lgio-gam}E, node 45). For raThal, both decreases in RD and increases in AD are associated with the increase in FA values (Figure \ref{fig:lgio-gam}C, node 65). Second, the lArc and rUnc tracts both show evidence of worsening, where tract scalar become more discrepant with Base by RTP. At Post, the lArc FA values do not differ from Base (albeit the increases in MD, AD, and RD; Figure \ref{fig:lgio-gam}A), and by RTP a steep decreases in FA about node 65 is present that is driven entirely by increased RD values. Likewise, the FA values for rUnc worsen over time (Figure \ref{fig:lgio-gam}F), most dramatically in the increased FA values near node 70 which is driven by RD decreases. Finally, the rCCing (Figure \ref{fig:lgio-gam}D) shows evidence of recovery near node 35. At Post, a steep decrease in FA is associated with a corresponding increase in RD, which diminishes by RTP. That said, the slight increase in FA about node 70 at Post seems to elongate by RTP, with a decline in RD as well.
+Within the selected tracts, and as with the corpus callosum, three patterns are visible. First, the lCS, raThal, and rIFO appear to have stable FA changes relative to Base. For the lCS, increases in FA (Figure \ref{fig:lgio-gam-sel}B, node 65) are driven by decreases in RD for the same region, and this pattern is also found for rIFO (Figure \ref{fig:lgio-gam-sel}E, node 45). For raThal, both decreases in RD and increases in AD are associated with the increase in FA values (Figure \ref{fig:lgio-gam-sel}C, node 65). Second, the lArc and rUnc tracts both show evidence of worsening, where tract scalar become more discrepant with Base by RTP. At Post, the lArc FA values do not differ from Base (albeit the increases in MD, AD, and RD; Figure \ref{fig:lgio-gam-sel}A), and by RTP a steep decreases in FA about node 65 is present that is driven entirely by increased RD values. Likewise, the FA values for rUnc worsen over time (Figure \ref{fig:lgio-gam-sel}F), most dramatically in the increased FA values near node 70, an increase which is driven by RD decreases. Finally, the rCCing (Figure \ref{fig:lgio-gam-sel}D) shows evidence of recovery near node 35. At Post, a steep decrease in FA is associated with a corresponding increase in RD, which diminishes by RTP. That said, the slight increase in FA about node 70 at Post seems to elongate by RTP, with a decline in RD as well.
 
 
 \subsection{DWI Tracts Interactions - ImPACT}
@@ -272,12 +284,12 @@ Description of DWI - ImPACT interaction.
 % TODO: Motivate ImPACT metric selections
 % TODO: LGIO_intx GAMs
 
-\begin{figure}[H]
-	\centering
-	\fbox{\includegraphics{fig_LGIO_intx_lCS_rx_time.png}}
-	\caption{Caption.}
-	\label{fig:lgio-imp-lcs}
-\end{figure}
+% \begin{figure}[H]
+% 	\centering
+% 	\fbox{\includegraphics{fig_LGIO_intx_lCS_rx_time.png}}
+% 	\caption{Caption.}
+% 	\label{fig:lgio-imp-lcs}
+% \end{figure}
 
 
 \subsection{DWI Tracts Interactions - Time}
@@ -286,12 +298,12 @@ Description of DWI-time interaction.
 
 % TODO: DI_time GAM results - lCS node 45.
 
-\begin{figure}[H]
-	\centering
-	\fbox{\includegraphics[scale=0.75]{fig_DI_time_lCS_fa.png}}
-	\caption{Caption.}
-	\label{fig:di-time-lcs}
-\end{figure}
+% \begin{figure}[H]
+% 	\centering
+% 	\fbox{\includegraphics[scale=0.75]{fig_DI_time_lCS_fa.png}}
+% 	\caption{Caption.}
+% 	\label{fig:di-time-lcs}
+% \end{figure}
 
 
 \section{Discussion}
@@ -358,7 +370,7 @@ Supplemental Materials.
 		  nthreads=4
 		)
 	\end{lstlisting}
-	\caption{Tract scalars are modeled as a function of separate 2D node and ImPACT smooths as well as a 3D tensor product interaction surface. \lstinline{imp_meas} = ImPACT composite or total symptom measure.}
+	\caption{Tract scalars are modeled as a function of separate 1D node and ImPACT smooths as well as a 2D tensor product interaction surface. \lstinline{imp_meas} = ImPACT composite or total symptom measure.}
 	\label{supp-code:gam-lgi-intx}
 \end{equ}
 

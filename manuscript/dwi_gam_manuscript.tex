@@ -100,6 +100,7 @@ Introduction here.
 \label{ssec:meth-part}
 Participants were recruited from men's football and women's soccer programs at the University of Nebraska-Lincoln, resulting in the enrollment of 69 (9 female, age = 19.36 $\pm$1.67, range = 17-24) National Collegiate Athletic Association (NCAA) athletes. Additional demographic metrics (e.g. race, ethnicity, SES) are omitted to protect participant confidentiality as University athletes are public figures and identification may cause deleterious consequences. Due to the limited number of females, and the sport-sex confound, we combined all participants into a single group. Institutional Review Board approval was obtained at the outset of the study, and prior to beginning experimental procedures participants completed informed consent and assent. Magnetic Resonant Imaging (MRI) and clinical assessment (ImPACT) data were acquired during three sessions: enrollment at the beginning of the season (baseline, Base), within 48 hours of diagnosed concussion (post-concussion, Post), and prior to return-to-play (RTP). As MRI and ImPACT (below) data were gathered separately, a number of participants did not contribute MRI and/or ImPACT data across one or more of the sessions. This resulted in the following final session counts: Base = 67 MRI (9 female), 61 ImPACT (5 female), Post = 65 MRI (8 female), 48 ImPACT (3 female), and RTP = 56 MRI (7 female), 32 ImPACT (2 female).
 
+% TODO: provide average time between Post and RTP
 % TODO: reformat final count? Perhaps a table.
 
 \subsection{ImPACT}
@@ -248,18 +249,17 @@ As tractometry was conducted on each session via PyAFQ, one potential source of 
 
 \subsubsection{Tract-Specific Analyses}
 \label{sssec:res-dwi-tract-tsa}
+\textit{Corpus Callosum Results}. The corpus callosum is divided into eight main tracts by PyAFQ: anterior forceps, motor, occipital, orbital, posterior parietal, superior frontal, superior parietal, and temporal. We investigated whether these tracts would have concussion- and recovery-related scalar changes, with particular interest in the posterior regions (superior parietal, posterior parietal). As an increase in FA can result from an increase in AD \textit{or} decrease in RD, we also modeled MD, AD, and RD so that any changes in FA could be understood with respect to the other scalars. Such models were specified for each tract, testing for Post and RTP differences from Base (R Code \ref{code:gam-lgio}).
 
-\textit{Corpus Callosum Results}. The corpus callosum is divided into eight main tracts by PyAFQ: anterior forceps (CCaf), motor (CCmot), occipital (CCocc), orbital (CCorb), posterior parietal (CCpp), superior frontal (CCsf), superior parietal (CCsp), and temporal (CCtemp). We investigated whether these tracts would have concussion- and recovery-related scalar changes, with particular interest in the posterior regions (CCsp, CCpp). As an increase in FA can result from an increase in AD \textit{or} decrease in RD, we next modeled FA, MD, AD, and RD for each tract, testing for Post and RTP differences from Base (R Code \ref{code:gam-lgio}).
-
-Figure \ref{fig:lgio-gam-cc} illustrates the scalar smooths for each of these tracts, including smooths for both the global tract profile and Post and RTP differences from Base. Inspection of these smooths reveals a number of patterns. First, despite significant test statistics against flatness, four tracts show relatively little FA change from Base: CCaf, CCocc, CCpp, and CCtemp (Figure \ref{fig:lgio-gam-cc}, A, C, E, \& H); such small difference magnitudes give little evidence of practical significance. Second, the Post-Base and RTP-Base FA differences appear to be constant for the CCsp (Figure \ref{fig:lgio-gam-cc}, G), where FA values about nodes 50-60 have increased relative to Base, seemingly driven by a decreased RD. Such a pattern recovery is consistent with axonal edema, particularly given the lack of change in AD. Third, evidence of recovery is apparent in the CCsf (Figure \ref{fig:lgio-gam-cc}, F). At Post, CCsf FA values around node 50 are elevated with respect to Base, but this magnitude of change is decreased by RTP. A similar pattern is also found in RD about the same nodes, and this pattern is again consistent with axonal swelling at the time of injury, but with the added evidence of decreased edema by the time of RTP. Finally, two tracts appear to worsen between Post and RTP: the CCmot and CCorb (Figure \ref{fig:lgio-gam-cc}, B \& D). As with the other tracts, the CCmot appears to have inflated FA values relative to Base about node 50, driven by decreased RD. Instead of constancy or recovery, however, the difference in scalar values spreads rightward (nodes 40-50). Conversely, CCorb has a decrease in FA values around node 60 (and increased RD) in Post relative to Base, a difference which increases in magnitude by RTP.
+Of the eight tracts investigated, four did not show meaningful differences from Base: anterior forceps, occipital, posterior parietal, and temporal. We note that while test statistics indicated significant non-flatness for each of these tracts, a review of the smooths determined that the magnitude of the effect was negligible, limiting any practical significance. Accordingly, we focus on the remaining four callosal tracts. Figure \ref{fig:lgio-gam-cc} illustrates the scalar smooths for each of these tracts, including smooths for both the global tract profile and Post and RTP differences from Base. Inspection of these smooths reveals three of patterns of injury. First, the Post-Base and RTP-Base FA differences appear to be constant for the superior parietal tract (CCsp; Figure \ref{fig:lgio-gam-cc}, A), where FA values about nodes 50-60 are increased relative to Base, seemingly driven by a decreased RD. Such a pattern recovery is consistent with axonal edema, particularly given the lack of change in AD. Second, evidence of recovery is apparent in the superior frontal tract (CCsf; Figure \ref{fig:lgio-gam-cc}, B). At Post, CCsf FA values around node 50 are elevated with respect to Base, but the magnitude of change is decreased by RTP. A similar pattern is also found in RD about the same nodes. This pattern is again consistent with axonal swelling at the time of injury, but with the added evidence of decreased edema by the time of RTP. Finally, two tracts appear to worsen between Post and RTP: the motor (CCmot) and orbital (CCorb) tracts (Figure \ref{fig:lgio-gam-cc}, C \& D). As with the other tracts, the CCmot appears to have inflated FA values relative to Base about node 50, driven by decreased RD. Instead of constancy or recovery, however, the difference in scalar values spreads leftward (nodes 40-50). Conversely, CCorb has a decrease in FA values around node 60 (and increased RD) in Post relative to Base, a difference which increases in magnitude by RTP.
 
 
-\begin{sidewaysfigure}
+\begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[scale=0.085]{fig_LGIO_callosal_smooths.png}}
-	\caption{HGAMs fitting the global (top) and session difference from Base (Post, RTP; middle, bottom) smooths. Each subplot (A-H) consists smooths for FA (top left), MD (top right), AD (bottom left), and RD (bottom right). `Diff: Post-Base' = Post difference relative to Base. `Diff: RTP-Base' = RTP difference relative to base. Red boxes indicate nodes where smooths differ statistically from the reference group (Base). Group smooths are plotted in the domain of the global smooth to show their fit contribution. LGIO = Longitudinal HGAM with Global and group (I) smooths, and an Ordered group factor. High-resolution version available online.}
+	\fbox{\includegraphics[scale=0.1]{fig_LGIO_callosal_smooths.png}}
+	\caption{Longitudinal HGAM smooths modeling DWI scalar as a function of node. Each model fit both the global tractometric profile (global smooths) and how sessions differed from the global (group smooths). Group smooths (\lstinline{Diff: Post-Base}, \lstinline{Diff: RTP-Base}) are `difference from Base' smooths. \textbf{A}: Global and group smooths for Callosum Superior Parietal for FA (top left), MD (top right), AD (bottom left), and RD (bottom right). \textbf{B}: Global and group scalar smooths for Callosum Superior Frontal. \textbf{C}: Global and group scalar smooths for Callosum Motor. \textbf{D}: Global and group scalar smooths for Callosum Orbital. Red boxes indicate nodes where smooths differ statistically from the reference group (Base). Group smooths are plotted in the domain of the global smooth to show their fit contribution. LGIO = Longitudinal HGAM with Global and group (I) smooths, and an Ordered group factor. High-resolution version available online.}
 	\label{fig:lgio-gam-cc}
-\end{sidewaysfigure}
+\end{figure}
 
 
 % TODO: Table of tract statistics
@@ -270,26 +270,39 @@ Figure \ref{fig:lgio-gam-cc} illustrates the scalar smooths for each of these tr
 \begin{figure}[H]
 	\centering
 	\fbox{\includegraphics[scale=0.09]{fig_LGIO_select_smooths.png}}
-	\caption{Longitudinal HGAM smooths modeling DWI scalar as a function of node. Each model fit both the global tractometric profile (global smooths) and how sessions differed from the global (group smooths). Specifically, session was treated as an ordered factor so resulting session smooths are a `difference from Base' smooth. For example, left arcuate (A) Post FA values did not differ from Base while RTP had lower FA values than base around node 65. Each section (A-F) consists of global and session smooths for FA (top left), MD (top right), AD (bottom left), and RD (bottom right). Red boxes indicate nodes where smooths differ statistically from the reference group (Base). Group smooths are plotted in the domain of the global smooth to show their fit contribution. LGIO = Longitudinal HGAM with Global and group (I) smooths, and an Ordered group factor. High-resolution version available online.}
+	\caption{Longitudinal HGAM smooths modeling DWI scalar as a function of node. Each section (A-F) consists of global and session smooths for FA (top left), MD (top right), AD (bottom left), and RD (bottom right). Red boxes indicate nodes where smooths differ statistically from the reference group (Base). Group smooths are plotted in the domain of the global smooth to show their fit contribution. LGIO = Longitudinal HGAM with Global and group (I) smooths, and an Ordered group factor. High-resolution version available online.}
 	\label{fig:lgio-gam-sel}
 \end{figure}
 
-Within the selected tracts, and as with the corpus callosum, three patterns are visible. First, the lCS, raThal, and rIFO appear to have stable FA changes relative to Base. For the lCS, increases in FA (Figure \ref{fig:lgio-gam-sel}B, node 65) are driven by decreases in RD for the same region, and this pattern is also found for rIFO (Figure \ref{fig:lgio-gam-sel}E, node 45). For raThal, both decreases in RD and increases in AD are associated with the increase in FA values (Figure \ref{fig:lgio-gam-sel}C, node 65). Second, the lArc and rUnc tracts both show evidence of worsening, where tract scalar become more discrepant with Base by RTP. At Post, the lArc FA values do not differ from Base (albeit the increases in MD, AD, and RD; Figure \ref{fig:lgio-gam-sel}A), and by RTP a steep decreases in FA about node 65 is present that is driven entirely by increased RD values. Likewise, the FA values for rUnc worsen over time (Figure \ref{fig:lgio-gam-sel}F), most dramatically in the increased FA values near node 70, an increase which is driven by RD decreases. Finally, the rCCing (Figure \ref{fig:lgio-gam-sel}D) shows evidence of recovery near node 35. At Post, a steep decrease in FA is associated with a corresponding increase in RD, which diminishes by RTP. That said, the slight increase in FA about node 70 at Post seems to elongate by RTP, with a decline in RD as well.
+Within the selected tracts, and as with the corpus callosum, patterns of injury stability, recovery, and worsening are present. First, the lCS, raThal, and rIFO appear to have stable FA changes relative to Base. For the lCS, increases in FA (Figure \ref{fig:lgio-gam-sel}B, node 65) are driven by decreases in RD for the same region, and this pattern is also found for rIFO (Figure \ref{fig:lgio-gam-sel}E, node 45). For raThal, both decreases in RD and increases in AD are associated with the increase in FA values (Figure \ref{fig:lgio-gam-sel}C, node 65). Second, the lArc and rUnc tracts both show evidence of worsening, where tract scalar become more discrepant with Base by RTP. At Post, the lArc FA values do not differ from Base (albeit the increases in MD, AD, and RD; Figure \ref{fig:lgio-gam-sel}A), and by RTP a steep decreases in FA about node 65 is present, which is driven by increased RD values. Likewise, the FA values for rUnc worsen over time (Figure \ref{fig:lgio-gam-sel}F), most dramatically in the increased FA values near node 70, an increase which is driven by RD decreases. Finally, the rCCing (Figure \ref{fig:lgio-gam-sel}D) shows evidence of recovery near node 35. At Post, a steep decrease in FA is associated with a corresponding increase in RD, which diminishes by RTP. That said, the slight increase in FA about node 70 at Post seems to elongate by RTP, with a decline in RD as well.
 
 
 \subsection{DWI Tracts Interactions - ImPACT}
 \label{ssec:res-dwi-imp}
-Description of DWI - ImPACT interaction.
+\textit{Corpus Callosum Interaction Results}. Modeling multimodal interactions is possible through tensor product interactions smooths: in addition to modeling within-tract longitudinal scalar changes, clinical assessment metrics (or data from other modalities) can be included in higher dimensional models (R Code \ref{code:gam-lgio-intx}) to investigate whether such assessment metrics relate to within-tract concussion-related scalar changes. We conducted exploratory analyses to determine whether changes in callosal FA values related to ImPACT composite and total symptom scores. Specifically, we tested whether the tract FA-ImPACT interaction at Post and RTP differed from those at Base, where Post differences may link physiologic changes (tract scalars) to clinical assessment and a lack of such differences at RTP may indicate recovery.
 
-% TODO: Motivate ImPACT metric selections
-% TODO: LGIO_intx GAMs
+Figure \ref{fig:lgio-intx-cc} visualizes Post and RTP tract node-FA-ImPACT difference interactions as topological surfaces, where the difference interaction is a comparison of Post or RTP to Base interactions. That is, a similar interaction at both Base and Post would result in a flat surface. A linear differential interaction at Post is found for each tract, and this difference from Base largely resolves by RTP. For instance, an interaction exists in the Callosum Superior Frontal tract about nodes 40-60 at Post (the same nodes which were implicated above) where lower visual memory scores are associated with decreased FA values (Figure \ref{fig:lgio-intx-cc}, A). At RTP, while a linear interaction is still somewhat present, the magnitude of the effect is diminished. Likewise, total symptoms are related to decreased FA values about Callosum Superior Frontal nodes 40-60 (Figure \ref{fig:lgio-intx-cc}, B), poorer visual motor performance with nodes 40-50 of Callosum Occipital (Figure \ref{fig:lgio-intx-cc}, C), and total symptoms with decreased FA Callosum Superior Parietal nodes 40-60 (Figure \ref{fig:lgio-intx-cc}, D). In each case of these cases, the FA-ImPACT interaction resolved by RTP, indicated by a `flatter' interaction difference surface.
 
-% \begin{figure}[H]
-% 	\centering
-% 	\fbox{\includegraphics{fig_LGIO_intx_lCS_rx_time.png}}
-% 	\caption{Caption.}
-% 	\label{fig:lgio-imp-lcs}
-% \end{figure}
+\begin{figure}[H]
+	\centering
+	\fbox{\includegraphics[width=0.9\textwidth]{fig_LGIO_intx_callosal.png}}
+	\caption{HGAM tensor product interaction smooths testing for differences from Base node-FA-ImPACT interactions at Post and RTP. A linear interaction is present at Post in each quadrant (top plots), indicated by a gradient (Z) change along the Y-axis at a specific node (X) region, which is not found at RTP (bottom plots).}
+	\label{fig:lgio-intx-cc}
+\end{figure}
+
+
+% TODO: Tables
+% TODO: standardize using abbreviations or full tract names
+
+% TODO: should select tract interaction results be kept?
+\textit{Select Tract Interaction Results}. Further exploratory analyses were conducted to see whether scalar changes in selected tracts (Figure \ref{fig:lgio-gam-sel}) related to changes in ImPACT composite and total symptom scores. Surprising, of the tracts and ImPACT metrics tested, a potential interaction was only detected between the left Corticospinal tract and reaction time (Figure \ref{fig:lgio-intx-lcs}). At Post, the slowest reaction times were associated with larger FA values about node 75. This pattern is reversed at RTP, likely due to sparsity in slow reaction times given recovery (see Figure \ref{fig:imp-gam}, bottom right).
+
+\begin{figure}[H]
+	\centering
+	\fbox{\includegraphics{fig_LGIO_intx_lCS_rx_time.png}}
+	\caption{Caption.}
+	\label{fig:lgio-intx-lcs}
+\end{figure}
 
 
 \subsection{DWI Tracts Interactions - Time}
@@ -312,8 +325,9 @@ Discussion.
 
 % TODO: Summary/recap
 % TODO: Interpret main findings
+% TODO: Reversed smooth-tensor interactiosn -- different groups in data.
 % TODO: Advocate HGAMs for mTBI research, reference AFQ-Insight?
-% Limitations: Interpretation of statistic (flatness and LGI, LGIO models), all data in one model - underfit certain profiles, scan-rescan variance in addition to algorithmic, heterogeneity of injury and insufficient sample size to cluster symptom profiles.
+% Limitations: Interpretation of statistic (flatness and LGI, LGIO models), all data in one model - underfit certain profiles, scan-rescan variance in addition to algorithmic, heterogeneity of injury and insufficient sample size to cluster symptom profiles, tensor products can be driven by sparesely sampling.
 
 
 % acknowledgment page

@@ -58,7 +58,7 @@ transform_data <- use("resources/transform_data.R")
 
 
 #' Pull and clean AFQ data.
-#' 
+#'
 #' Get data from db_adr according to user request, where tbl_afq = 3 sessions
 #' of ADR data (main dataset), tbl_afq_rerun = ADR baseline rerun through
 #' pyAFQ (algorithimic reliability), or tbl_afq_rescan = single subject
@@ -80,7 +80,7 @@ get_data_afq <- function(table_name) {
   # Check for local csv, read-in data or pull from db_adr.
   afq_name <- strsplit(table_name, "tbl_")[[1]][2]
   afq_path <- paste(
-    .analysis_dir(), "dataframes", paste0("df_", afq_name, ".csv"), 
+    .analysis_dir(), "dataframes", paste0("df_", afq_name, ".csv"),
     sep = "/"
   )
 
@@ -199,17 +199,16 @@ get_data_scan_impact <- function(df_afq) {
 
 
 #' Determine subject sex and participation.
-#' 
+#'
 #' Identify subjects with scan data and add demographic
 #' and ImpACT values where available. Determine age
 #' metrics, supply session counts for scan and impact.
-#' 
+#'
 #' @param df_afq Dataframe output of get_data_afq().
 #' @param df_scan_imp Dataframe output of get_data_scan_impact().
 #' @returns Named list containing demographic metrics and counts.
 export("get_demo_counts")
 get_demo_counts <- function(df_afq, df_scan_imp) {
-  
   # Get demographic data
   demo_path <- paste(
     .analysis_dir(), "dataframes", "df_demographics.csv",
@@ -236,10 +235,10 @@ get_demo_counts <- function(df_afq, df_scan_imp) {
   )
   rm(df_afq_sub, df_demo)
   df <- subset(
-    df, 
+    df,
     select = c("subj_id", "scan_name", "sex", "age_base", "dti_fa")
   )
-  
+
   # Add impact
   df_imp <- subset(df_scan_imp, select = c(subj_id, scan_name, mem_ver))
   df <- merge(
@@ -248,11 +247,11 @@ get_demo_counts <- function(df_afq, df_scan_imp) {
     all.x = T
   )
   rm(df_imp)
-  
+
   # Identify unique subjects
   idx_subj <- match(unique(df$subj_id), df$subj_id)
-  df_subj <- df[idx_subj,]
-  
+  df_subj <- df[idx_subj, ]
+
   # Identify subjects with scan, impact data
   idx_scan <- which(!is.na(df$dti_fa))
   idx_imp <- which(!is.na(df$mem_ver))
@@ -260,13 +259,13 @@ get_demo_counts <- function(df_afq, df_scan_imp) {
   # # Identify subjs with post but no base (and converse)
   # idx_post <- which(df$scan_name == "post")
   # idx_base <- which(df$scan_name == "base")
-  
+
   return(list(
     "num_tot" = length(df_subj$subj_id),
     "num_male" = length(which(df_subj$sex == "M")),
     "num_female" = length(which(df_subj$sex == "F")),
-    "sex_scan" = table(df[idx_scan,]$sex, df[idx_scan,]$scan_name),
-    "sex_imp" = table(df[idx_imp,]$sex, df[idx_imp,]$scan_name),
+    "sex_scan" = table(df[idx_scan, ]$sex, df[idx_scan, ]$scan_name),
+    "sex_imp" = table(df[idx_imp, ]$sex, df[idx_imp, ]$scan_name),
     # "num_post_no_base" = dim(anti_join(df[idx_post,], df[idx_base,], by="subj_id"))[1],
     # "num_base_no_post" = dim(anti_join(df[idx_base,], df[idx_post,], by="subj_id"))[1],
     "age_avg" = round(mean(df_subj$age_base), 2),
@@ -343,14 +342,14 @@ impact_gams <- function(df_scan_imp) {
   # #
   # beh_list <- colnames(df_scan_imp)[7:12]
   # beh <- beh_list[6]
-  # 
+  #
   # library(mgcv)
   # library(fitdistrplus)
   # library(itsadug)
   # descdist(df_scan_imp[, beh])
-  # 
+  #
   # hist(df_scan_imp[, beh], breaks=30)
-  # 
+  #
   # fit_beh <- bam(
   #   tot_symp ~ s(scan_count, bs = "tp", k = 3) +
   #     s(subj_id, bs = "re"),
@@ -362,20 +361,20 @@ impact_gams <- function(df_scan_imp) {
   # gam.check(fit_beh)
   # summary(fit_beh)
   # plot(fit_beh)
-  # 
+  #
   # # Transform all
   # df_scan_imp$imp_tx <- NA
   # df_scan_imp$imp_tx <- log(df_scan_imp[, beh])
   # hist(df_scan_imp$imp_tx)
-  # 
+  #
   # df_scan_imp$imp_tx <- df_scan_imp[, beh]/100
   # df_scan_imp$imp_tx <- df_scan_imp$imp_tx + 0.01
-  # 
+  #
   # df_scan_imp$imp_tx <- df_scan_imp[, beh] + 0.5
-  # 
+  #
   # hist(df_scan_imp$imp_tx, breaks=30)
   # descdist(df_scan_imp$imp_tx)
-  # 
+  #
   # fit_tx <- bam(
   #   tot_symp ~ s(scan_count, bs = "tp", k = 3) +
   #     s(subj_id, bs = "re"),
@@ -387,7 +386,7 @@ impact_gams <- function(df_scan_imp) {
   # gam.check(fit_tx)
   # summary(fit_tx)
   # plot(fit_tx)
-  # 
+  #
   # fit_tx2 <- bam(
   #   imp_ctl ~ s(scan_count, bs = "tp", k = 3) +
   #     s(subj_id, bs = "re"),
@@ -399,8 +398,8 @@ impact_gams <- function(df_scan_imp) {
   # gam.check(fit_tx2)
   # summary(fit_tx2)
   # plot(fit_tx2)
-  # 
-  # 
+  #
+  #
   # library(itsadug)
   # compareML(fit_beh, fit_tx)
   # compareML(fit_beh, fit_tx2)
@@ -495,31 +494,33 @@ dwi_gam_delta_all <- function(df_afq, make_plots = T) {
 #' Title.
 #' TODO
 export("dwi_gam_delta_rerun")
-dwi_gam_delta_rerun <- function(df_afq, df_afq_rr){
+dwi_gam_delta_rerun <- function(df_afq, df_afq_rr) {
   # Subset df_afq for relevant values
   df_afq_base <- df_afq[which(df_afq$scan_name == "base"), ]
   df_afq_base <- subset(
-    df_afq_base, select = c("subj_id", "tract_name", "node_id", "dti_fa")
+    df_afq_base,
+    select = c("subj_id", "tract_name", "node_id", "dti_fa")
   )
   colnames(df_afq_base)[4] <- "fa_base1"
   row.names(df_afq_base) <- NULL
-  
+
   # Match df_afq_rr for merging
   df_rerun_base <- subset(
-    df_afq_rr, select = c("subj_id", "tract_name", "node_id", "dti_fa")
+    df_afq_rr,
+    select = c("subj_id", "tract_name", "node_id", "dti_fa")
   )
   colnames(df_rerun_base)[4] <- "fa_base2"
   row.names(df_rerun_base) <- NULL
-  
+
   # Get difference of FAs between runs
   df <- merge(
-    df_afq_base, df_rerun_base, 
-    by = c("subj_id", "tract_name", "node_id"), 
+    df_afq_base, df_rerun_base,
+    by = c("subj_id", "tract_name", "node_id"),
     all = T
   )
   rm(df_afq_base, df_rerun_base)
   df$delta <- df$fa_base2 - df$fa_base1 # Similar comparison to post-base
-  
+
   # Run model
   analysis_dir <- .analysis_dir()
   rds_di <- paste0(analysis_dir, "/stats_gams/rda_objects/fit_DI_rerun_fa.Rda")
@@ -529,13 +530,13 @@ dwi_gam_delta_rerun <- function(df_afq, df_afq_rr){
     rm(h_gam)
   }
   fit_DI <- readRDS(rds_di)
-  
+
   # Mine, print summary stats
   sum_di <- paste0(analysis_dir, "/stats_gams/gam_summaries/fit_DI_rerun_fa.txt")
   if (!file.exists(sum_di)) {
     fit_gams$write_gam_stats(fit_DI, sum_di)
   }
-  
+
   # Identify max deflections from zero
   idx_smooths <- transform_data$idx_di_smooths(fit_DI)
   df_max <- quick_stats$max_deflect(fit_DI, idx_smooths$all)
@@ -544,7 +545,7 @@ dwi_gam_delta_rerun <- function(df_afq, df_afq_rr){
     .analysis_dir(), "/stats_gams/gam_summaries/fit_DI_rerun_fa_max.csv"
   )
   utils::write.csv(df_max, out_csv, row.names = F)
-  
+
   # Draw combined plot
   grDevices::png(
     filename = paste0(
@@ -562,21 +563,20 @@ dwi_gam_delta_rerun <- function(df_afq, df_afq_rr){
 
 
 #' Title.
-#' 
+#'
 #' TODO
 export("plot_dwi_gam_all_rerun")
-plot_dwi_gam_all_rerun <- function(fit_LDI, fit_DI_rr){
-  
-  # 
+plot_dwi_gam_all_rerun <- function(fit_LDI, fit_DI_rr) {
+  #
   idx_ldi <- transform_data$idx_ldi_smooths(fit_LDI)
   grid_ldi <- draw_plots$grid_ldi_comb(
     fit_LDI, idx_ldi$post, idx_ldi$rtp, idx_ldi$names
   )
-  
+
   #
   idx_di <- transform_data$idx_di_smooths(fit_DI_rr)
   grid_di <- draw_plots$grid_di_comb(fit_DI_rr, idx_di$all, idx_di$names)
-  
+
   grDevices::png(
     filename = paste0(
       .analysis_dir(), "/stats_gams/plots/fit_LDI_DI_rerun.png"
@@ -586,7 +586,7 @@ plot_dwi_gam_all_rerun <- function(fit_LDI, fit_DI_rr){
     width = 12,
     res = 600
   )
-  grid.arrange(grid_ldi, grid_di, heights=c(1, 0.5))
+  grid.arrange(grid_ldi, grid_di, heights = c(1, 0.5))
   grDevices::dev.off()
 }
 
@@ -636,6 +636,13 @@ dwi_gam_delta_time <- function(df_afq, tract) {
     rm(h_gam)
   }
   fit_DI_time <- readRDS(rds_di)
+  
+  #
+  sum_di <- paste0(
+    .analysis_dir(), "/stats_gams/gam_summaries/DI_time/fit_DI_time_",
+    tract_short, "_fa.txt"
+  )
+  fit_gams$write_gam_stats(fit_DI_time, sum_di)
 
   #
   plot_obj <- getViz(fit_DI_time)
@@ -751,9 +758,9 @@ dwi_gam_long_tract <- function(df_afq, tract) {
   obj_MD <- .fit_plot_long_tract(df, tract, "dti_md")
   obj_RD <- .fit_plot_long_tract(df, tract, "dti_rd")
   obj_AD <- .fit_plot_long_tract(df, tract, "dti_ad")
-  
+
   # Make LGIO stat table
-  sum_to_table <- function(fit_obj, scalar){
+  sum_to_table <- function(fit_obj, scalar) {
     sum_table <- summary(fit_obj)
     table_lgio <- as.data.frame(sum_table$s.table)
     table_lgio <- cbind(smooth = rownames(table_lgio), table_lgio)
@@ -766,14 +773,14 @@ dwi_gam_long_tract <- function(df_afq, tract) {
   stat_table <- rbind(stat_table, sum_to_table(obj_MD$fit_LGIO, "MD"))
   stat_table <- rbind(stat_table, sum_to_table(obj_AD$fit_LGIO, "AD"))
   stat_table <- rbind(stat_table, sum_to_table(obj_RD$fit_LGIO, "RD"))
-  
+
   h_tract <- fit_gams$switch_tract(tract)
   out_table <- paste0(
-    .analysis_dir(), 
+    .analysis_dir(),
     "/stats_gams/gam_summaries/LGIO_tract/summary_LGIO_", h_tract, ".csv"
   )
   utils::write.csv(stat_table, out_table, row.names = F)
-  
+
   # Assemble and write LGIO plots
   grDevices::png(
     filename = paste0(

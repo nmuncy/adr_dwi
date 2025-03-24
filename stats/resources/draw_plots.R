@@ -1326,6 +1326,24 @@ grid_lgio_intx <- function(
 }
 
 
+# test_lgio_intx <- function(
+#     fit_LGIO_intx, tract, scalar_name, impact_meas, num_Ia = 7, num_Ib = 8){
+#   
+#   plot(fit_LGIO_intx, rug=T)
+#   
+#   plot_obj <- getViz(fit_LGIO_intx)
+#   p <- plot(sm(plot_obj, num_Ia)) + l_fitRaster() + 
+#     l_fitContour() + l_points() + l_rug()
+#   # p + coord_flip() # Does not flip everything
+#   p 
+#   
+#   pg <- ggplot_build(p$ggObj)
+#   pl <- layer_data(p$ggObj, 4)
+#   library(rgl)
+#   plotRGL(sm(plot_obj, num_Ia), residuals=T)
+# }
+
+
 #' Make XYplot tracking participants by visit.
 #'
 #' Adds Wilcoxon Rank-Sum testing to title for better and worse,

@@ -42,52 +42,44 @@ workflows$plot_dwi_gam_all_rerun(fit_LDI, fit_DI_rr)
 # as an attempt to quantify recovery (or worsening of injury).
 #
 # Tracts with no run-reun difference: CCaf, CCmot, CCocc, CCsp, lArc, lCS, lSL
-# Other tracts of interest: laThal, lIFO, raThal, rCCing, riFO, rUnc, CCpp
-# Selected tracts: CCaf, CCsp, lArc, lCS.
+# (Other tracts of interest?: laThal, lIFO, raThal, rCCing, riFO, rUnc, CCpp)
+# Select tracts: lArc, lCS, raThal, rCCing, rIFO, rUNC
 
+# Use selected tracts and corpus callosum
 tract_all <- unique(df_afq$tract_name)
-
-# Stable tracts, and tracts of interest
-# tract_list <- c(
-#   tract_all[17], tract_all[18], tract_all[19], tract_all[23],
-#   tract_all[13], tract_all[5], tract_all[11]
-# )
-# tract_list <- c(
-#   tract_list, tract_all[1], tract_all[7], tract_all[2],
-#   tract_all[4], tract_all[8], tract_all[16], tract_all[21]
-# )
-tract_list <- c(tract_all[17],tract_all[23],tract_all[13],tract_all[5])
+tract_select <- c(
+  tract_all[13], tract_all[5], tract_all[2], tract_all[4],
+  tract_all[8], tract_all[16]
+)
+tract_cc <- tract_all[17:24]
 
 # Plot tracts changes in scalars
-# plot_list <- c()
-# c <- 1
-for (tract in tract_list) {
-  tract_gams <- workflows$dwi_gam_long_tract(df_afq, tract)
-  # if (length(tract_list) == 4){
-  #   plot_list[[c]] <- tract_gams$plot_grid
-  #   c <- c+1
-  # }
+for (tract in c(tract_cc, tract_select)) {
+  workflows$dwi_gam_long_tract(df_afq, tract)
 }
-# grid.arrange(
-#   plot_list[[1]], 
-#   plot_list[[2]], 
-#   plot_list[[3]], 
-#   plot_list[[4]], 
-#   ncol=2, 
-#   nrow=2
-# )
 
-# Interactions with ImPACT, time
-for (tract in tract_list) {
-  fit_intx <- workflows$dwi_gam_long_impact(df_afq, df_scan_imp, tract)
+# Exploratory analyses - interactions with ImPACT
+# CC tracts intx with tot_symp, time
+imp_list <- names(df_scan_imp[7:12])
+for (tract in tract_cc) {
+  for (imp in imp_list){
+    workflows$dwi_gam_long_impact(
+      df_afq, df_scan_imp, tract, impact_meas = imp
+    )
+  }
+}
+
+# Select tracts intx with ImPACT, time
+for (tract in tract_select) {
+  for (imp in imp_list){
+    workflows$dwi_gam_long_impact(
+      df_afq, df_scan_imp, tract, impact_meas = imp
+    )
+  }
+}
+
+
+# Test whether longer Post-RTP intervals associate with larger scalar changes
+for (tract in c(tract_cc, tract_select)){
   workflows$dwi_gam_delta_time(df_afq, tract)
 }
-
-
-# # Only test for CC and vis_mem interactions
-# tract_roi <- tract_all[17:24]
-# for(tract in tract_roi){
-#   fit_intx <- workflows$dwi_gam_long_impact(
-#     df_afq, df_scan_imp, tract, impact_meas="mem_vis"
-#   )
-# }

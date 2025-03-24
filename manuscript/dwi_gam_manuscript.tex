@@ -279,49 +279,51 @@ Within the selected tracts, and as with the corpus callosum, patterns of injury 
 
 \subsection{DWI Tracts Interactions - ImPACT}
 \label{ssec:res-dwi-imp}
-\textit{Corpus Callosum Interaction Results}. Modeling multimodal interactions is possible through tensor product interactions smooths: in addition to modeling within-tract longitudinal scalar changes, clinical assessment metrics (or data from other modalities) can be included in higher dimensional models (R Code \ref{code:gam-lgio-intx}) to investigate whether such assessment metrics relate to within-tract concussion-related scalar changes. We conducted exploratory analyses to determine whether changes in callosal FA values related to ImPACT composite and total symptom scores. Specifically, we tested whether the tract FA-ImPACT interaction at Post and RTP differed from those at Base, where Post differences may link physiologic changes (tract scalars) to clinical assessment and a lack of such differences at RTP may indicate recovery.
+\textit{Corpus Callosum Interaction Results}. Tensor product interaction smooths support multimodal interaction models. In addition to modeling within-tract longitudinal scalar changes, clinical assessment metrics (or data from other modalities) can be included in higher dimensional models (R Code \ref{code:gam-lgio-intx}) to investigate whether such assessment metrics relate to within-tract concussion-related scalar changes. We conducted exploratory analyses to determine whether changes in callosal FA values related to ImPACT composite and total symptom scores. Specifically, we tested whether the tract FA-ImPACT interaction at Post and RTP differed from those at Base, where Post differences may link physiologic changes (tract scalars) to clinical assessment and a lack of such differences at RTP may indicate recovery.
 
-Figure \ref{fig:lgio-intx-cc} visualizes Post and RTP tract node-FA-ImPACT difference interactions as topological surfaces, where the difference interaction is a comparison of Post or RTP to Base interactions. That is, a similar interaction at both Base and Post would result in a flat surface. A linear differential interaction at Post is found for each tract, and this difference from Base largely resolves by RTP. For instance, an interaction exists in the Callosum Superior Frontal tract about nodes 40-60 at Post (the same nodes which were implicated above) where lower visual memory scores are associated with decreased FA values (Figure \ref{fig:lgio-intx-cc}, A). At RTP, while a linear interaction is still somewhat present, the magnitude of the effect is diminished. Likewise, total symptoms are related to decreased FA values about Callosum Superior Frontal nodes 40-60 (Figure \ref{fig:lgio-intx-cc}, B), poorer visual motor performance with nodes 40-50 of Callosum Occipital (Figure \ref{fig:lgio-intx-cc}, C), and total symptoms with decreased FA Callosum Superior Parietal nodes 40-60 (Figure \ref{fig:lgio-intx-cc}, D). In each case of these cases, the FA-ImPACT interaction resolved by RTP, indicated by a `flatter' interaction difference surface.
+Figure \ref{fig:lgio-intx-cc} visualizes Post and RTP tract node-FA-ImPACT difference interactions as topological surfaces, where the difference interaction is a comparison of Post or RTP to Base interactions. That is, an identical interaction at both Base and Post would result in a flat surface. A linear differential interaction at Post is found for each tract, and this difference from Base largely resolves by RTP. For instance, an interaction exists in the Callosum Superior Frontal tract about nodes 40-60 at Post (the same nodes which were implicated above) where lower visual memory scores are associated with decreased FA values (Figure \ref{fig:lgio-intx-cc}, A). At RTP, while a linear interaction is still somewhat present, the magnitude of the effect is diminished. Likewise, total symptoms are related to decreased FA values about Callosum Superior Frontal nodes 40-60 (Figure \ref{fig:lgio-intx-cc}, B), poorer visual motor performance with nodes 40-50 of Callosum Occipital (Figure \ref{fig:lgio-intx-cc}, C), and total symptoms with decreased FA Callosum Superior Parietal nodes 40-60 (Figure \ref{fig:lgio-intx-cc}, D). In each case of these cases, the FA-ImPACT interaction resolved by RTP, indicated by the `flatter' interaction difference surface.
 
 \begin{figure}[H]
 	\centering
 	\fbox{\includegraphics[width=0.9\textwidth]{fig_LGIO_intx_callosal.png}}
-	\caption{HGAM tensor product interaction smooths testing for differences from Base node-FA-ImPACT interactions at Post and RTP. A linear interaction is present at Post in each quadrant (top plots), indicated by a gradient (Z) change along the Y-axis at a specific node (X) region, which is not found at RTP (bottom plots).}
+	\caption{HGAM tensor product interaction smooths testing for differences from Base node-FA-ImPACT interactions at Post and RTP. A linear interaction is present at Post in each quadrant (top plots), indicated by a gradient (Z) change along the Y-axis at a specific node (X) region. This interaction is diminished or not found at RTP (bottom plots).}
 	\label{fig:lgio-intx-cc}
 \end{figure}
 
 
 % TODO: Tables
 % TODO: standardize using abbreviations or full tract names
-
+% TODO: Update interaction figures IMPACT -> ImPACT
+% TODO: Update interaction figure titles Visit: Post-Base -> Post vs Base
 % TODO: should select tract interaction results be kept?
-\textit{Select Tract Interaction Results}. Further exploratory analyses were conducted to see whether scalar changes in selected tracts (Figure \ref{fig:lgio-gam-sel}) related to changes in ImPACT composite and total symptom scores. Surprising, of the tracts and ImPACT metrics tested, a potential interaction was only detected between the left Corticospinal tract and reaction time (Figure \ref{fig:lgio-intx-lcs}). At Post, the slowest reaction times were associated with larger FA values about node 75. This pattern is reversed at RTP, likely due to sparsity in slow reaction times given recovery (see Figure \ref{fig:imp-gam}, bottom right).
+
+\textit{Select Tract Interaction Results}. Further exploratory analyses were conducted to see whether scalar changes in selected tracts (Figure \ref{fig:lgio-gam-sel}) related to changes in ImPACT composite and total symptom scores. Surprisingly, of the tracts and ImPACT metrics tested, a potential interaction was only detected between the left Corticospinal tract and reaction time (Figure \ref{fig:lgio-intx-lcs}). At Post, the slowest reaction times were associated with larger FA values about node 75. This pattern is reversed at RTP, likely due to sparsity in slow reaction times given recovery (see Figure \ref{fig:imp-gam}, bottom right).
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics{fig_LGIO_intx_lCS_rx_time.png}}
-	\caption{Caption.}
+	\fbox{\includegraphics[width=0.5\textwidth]{fig_LGIO_intx_lCS_rx_time.png}}
+	\caption{HGAM tensor product interaction of node, FA, and reaction time for the left Corticospinal tract. Post and RTP surfaces are relative to Base. Rx Time = reaction time.}
 	\label{fig:lgio-intx-lcs}
 \end{figure}
 
 
 \subsection{DWI Tracts Interactions - Time}
 \label{ssec:res-dwi-time}
-Description of DWI-time interaction.
+In addition to modeling the interaction of tract FA changes with assessment metrics, another potentially powerful use of tensor product interaction smooths is to model changes in tract scalars as a function of time. Given the within-tract temporal dynamics of axonal injury and recovery, the ability to model non-linear temporal interactions with scalar changes will help quantify the progression of injury. For such an analysis, however, patients would require multiple scans during the recovery period to effectively track signal associated with recovery. As our data were collected at Post and RTP, we modeled tract FA differences (for the tracts identified above) between Post and RTP as a function of node and number of days between the two sessions. Such a model will identify which scalar changes are associated with the longest recovery periods, as presumably less-severe injuries are associated with fewer days between Post and RTP. We also note that few participants had recovery periods longer than 14 days.
 
-% TODO: DI_time GAM results - lCS node 45.
+A number of linear node-$\Delta$FA-time interaction patterns were identified and are visualized as topographic maps in Figure \ref{fig:di-time}. First, and with respect to the left Corticospinal tract, (Figure \ref{fig:di-time}, A), participants with negative $\Delta$FA values about node 50 had a shorter recovery period (time between Post and RTP), while participants with positive values had longer recovery times. A negative RTP-Post $\Delta$FA value could occur when slight edema is present at Post (decreased RD, no change in AD) which then resolves by RTP. Conversely, a positive difference may be indicative of late, continued, or worsening edema, possibly due to more substantial axolemmal damage. While an initial (Post) decrease in AD (and corresponding recovery of AD) would also explain the pattern, this is less likely as increases in FA (without accompanying changes in AD) are most commonly implicated in mTBI and more substantial axonal changes generally associated with m/sTBI ([CITE?]).
 
-% \begin{figure}[H]
-% 	\centering
-% 	\fbox{\includegraphics[scale=0.75]{fig_DI_time_lCS_fa.png}}
-% 	\caption{Caption.}
-% 	\label{fig:di-time-lcs}
-% \end{figure}
+\begin{figure}[H]
+	\centering
+	\fbox{\includegraphics{fig_DI_time.png}}
+	\caption{Caption.}
+	\label{fig:di-time}
+\end{figure}
 
 
 \section{Discussion}
 \label{sec:disc}
-Discussion.
+Discussion here.
 
 % TODO: Summary/recap
 % TODO: Interpret main findings

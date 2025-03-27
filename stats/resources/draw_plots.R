@@ -531,7 +531,7 @@ draw_di_time <- function(plot_obj, tract, x_min = 10, x_max = 89) {
   p <- plot(sm(plot_obj, 4))
   p_data <- as.data.frame(p$data$fit)
   colnames(p_data) <- c("fit", "tfit", "time", "nodeID", "se")
-  
+
   pp <- ggplot(
     data = p_data,
     aes(x = .data$nodeID, y = .data$time, z = .data$fit)
@@ -794,20 +794,20 @@ draw_ios_diff_sig <- function(plot_obj, i_num, x_min = 10, x_max = 89) {
   p <- plot(sm(plot_obj, i_num)) +
     geom_hline(yintercept = 0)
   p_data <- .add_lb_ub(p)
-  
+
   # Find nodes that differ
   rect_less <- .find_sig_nodes(p_data, sig_dir = "less")
   rect_more <- .find_sig_nodes(p_data, sig_dir = "more")
-  
+
   # Account for SE in ymin/max
   max_y <- max(p_data$est)
   max_node <- which(p_data$est == max_y)
   GY_max <- max_y + p_data[max_node, ]$ub
-  
+
   min_y <- min(p_data$est)
   min_node <- which(p_data$est == min_y)
   GY_min <- min_y + p_data[min_node, ]$lb
-  
+
   # Draw
   pp <- .draw_smooth_rects(
     p_data, rect_less, rect_more, x_min, x_max, GY_min, GY_max
@@ -828,7 +828,7 @@ draw_is <- function(plot_obj, i_num, x_min = 10, x_max = 89) {
   # use plot to extract attribute of interest
   p <- plot(sm(plot_obj, i_num))
   p_data <- .add_lb_ub(p, col_names = c("nodeID", "est", "ty", "Group"))
-  
+
   # make, save ggplot
   pp <- ggplot(
     data = p_data,
@@ -867,7 +867,7 @@ draw_is_intx <- function(
   p <- plot(sm(plot_obj, i_num))
   p_data <- as.data.frame(p$data$fit)
   colnames(p_data) <- c("fit", "tfit", "mem_vis", "nodeID", "se")
-  
+
   # make, save ggplot
   pp <- ggplot(
     data = p_data,
@@ -956,12 +956,12 @@ grid_di_comb <- function(
     scalar_name = "FA", x_min = 10, x_max = 89) {
   # Generate plots objs from smooths
   plot_obj <- getViz(fit_DI)
-  
+
   # Identify CC, L, R smooth indices
   idx_cc <- match(name_smooths[grepl("Callosum", name_smooths)], name_smooths)
   idx_left <- match(name_smooths[grepl("Left", name_smooths)], name_smooths)
   idx_right <- match(name_smooths[grepl("Right", name_smooths)], name_smooths)
-  
+
   # Build post plots
   ymin_ymax <- .get_ymin_ymax(plot_obj, node_smooths)
   p_cc <- .draw_ldi_comb(
@@ -979,14 +979,15 @@ grid_di_comb <- function(
     ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max,
     add_top = T, add_bot = T
   )
-  
+
   # draw grid
   top2_name <- text_grob(
     "Run-Rerun difference FA tract smooths",
     size = 14, family = "Times New Roman"
   )
   top1_name <- top3_name <- text_grob(
-    "", size = 14, family = "Times New Roman"
+    "",
+    size = 14, family = "Times New Roman"
   )
   left1_name <- text_grob(
     "Diff: Run-Rerun",
@@ -1147,7 +1148,7 @@ grid_ldi_comb <- function(
     "Longitudinal difference FA tract smooths",
     size = 14, family = "Times New Roman"
   )
-  top1_name <- top3_name <- 
+  top1_name <- top3_name <-
     text_grob("", size = 14, family = "Times New Roman")
   left1_name <- text_grob(
     paste("Diff:", comp_a),
@@ -1158,9 +1159,9 @@ grid_ldi_comb <- function(
     size = 12, family = "Times New Roman", rot = 90
   )
   plot_grid <- grid.arrange(
-    arrangeGrob(p_post_cc, left = left1_name, top=top1_name),
-    arrangeGrob(p_post_left, top=top2_name),
-    arrangeGrob(p_post_right, top=top3_name),
+    arrangeGrob(p_post_cc, left = left1_name, top = top1_name),
+    arrangeGrob(p_post_left, top = top2_name),
+    arrangeGrob(p_post_right, top = top3_name),
     arrangeGrob(p_rtp_cc, left = left2_name),
     arrangeGrob(p_rtp_left),
     arrangeGrob(p_rtp_right),
@@ -1270,7 +1271,7 @@ grid_lgio <- function(
   pGlobal <- draw_gs(plot_GO, num_G)
   pDiffa <- draw_gios_diff_sig(plot_GO, num_G, num_Ia)
   pDiffb <- draw_gios_diff_sig(plot_GO, num_G, num_Ib)
-  
+
   # draw grid
   plot_list <- list(
     "global" = pGlobal,
@@ -1328,15 +1329,15 @@ grid_lgio_intx <- function(
 
 # test_lgio_intx <- function(
 #     fit_LGIO_intx, tract, scalar_name, impact_meas, num_Ia = 7, num_Ib = 8){
-#   
+#
 #   plot(fit_LGIO_intx, rug=T)
-#   
+#
 #   plot_obj <- getViz(fit_LGIO_intx)
-#   p <- plot(sm(plot_obj, num_Ia)) + l_fitRaster() + 
+#   p <- plot(sm(plot_obj, num_Ia)) + l_fitRaster() +
 #     l_fitContour() + l_points() + l_rug()
 #   # p + coord_flip() # Does not flip everything
-#   p 
-#   
+#   p
+#
 #   pg <- ggplot_build(p$ggObj)
 #   pl <- layer_data(p$ggObj, 4)
 #   library(rgl)

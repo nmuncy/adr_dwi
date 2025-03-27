@@ -51,7 +51,6 @@ better_worse <- function(col_name, df, visit_name) {
 #' across visits; avg_wor = avergae value of those who got worse across visits.
 export("score_change")
 score_change <- function(col_name, df, visit_name) {
-  
   # Cast wide and calculate differences
   df_sub <- reshape(
     df,
@@ -133,46 +132,46 @@ wc_ranksum <- function(col_name, df, visit_name) {
 
 
 #' Conduct Principal Components Analysis of impact data.
-#' 
+#'
 #' @param df Dataframe of impact scores.
 #' @param col_list List of columns to include in PCA.
 #' @returns PCA (prcomp) stats object.
 export("run_pca")
-run_pca <- function(df, col_list){
+run_pca <- function(df, col_list) {
   df <- df[stats::complete.cases(df[, col_list]), ]
-  stats_pc <- stats::prcomp(df[, col_list], center=T, scale.=T)
+  stats_pc <- stats::prcomp(df[, col_list], center = T, scale. = T)
   return(stats_pc)
 }
 
 
 #' Conduct K-means clustering
-#' 
+#'
 #' @param df Dataframe of impact scores.
 #' @param col_list List of columns to include in k-means analysis.
 #' @param num_k Numeric, specify number of centers.
 #' @returns Named list containing scaled data (data_norm), kmeans stats
 #'    object (stats_km), and cluster lists (clust_km).
 export("run_kmeans")
-run_kmeans <- function(df, col_list, num_k){
+run_kmeans <- function(df, col_list, num_k) {
   df <- df[stats::complete.cases(df[, col_list]), ]
   data_norm <- scale(df[, col_list])
-  stats_km <- stats::kmeans(data_norm, centers = num_k, nstart=100)
-  
+  stats_km <- stats::kmeans(data_norm, centers = num_k, nstart = 100)
+
   clust_km <- stats_km$cluster
   rownames(data_norm) <- df$subj_id
   return(list(
-    "data_norm" = data_norm, "stats_km" = stats_km, "clust_km" = clust_km)
-  )
+    "data_norm" = data_norm, "stats_km" = stats_km, "clust_km" = clust_km
+  ))
 }
 
 
 #' Identify GAM max deflections from zero.
-#' 
+#'
 #' @param fit_gam mgcv::bam fit object.
 #' @param idx_smooths Index of smooths in fit_gam to find deflections in.
 #' @returns Dataframe containing node and deflection value for each smooth.
 export("max_deflect")
-max_deflect <- function(fit_gam, idx_smooths){
+max_deflect <- function(fit_gam, idx_smooths) {
   # Identify max deflections from zero
   t_name <- c_name <- n_name <- m_val <- c()
   p <- getViz(fit_gam)
@@ -181,19 +180,19 @@ max_deflect <- function(fit_gam, idx_smooths){
     p_info <- plot(sm(p, num))
     p_data <- as.data.frame(p_info$data$fit)
     max_y <- max(abs(p_data$y))
-    
+
     # Get tract, comparison names
     row_name <- p_info$ggObj$labels$y
     h_str <- strsplit(row_name, split = ":")
     row_info <- strsplit(h_str[[1]][2], split = "\\.")
-    
+
     # Update vecs for df building
     t_name <- c(t_name, row_info[[1]][1])
     c_name <- c(c_name, row_info[[1]][2])
     n_name <- c(n_name, p_data[which(abs(p_data$y) == max_y), ]$x)
     m_val <- c(m_val, max_y)
   }
-  
+
   # Make dataframe, identify max, update names
   df_max <- data.frame(t_name, c_name, n_name, m_val)
   colnames(df_max) <- c("tract", "comp", "node", "max")
@@ -204,15 +203,15 @@ max_deflect <- function(fit_gam, idx_smooths){
 
 
 #' Extract smooth node fit estimations.
-#' 
+#'
 #' @param fit_gam mgcv::bam fit object.
 #' @param idx_smooths Index of smooths in fit_gam to extract estimations from.
 #' @returns Dataframe of estimations for each smooth.
 export("get_estimations")
-get_estimations <- function(fit_gam, idx_smooths){
+get_estimations <- function(fit_gam, idx_smooths) {
   # Identify max deflections from zero
   df_est <- data.frame(
-    node = numeric(), est = numeric(), se = numeric(), 
+    node = numeric(), est = numeric(), se = numeric(),
     comp = character(), tract = character()
   )
   p <- getViz(fit_gam)
@@ -228,11 +227,11 @@ get_estimations <- function(fit_gam, idx_smooths){
     row_info <- strsplit(h_str[[1]][2], split = "\\.")
     p_data$comp <- row_info[[1]][2]
     p_data$tract <- row_info[[1]][1]
-    
+
     # Stack dfs
     df_est <- rbind(df_est, p_data[, c(1, 2, 4, 5, 6)])
   }
-  
+
   # Manage string values
   df_est$tract <- gsub("tract_name", "", df_est$tract)
   df_est$tract <- gsub("tract_scan", "", df_est$tract)

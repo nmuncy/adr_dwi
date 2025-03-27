@@ -1,7 +1,7 @@
 # Methods for transforming data in various ways.
 #
 # fix_impact_scan: Manually resolve data issues in matched impact-scan data.
-# compare_base_post: Identify which ImPACT measures get better between 
+# compare_base_post: Identify which ImPACT measures get better between
 #   baseline and post-concussion visits.
 # calc_fa_delta: Calculate FA difference between post and base, rtp and base.
 # idx_ldi_smooths: Extract smooth info and index from LDI gam object.
@@ -59,7 +59,7 @@ fix_impact_scan <- function(df) {
 #' Identify subjects who get better from base to fu1.
 #'
 #' Deprecated.
-#' 
+#'
 #' TODO remove.
 #'
 #' @param col_name Column name for testing.
@@ -166,12 +166,12 @@ compare_base_post <- function(col_name, df, low = FALSE) {
 
 
 #' Calculate FA post-base and rtp-base.
-#' 
+#'
 #' @param df_afq Dataframe containing AFQ data.
 #' @returns Dataframe with new columns comp_scan (comparison of scan names)
 #'  and delta (A-B FA value).
 export("calc_fa_delta")
-calc_fa_delta <- function(df_afq){
+calc_fa_delta <- function(df_afq) {
   # Subset relevant columns, convert to wide for easy A-B calcs
   df_sub <- subset(
     df_afq,
@@ -184,7 +184,7 @@ calc_fa_delta <- function(df_afq){
   )
   df_wide$delta.post_base <- df_wide$dti_fa.post - df_wide$dti_fa.base
   df_wide$delta.rtp_base <- df_wide$dti_fa.rtp - df_wide$dti_fa.base
-  
+
   # Return to long form
   df_wide <- subset(
     df_wide,
@@ -208,12 +208,12 @@ calc_fa_delta <- function(df_afq){
 
 
 #' Get index of LDI tract smooths.
-#' 
+#'
 #' @param fit_obj mgcv::bam fit object.
 #' @returns Named list, names=list of smooth names, post=index of post
 #'    smooths, rtp=index of rtp smooths, all=index of post+rtp smooths.
 export("idx_ldi_smooths")
-idx_ldi_smooths <- function(fit_obj){
+idx_ldi_smooths <- function(fit_obj) {
   # Identify Post, RTP smooth indices and smooth names
   tract_smooths <- name_smooths <- c()
   for (num in 1:length(fit_obj$smooth)) {
@@ -224,7 +224,7 @@ idx_ldi_smooths <- function(fit_obj){
       name_smooths <- c(name_smooths, strsplit(h, "\\.")[[1]][1])
     }
   }
-  
+
   # Get smooth groups
   half <- length(tract_smooths) / 2
   post_smooths <- utils::head(tract_smooths, half)
@@ -232,21 +232,21 @@ idx_ldi_smooths <- function(fit_obj){
   name_smooths <- utils::head(name_smooths, half) # Names appear twice
   return(
     list(
-      "names"=name_smooths, 
-      "post"=post_smooths, 
-      "rtp"=rtp_smooths, 
-      "all"=tract_smooths
+      "names" = name_smooths,
+      "post" = post_smooths,
+      "rtp" = rtp_smooths,
+      "all" = tract_smooths
     )
   )
 }
 
 
 #' Get index of DI tract smooths.
-#' 
+#'
 #' @param fit_obj mgcv::bam fit object.
 #' @returns Named list, names=list of smooth names, all=index of smooths.
 export("idx_di_smooths")
-idx_di_smooths <- function(fit_obj){
+idx_di_smooths <- function(fit_obj) {
   tract_smooths <- name_smooths <- c()
   for (num in 1:length(fit_obj$smooth)) {
     if (fit_obj[["smooth"]][[num]][["term"]] == "node_id") {
@@ -255,5 +255,5 @@ idx_di_smooths <- function(fit_obj){
       name_smooths <- c(name_smooths, strsplit(label, "tract_name")[[1]][2])
     }
   }
-  return(list("names"=name_smooths, "all"=tract_smooths))
+  return(list("names" = name_smooths, "all" = tract_smooths))
 }

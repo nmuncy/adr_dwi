@@ -16,7 +16,6 @@ import(lubridate)
 #'
 #' @returns Connection object to db_adr.
 .db_connect <- function() {
-  
   # host = "127.0.0.1",
   # port = 3308,
   db_con <- dbConnect(
@@ -32,10 +31,10 @@ import(lubridate)
 
 
 #' Pull subject age-at-baseline and sex demographics.
-#' 
+#'
 #' @returns Tidy dataframe of demographic values.
 export("get_demographics")
-get_demographics <- function(){
+get_demographics <- function() {
   db_con <- .db_connect()
   sql_cmd <- "select
     td.subj_id, td.sex, td.age_base
@@ -53,7 +52,7 @@ get_demographics <- function(){
 #'
 #' Get composites and total symptom score,
 #' also fetch test name and impact dates.
-#' 
+#'
 #' @returns Tidy dataframe of impact composites.
 export("get_user_comp")
 get_user_comp <- function() {
@@ -85,9 +84,9 @@ get_user_comp <- function() {
 
 
 #' Build select command for afq rescan data.
-#' 
+#'
 #' @returns String of SQL select syntax.
-.select_afq_rescan <- function(){
+.select_afq_rescan <- function() {
   sql_cmd <- "select
     tafq.subj_id, tafq.sess_id, rft.tract_name, tafq.node_id,
       tafq.dti_fa, tafq.dti_md, tafq.dti_ad, tafq.dti_rd
@@ -99,7 +98,7 @@ get_user_comp <- function() {
 
 
 #' Pull AFQ data from db_adr.
-#' 
+#'
 #' Get AFQ FA, MD, AD, and RD values for all or
 #' specified tracts and sessions. Visit date is
 #' also included.
@@ -121,14 +120,14 @@ get_afq <- function(sess_id = NULL, tract_id = NULL, table_name = "tbl_afq") {
       stop(paste("Unexpected sess_id:", sess_id))
     }
   }
-  if (!table_name %in% c("tbl_afq", "tbl_afq_rerun", "tbl_afq_rescan")){
+  if (!table_name %in% c("tbl_afq", "tbl_afq_rerun", "tbl_afq_rescan")) {
     stop(paste("Unexpected table_name:", tbl_name))
   }
 
   # Build select statement from appropriate table,
   # tbl_afq_rescan is unique and does not have scan dates.
   db_con <- .db_connect()
-  if (table_name == "tbl_afq_rescan"){
+  if (table_name == "tbl_afq_rescan") {
     sql_cmd <- .select_afq_rescan()
   } else {
     sql_cmd <- "select
@@ -138,13 +137,13 @@ get_afq <- function(sess_id = NULL, tract_id = NULL, table_name = "tbl_afq") {
     "
     sql_cmd <- paste(sql_cmd, "from", table_name, "tafq") # Query relevant table
     sql_cmd <- paste(
-      sql_cmd, 
+      sql_cmd,
       " join ref_scan rfs on tafq.sess_id=rfs.scan_id
         join ref_tract rft on tafq.tract_id=rft.tract_id
       "
     )
   }
-  
+
   # If user specifies specific session and/or tract
   if (!is.null(sess_id) & !is.null(tract_id)) {
     sql_cmd <- paste(
@@ -170,7 +169,7 @@ get_afq <- function(sess_id = NULL, tract_id = NULL, table_name = "tbl_afq") {
 #'
 #' Update impact names and add days post FU1 (diff_post) for
 #' and subsequent impact assessments.
-#' 
+#'
 #' @param an_dir Location of directory for analyses.
 #' @returns Dataframe of impact composite scores.
 export("clean_impact")
@@ -180,14 +179,14 @@ clean_impact <- function(an_dir) {
     an_dir, "dataframes", "df_impact.csv",
     sep = "/"
   )
-  
+
   if (!file.exists(imp_path)) {
     df <- get_user_comp()
     utils::write.csv(df, imp_path, row.names = F)
     rm(df)
   }
   df_imp <- utils::read.csv(imp_path)
-  
+
   # Manage column types, names
   df_imp$subj_id <- factor(df_imp$subj_id)
   df_imp$impact_name <- factor(df_imp$impact_name)
@@ -198,7 +197,7 @@ clean_impact <- function(an_dir) {
   colnames(df_imp)[5:10] <- c(
     "mem_ver", "mem_vis", "vis_mot", "rx_time", "imp_ctl", "tot_symp"
   )
-  
+
   # Calculate days since fu1
   idx_base <- which(df_imp$impact_name == "base")
   df_base <- df_imp[idx_base, ]
@@ -212,7 +211,7 @@ clean_impact <- function(an_dir) {
     )
   df_post <- subset(df_post, select = -c(date))
   # names(df_post)[names(df_post) == 'date'] <- 'impact_date'
-  
+
   # Return combined dfs
   df_base$diff_post <- NA
   df_comb <- rbind(df_base, df_post)

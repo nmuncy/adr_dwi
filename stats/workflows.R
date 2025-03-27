@@ -15,6 +15,8 @@ transform_data <- use("resources/transform_data.R")
 
 #' Setup project analysis directory.
 #'
+#' Make select parent directories in stats_gams.
+#'
 #' @returns Path to NRDStor project analysis directory for
 #' Gimli (linux) and Frodo (mac) workstations.
 .analysis_dir <- function() {
@@ -28,6 +30,85 @@ transform_data <- use("resources/transform_data.R")
   dir.create(file.path(an_dir, "stats_gams/rda_objects"), showWarnings = F)
   dir.create(file.path(an_dir, "stats_gams/plots"), showWarnings = F)
   return(an_dir)
+}
+
+
+#' Fit and coordinate plotting of longitudinal HGAMs.
+#'
+#' Support longitudinal modeling and plotting of scalars. Makes longitudinal
+#' GAMs with global and group smooths with group wiggliness (LGI) and also
+#' global and group smooths as ordered factors (LGIO).
+#'
+#' Used to unload redundant work from gams_long_scalar().
+#'
+#' Models saved to out_dir/stats_gams/rda_objects/LGI<O>_tract/fit_LGI*
+#' Summaries saved to out_dir/stats_gams/gam_summaries/LGI<O>_tract/fit_LGI*
+#'
+#' @param df Dataframe containing AFQ data.
+#' @param tract String, name of AFQ tract (corresponds to df$tract_name).
+#' @param scalar_name String, name of DTI scalar (corresponds to df column).
+#' @returns Named list organized by GAM fits (fit_LGI, fit_LGIO)
+#'    and the smooth plots (plot).
+.fit_plot_long_tract <- function(df, tract, scalar_name) {
+  # Validate user args, get tract/scalar names
+  if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
+    stop("Unexpected scalar_name")
+  }
+  # print(scalar_name)
+  h_tract <- fit_gams$switch_tract(tract)
+  scalar <- strsplit(scalar_name, "_")[[1]][2]
+
+  # Get (and make/save if needed) LGI model.
+  analysis_dir <- .analysis_dir()
+  rds_lgi <- paste0(
+    analysis_dir, "/stats_gams/rda_objects/LGI_tract/fit_LGI_",
+    h_tract, "_", scalar, ".Rda"
+  )
+  if (!file.exists(rds_lgi)) {
+    h_gam <- fit_gams$mod_lgi(df, scalar_name)
+    saveRDS(h_gam, file = rds_lgi)
+    rm(h_gam)
+  }
+  fit_LGI <- readRDS(rds_lgi)
+  sum_lgi <- paste0(
+    analysis_dir, "/stats_gams/gam_summaries/LGI_tract/fit_LGI_",
+    h_tract, "_", scalar, ".txt"
+  )
+  fit_gams$write_gam_stats(fit_LGI, sum_lgi)
+
+  # Get (and make/save if needed) LGIO model, write summary stats to disk.
+  rds_lgio <- paste0(
+    analysis_dir, "/stats_gams/rda_objects/LGIO_tract/fit_LGIO_",
+    h_tract, "_", scalar, ".Rda"
+  )
+  if (!file.exists(rds_lgio)) {
+    h_gam <- fit_gams$mod_lgio(df, scalar_name)
+    saveRDS(h_gam, file = rds_lgio)
+    rm(h_gam)
+  }
+  fit_LGIO <- readRDS(rds_lgio)
+  sum_lgio <- paste0(
+    analysis_dir, "/stats_gams/gam_summaries/LGIO_tract/fit_LGIO_",
+    h_tract, "_", scalar, ".txt"
+  )
+  fit_gams$write_gam_stats(fit_LGIO, sum_lgio)
+  # gam.check(fit_LGIO)
+  # summary(fit_LGIO)
+  # plot(fit_LGIO)
+
+  # Coordinate drawing of smooths
+  plots_LGI <- draw_plots$grid_lgi(
+    fit_LGI, tract, toupper(scalar)
+  )
+  plots_LGIO <- draw_plots$grid_lgio(
+    fit_LGIO, tract, toupper(scalar)
+  )
+  return(list(
+    "fit_LGI" = fit_LGI,
+    "fit_LGIO" = fit_LGIO,
+    "plots_LGIO" = plots_LGIO,
+    "plots_LGI" = plots_LGI
+  ))
 }
 
 
@@ -54,6 +135,111 @@ transform_data <- use("resources/transform_data.R")
     ungroup()
   df_a <- subset(df_a, select = -c(date.x, date.y, time_diff))
   return(df_a)
+}
+
+
+#' Plan specific IMPACT measure for tract interaction analysis.
+#'
+#' @param tract String, name of AFQ tract.
+#' @returns String, name of impact measure.
+.tract_impact <- function(tract) {
+  map_beh <- switch(tract,
+    "Callosum Anterior Frontal" = "tot_symp",
+    "Callosum Orbital" = "tot_symp",
+    "Callosum Motor" = "rx_time",
+    "Callosum Superior Parietal" = "mem_vis",
+    "Callosum Posterior Parietal" = "mem_vis",
+    "Callosum Occipital" = "mem_vis",
+    "Left Anterior Thalamic" = "mem_vis",
+    "Left Arcuate" = "mem_vis",
+    "Left Cingulum Cingulate" = "mem_vis",
+    "Left Corticospinal" = "rx_time",
+    "Left Inferior Fronto-occipital" = "mem_vis",
+    "Left Superior Longitudinal" = "mem_vis",
+    "Right Anterior Thalamic" = "mem_vis",
+    "Right Cingulum Cingulate" = "mem_vis",
+    "Right Inferior Fronto-occipital" = "mem_vis",
+    "Right Uncinate" = "tot_symp"
+  )
+  return(map_beh)
+}
+
+
+#' Conduct GAMs for each ImPACT composite and total symptoms.
+#'
+#' Converts visit (Base, Post, RTP) to integer to model change in time (visit)
+#' of ImPACT metrics. Each metric is fit with a relevant distribution and link
+#' function, and scaling data occurs for zero/one-inflation.
+#'
+#' Summaries saved to
+#' out_dir/stats_gams/gam_summaries/G_impact/fit_G_impact_*.txt
+#' Plot saved to out_dir/stats_gams/plots/fit_impact.png.
+#'
+#' @param df_scan_imp Dataframe returned by workflows$get_data_scan_impact().
+#' @returns Named list of GAM fits organized by ImPACT metric short name.
+export("beh_gam_impact")
+beh_gam_impact <- function(df_scan_imp) {
+  # Make continuous x-axis
+  df_scan_imp$scan_count <- 1
+  df_scan_imp[which(df_scan_imp$scan_name == "post"), ]$scan_count <- 2
+  df_scan_imp[which(df_scan_imp$scan_name == "rtp"), ]$scan_count <- 3
+
+  # Set output strings
+  out_dir <- paste0(.analysis_dir(), "/stats_gams/gam_summaries/G_impact")
+  dir.create(file.path(out_dir), showWarnings = F)
+  out_pref <- paste0(out_dir, "/fit_G_impact_")
+
+  # Visual memory
+  fit_mem_vis <- fit_gams$mod_imp(df_scan_imp, "mem_vis", fit_meth = "prop")
+  fit_gams$write_gam_stats(fit_mem_vis, paste0(out_pref, "mem_vis.txt"))
+
+  # Verbal memory
+  fit_mem_ver <- fit_gams$mod_imp(
+    df_scan_imp, "mem_ver",
+    fit_meth = "prop", adj_value = -0.01
+  )
+  fit_gams$write_gam_stats(fit_mem_ver, paste0(out_pref, "mem_ver.txt"))
+
+  # Visual motor
+  fit_vis_mot <- fit_gams$mod_imp(df_scan_imp, "vis_mot") # Fit could be better
+  fit_gams$write_gam_stats(fit_vis_mot, paste0(out_pref, "vis_mot.txt"))
+
+  # Reaction time
+  fit_rx_time <- fit_gams$mod_imp(df_scan_imp, "rx_time") # Fit could be better
+  fit_gams$write_gam_stats(fit_rx_time, paste0(out_pref, "rx_time.txt"))
+
+  # Impulse control
+  fit_imp_ctl <- fit_gams$mod_imp(df_scan_imp, "imp_ctl", fit_meth = "negbin")
+  fit_gams$write_gam_stats(fit_imp_ctl, paste0(out_pref, "imp_ctl.txt"))
+
+  # Total symptoms
+  fit_tot_symp <- fit_gams$mod_imp(df_scan_imp, "tot_symp", fit_meth = "negbin")
+  fit_gams$write_gam_stats(fit_tot_symp, paste0(out_pref, "tot_symp.txt"))
+
+  # Draw combined plot
+  grDevices::png(
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/fit_impact.png"
+    ),
+    units = "in",
+    height = 4,
+    width = 6,
+    res = 600
+  )
+  draw_plots$grid_impact_gam(
+    fit_mem_vis, fit_mem_ver, fit_vis_mot,
+    fit_rx_time, fit_imp_ctl, fit_tot_symp
+  )
+  grDevices::dev.off()
+
+  return(list(
+    "mem_vis" = fit_mem_vis,
+    "mem_ver" = fit_mem_ver,
+    "vis_mot" = fit_vis_mot,
+    "rx_time" = fit_rx_time,
+    "imp_ctl" = fit_imp_ctl,
+    "tot_symp" = fit_tot_symp
+  ))
 }
 
 
@@ -197,7 +383,6 @@ get_data_scan_impact <- function(df_afq) {
 }
 
 
-
 #' Determine subject sex and participation.
 #'
 #' Identify subjects with scan data and add demographic
@@ -276,144 +461,18 @@ get_demo_counts <- function(df_afq, df_scan_imp) {
 }
 
 
-#' Title.
-#'
-#' TODO
-export("impact_gams")
-impact_gams <- function(df_scan_imp) {
-  # Make continuous x-axis
-  df_scan_imp$scan_count <- 1
-  df_scan_imp[which(df_scan_imp$scan_name == "post"), ]$scan_count <- 2
-  df_scan_imp[which(df_scan_imp$scan_name == "rtp"), ]$scan_count <- 3
-
-  # Model each impact measure, capture summary
-  out_dir <- paste0(.analysis_dir(), "/stats_gams/gam_summaries/G_impact")
-  dir.create(file.path(out_dir), showWarnings = F)
-  out_pref <- paste0(out_dir, "/fit_G_impact_")
-
-  fit_mem_vis <- fit_gams$mod_imp(df_scan_imp, "mem_vis", fit_meth = "prop")
-  fit_gams$write_gam_stats(fit_mem_vis, paste0(out_pref, "mem_vis.txt"))
-
-  fit_mem_ver <- fit_gams$mod_imp(
-    df_scan_imp, "mem_ver",
-    fit_meth = "prop", adj_value = -0.01
-  )
-  fit_gams$write_gam_stats(fit_mem_ver, paste0(out_pref, "mem_ver.txt"))
-
-  fit_vis_mot <- fit_gams$mod_imp(df_scan_imp, "vis_mot") # Fit could be better
-  fit_gams$write_gam_stats(fit_vis_mot, paste0(out_pref, "vis_mot.txt"))
-
-  fit_rx_time <- fit_gams$mod_imp(df_scan_imp, "rx_time") # Fit could be better
-  fit_gams$write_gam_stats(fit_rx_time, paste0(out_pref, "rx_time.txt"))
-
-  fit_imp_ctl <- fit_gams$mod_imp(df_scan_imp, "imp_ctl", fit_meth = "negbin")
-  fit_gams$write_gam_stats(fit_imp_ctl, paste0(out_pref, "imp_ctl.txt"))
-
-  fit_tot_symp <- fit_gams$mod_imp(df_scan_imp, "tot_symp", fit_meth = "negbin")
-  fit_gams$write_gam_stats(fit_tot_symp, paste0(out_pref, "tot_symp.txt"))
-
-
-  # Draw combined plot
-  grDevices::png(
-    filename = paste0(
-      .analysis_dir(), "/stats_gams/plots/fit_impact.png"
-    ),
-    units = "in",
-    height = 4,
-    width = 6,
-    res = 600
-  )
-  draw_plots$grid_impact_gam(
-    fit_mem_vis, fit_mem_ver, fit_vis_mot,
-    fit_rx_time, fit_imp_ctl, fit_tot_symp
-  )
-  grDevices::dev.off()
-
-  return(list(
-    "mem_vis" = fit_mem_vis,
-    "mem_ver" = fit_mem_ver,
-    "vis_mot" = fit_vis_mot,
-    "rx_time" = fit_rx_time,
-    "imp_ctl" = fit_imp_ctl,
-    "tot_symp" = fit_tot_symp
-  ))
-
-
-  # #
-  # beh_list <- colnames(df_scan_imp)[7:12]
-  # beh <- beh_list[6]
-  #
-  # library(mgcv)
-  # library(fitdistrplus)
-  # library(itsadug)
-  # descdist(df_scan_imp[, beh])
-  #
-  # hist(df_scan_imp[, beh], breaks=30)
-  #
-  # fit_beh <- bam(
-  #   tot_symp ~ s(scan_count, bs = "tp", k = 3) +
-  #     s(subj_id, bs = "re"),
-  #   data = df_scan_imp,
-  #   family = gaussian(),
-  #   method = "fREML",
-  #   discrete = T
-  # )
-  # gam.check(fit_beh)
-  # summary(fit_beh)
-  # plot(fit_beh)
-  #
-  # # Transform all
-  # df_scan_imp$imp_tx <- NA
-  # df_scan_imp$imp_tx <- log(df_scan_imp[, beh])
-  # hist(df_scan_imp$imp_tx)
-  #
-  # df_scan_imp$imp_tx <- df_scan_imp[, beh]/100
-  # df_scan_imp$imp_tx <- df_scan_imp$imp_tx + 0.01
-  #
-  # df_scan_imp$imp_tx <- df_scan_imp[, beh] + 0.5
-  #
-  # hist(df_scan_imp$imp_tx, breaks=30)
-  # descdist(df_scan_imp$imp_tx)
-  #
-  # fit_tx <- bam(
-  #   tot_symp ~ s(scan_count, bs = "tp", k = 3) +
-  #     s(subj_id, bs = "re"),
-  #   data = df_scan_imp,
-  #   family = nb(),
-  #   method = "fREML",
-  #   discrete = T
-  # )
-  # gam.check(fit_tx)
-  # summary(fit_tx)
-  # plot(fit_tx)
-  #
-  # fit_tx2 <- bam(
-  #   imp_ctl ~ s(scan_count, bs = "tp", k = 3) +
-  #     s(subj_id, bs = "re"),
-  #   data = df_scan_imp,
-  #   family = poisson(),
-  #   method = "fREML",
-  #   discrete = T
-  # )
-  # gam.check(fit_tx2)
-  # summary(fit_tx2)
-  # plot(fit_tx2)
-  #
-  #
-  # library(itsadug)
-  # compareML(fit_beh, fit_tx)
-  # compareML(fit_beh, fit_tx2)
-  # compareML(fit_tx, fit_tx2)
-}
-
-
 #' Model all tracts for post-base and rtp-base differences (delta).
 #'
 #' Conduct longitudinal HGAM with all tracts and scan times so subject variance
 #' is pooled across tracts and scans. Delta values are used as ordered factors
 #' become difficult across factor interactions.
 #'
-#' @param df_afq Dataframe containing AFQ data.
+#' Models saved to out_dir/stats_gams/rda_objects/fit_LDI_fa.Rda
+#' Summaries saved to out_dir/stats_gams/gam_summaries/fit_LDI_fa.txt
+#' Plot saved to out_dir/stats_gams/plots/LDI_all/fit_LDI_*
+#'
+#' @param df_afq Dataframe containing AFQ data, from
+#'  workflows$get_data_afq("tbl_afq").
 #' @param make_plots Logical, whether to draw all tract grids.
 #' @returns mgcv::bam fit object.
 export("dwi_gam_delta_all")
@@ -490,9 +549,19 @@ dwi_gam_delta_all <- function(df_afq, make_plots = T) {
 }
 
 
-
-#' Title.
-#' TODO
+#' Model all tracts for run-rerun FA differences (delta).
+#'
+#' Test for algorithmic variance by comparing tractometric profiles
+#' from rerunning PyAFQ on Base session (test-retest). Includes difference
+#' FA values for all tracts.
+#'
+#' Models saved to out_dir/stats_gams/rda_objects/fit_DI_rerun_fa.Rda
+#' Summaries saved to out_dir/stats_gams/gam_summaries/fit_DI_rerun_fa*
+#' Plot saved to out_dir/stats_gams/plots/DI_all/fit_DI_rerun_all*
+#'
+#' @param df_afq Dataframe containing AFQ data, from workflows$get_data_afq().
+#' @param df_afq Dataframe from workflows$get_data_afq("tbl_afq_rerun").
+#' @returns mgcv::bam fit object.
 export("dwi_gam_delta_rerun")
 dwi_gam_delta_rerun <- function(df_afq, df_afq_rr) {
   # Subset df_afq for relevant values
@@ -532,7 +601,10 @@ dwi_gam_delta_rerun <- function(df_afq, df_afq_rr) {
   fit_DI <- readRDS(rds_di)
 
   # Mine, print summary stats
-  sum_di <- paste0(analysis_dir, "/stats_gams/gam_summaries/fit_DI_rerun_fa.txt")
+  sum_di <- paste0(
+    analysis_dir,
+    "/stats_gams/gam_summaries/fit_DI_rerun_fa.txt"
+  )
   if (!file.exists(sum_di)) {
     fit_gams$write_gam_stats(fit_DI, sum_di)
   }
@@ -562,38 +634,19 @@ dwi_gam_delta_rerun <- function(df_afq, df_afq_rr) {
 }
 
 
-#' Title.
+#' Model tract node-FA-time interaction.
 #'
-#' TODO
-export("plot_dwi_gam_all_rerun")
-plot_dwi_gam_all_rerun <- function(fit_LDI, fit_DI_rr) {
-  #
-  idx_ldi <- transform_data$idx_ldi_smooths(fit_LDI)
-  grid_ldi <- draw_plots$grid_ldi_comb(
-    fit_LDI, idx_ldi$post, idx_ldi$rtp, idx_ldi$names
-  )
-
-  #
-  idx_di <- transform_data$idx_di_smooths(fit_DI_rr)
-  grid_di <- draw_plots$grid_di_comb(fit_DI_rr, idx_di$all, idx_di$names)
-
-  grDevices::png(
-    filename = paste0(
-      .analysis_dir(), "/stats_gams/plots/fit_LDI_DI_rerun.png"
-    ),
-    units = "in",
-    height = 8,
-    width = 12,
-    res = 600
-  )
-  grid.arrange(grid_ldi, grid_di, heights = c(1, 0.5))
-  grDevices::dev.off()
-}
-
-
-#' Title.
+#' Calculate RTP-Post FA change value, model delta FA with smooths for node,
+#' number of days between RTP and Post, and produce tensor product interaction
+#' smooth for 2D interaction.
 #'
-#' TODO
+#' Models saved to out_dir/stats_gams/rda_objects/DI_time/fit_DI_time*
+#' Summaries saved to out_dir/stats_gams/gam_summaries/DI_time/fit_DI_time_*
+#' Plot saved to out_dir/stats_gams/plots/DI_time/fit_DI_time*
+#'
+#' @param df_afq Dataframe containing AFQ data, from
+#'  workflows$get_data_afq("tbl_afq").
+#' @param tract Name of PyAFQ tract.
 export("dwi_gam_delta_time")
 dwi_gam_delta_time <- function(df_afq, tract) {
   # Tract FA for post, rtp
@@ -601,7 +654,7 @@ dwi_gam_delta_time <- function(df_afq, tract) {
   df_tract <- subset(df_tract, select = -c(dti_md, dti_ad, dti_rd))
   df_tract <- df_tract[which(df_tract$scan_name != "base"), ]
 
-  #
+  # Organize for difference calcs
   df <- stats::reshape(
     df_tract,
     idvar = c("subj_id", "tract_name", "node_id"),
@@ -618,12 +671,10 @@ dwi_gam_delta_time <- function(df_afq, tract) {
   df <- df[complete.cases(df$days.rtp_post), ]
   rm(df_tract)
 
-  # hist(df$days.rtp_post)
-  df <- df[which(df$days.rtp_post < 40), ] #
+  # Drop extra-long recovery times (very few, wrecks model fits).
+  df <- df[which(df$days.rtp_post < 40), ]
 
-  #
-  # fit_DI_time <- fit_gams$mod_di_time(df)
-
+  # Fit and save model
   rda_dir <- paste0(.analysis_dir(), "/stats_gams/rda_objects/DI_time")
   dir.create(file.path(rda_dir), showWarnings = F)
   tract_short <- fit_gams$switch_tract(tract)
@@ -636,19 +687,18 @@ dwi_gam_delta_time <- function(df_afq, tract) {
     rm(h_gam)
   }
   fit_DI_time <- readRDS(rds_di)
-  
-  #
+
+  # Write summary
   sum_di <- paste0(
     .analysis_dir(), "/stats_gams/gam_summaries/DI_time/fit_DI_time_",
     tract_short, "_fa.txt"
   )
   fit_gams$write_gam_stats(fit_DI_time, sum_di)
 
-  #
+  # Draw plots
   plot_obj <- getViz(fit_DI_time)
   plot_time <- draw_plots$draw_di_time(plot_obj, tract)
 
-  #
   plot_dir <- paste0(.analysis_dir(), "/stats_gams/plots/DI_time")
   dir.create(file.path(plot_dir), showWarnings = F)
   ggplot2::ggsave(
@@ -662,87 +712,15 @@ dwi_gam_delta_time <- function(df_afq, tract) {
 }
 
 
-#' Fit and coordinate plotting of longitudinal HGAMs.
-#'
-#' Support longitudinal modeling and plotting of scalars. Makes longitudinal
-#' GAMs with global and group smooths with group wiggliness (LGI) and also
-#' global and group smooths as ordered factors (LGIO).
-#'
-#' Used to unload redundant work from gams_long_scalar().
-#'
-#' @param df Dataframe containing AFQ data.
-#' @param tract String, name of AFQ tract (corresponds to df$tract_name).
-#' @param scalar_name String, name of DTI scalar (corresponds to df column).
-#' @returns Named list organized by GAM fits (fit_LGI, fit_LGIO)
-#'    and the smooth plots (plot).
-.fit_plot_long_tract <- function(df, tract, scalar_name) {
-  # Validate user args, get tract/scalar names
-  if (!scalar_name %in% paste0("dti_", c("fa", "rd", "md", "ad"))) {
-    stop("Unexpected scalar_name")
-  }
-  # print(scalar_name)
-  h_tract <- fit_gams$switch_tract(tract)
-  scalar <- strsplit(scalar_name, "_")[[1]][2]
-
-  # Get (and make/save if needed) LGI model.
-  analysis_dir <- .analysis_dir()
-  rds_lgi <- paste0(
-    analysis_dir, "/stats_gams/rda_objects/LGI_tract/fit_LGI_",
-    h_tract, "_", scalar, ".Rda"
-  )
-  if (!file.exists(rds_lgi)) {
-    h_gam <- fit_gams$mod_lgi(df, scalar_name)
-    saveRDS(h_gam, file = rds_lgi)
-    rm(h_gam)
-  }
-  fit_LGI <- readRDS(rds_lgi)
-  sum_lgi <- paste0(
-    analysis_dir, "/stats_gams/gam_summaries/LGI_tract/fit_LGI_",
-    h_tract, "_", scalar, ".txt"
-  )
-  fit_gams$write_gam_stats(fit_LGI, sum_lgi)
-
-  # Get (and make/save if needed) LGIO model, write summary stats to disk.
-  rds_lgio <- paste0(
-    analysis_dir, "/stats_gams/rda_objects/LGIO_tract/fit_LGIO_",
-    h_tract, "_", scalar, ".Rda"
-  )
-  if (!file.exists(rds_lgio)) {
-    h_gam <- fit_gams$mod_lgio(df, scalar_name)
-    saveRDS(h_gam, file = rds_lgio)
-    rm(h_gam)
-  }
-  fit_LGIO <- readRDS(rds_lgio)
-  sum_lgio <- paste0(
-    analysis_dir, "/stats_gams/gam_summaries/LGIO_tract/fit_LGIO_",
-    h_tract, "_", scalar, ".txt"
-  )
-  fit_gams$write_gam_stats(fit_LGIO, sum_lgio)
-  # gam.check(fit_LGIO)
-  # summary(fit_LGIO)
-  # plot(fit_LGIO)
-
-  # Coordinate drawing of smooths
-  plots_LGI <- draw_plots$grid_lgi(
-    fit_LGI, tract, toupper(scalar)
-  )
-  plots_LGIO <- draw_plots$grid_lgio(
-    fit_LGIO, tract, toupper(scalar)
-  )
-  return(list(
-    "fit_LGI" = fit_LGI,
-    "fit_LGIO" = fit_LGIO,
-    "plots_LGIO" = plots_LGIO,
-    "plots_LGI" = plots_LGI
-  ))
-}
-
-
 #' Fit DWI scalars with longitudinal HGAMs for single tract.
 #'
 #' Fit DWI data (FA, RD, AD, MD) with longitudinal hierarchical
 #' GAMS using both global and group smooths (and group wiggliness).
 #' Also fit as ordered factor for group (post/rtp vs base).
+#'
+#' Models saved to out_dir/stats_gams/rda_objects/LGI<O>_tract/fit_LGI*
+#' Summaries saved to out_dir/stats_gams/gam_summaries/LGI<O>_tract/fit_LGI*
+#' Plot saved to out_dir/stats_gams/plots/LGI<O>_tract/fit_LGI*
 #'
 #' @param df_afq Dataframe output of clean_afq().
 #' @param tract String, name of AFQ tract (corresponds to df_afq$tract_name).
@@ -831,36 +809,24 @@ dwi_gam_long_tract <- function(df_afq, tract) {
 }
 
 
-#' Plan specific IMPACT measure for tract interaction analysis.
-#'
-#' @param tract String, name of AFQ tract.
-#' @returns String, name of impact measure.
-.tract_impact <- function(tract) {
-  map_beh <- switch(tract,
-    "Callosum Anterior Frontal" = "tot_symp",
-    "Callosum Orbital" = "tot_symp",
-    "Callosum Motor" = "rx_time",
-    "Callosum Superior Parietal" = "mem_vis",
-    "Callosum Posterior Parietal" = "mem_vis",
-    "Callosum Occipital" = "mem_vis",
-    "Left Anterior Thalamic" = "mem_vis",
-    "Left Arcuate" = "mem_vis",
-    "Left Cingulum Cingulate" = "mem_vis",
-    "Left Corticospinal" = "rx_time",
-    "Left Inferior Fronto-occipital" = "mem_vis",
-    "Left Superior Longitudinal" = "mem_vis",
-    "Right Anterior Thalamic" = "mem_vis",
-    "Right Cingulum Cingulate" = "mem_vis",
-    "Right Inferior Fronto-occipital" = "mem_vis",
-    "Right Uncinate" = "tot_symp"
-  )
-  return(map_beh)
-}
 
-
-#' Fit DWI scalars X Impact with longitudinal HGAMs.
+#' Model tract node-FA-ImPACT metric interaction.
 #'
-#' TODO
+#' Conduct LGI and LGIO interaction models of node-FA-ImPACT interactions.
+#' FA is fit with 1D smooths for node, ImPACT, and 2D tensor product smooths
+#' of node X ImPACT, for each visit (Base, Post, and RTP).
+#'
+#' Models saved to out_dir/stats_gams/rda_objects/DI_time/fit_DI_time*
+#' Summaries saved to out_dir/stats_gams/gam_summaries/DI_time/fit_DI_time_*
+#' Plot saved to out_dir/stats_gams/plots/DI_time/fit_DI_time*
+#'
+#' @param df_afq Dataframe containing AFQ data, from
+#'  workflows$get_data_afq("tbl_afq").
+#' @param df_scan_imp Dataframe returned by workflows$get_data_scan_impact().
+#' @param tract Name of PyAFQ tract.
+#' @param impact_meas Optional, if "planned" then pre-planned ImPACT metrics
+#'  will be tested for select tracts. Otherwise specify short name of ImPACT.
+#'  @return Named list of LGI and LGIO interaction models.
 export("dwi_gam_long_impact")
 dwi_gam_long_impact <- function(
     df_afq, df_scan_imp, tract, impact_meas = "planned") {
@@ -949,4 +915,38 @@ dwi_gam_long_impact <- function(
     gam_LGI_intx = fit_LGI_intx,
     gam_LGIO_intx = fit_LGIO_intx
   ))
+}
+
+
+#' Plot all smooths from dwi_gam_delta_all and dwi_gam_delta_rerun models.
+#'
+#' Stitch together plots of delta_all and delta_rerun. Plot saved to
+#' out_dir/stats_gams/plots/fit_LDI_DI_rerun.png.
+#'
+#' @param fit_LDI GAM object returned by workflows$dwi_gam_delta_all().
+#' @param fit_DI_rr GAM object returned by workflows$dwi_gam_delta_rerun().
+export("plot_dwi_gam_all_rerun")
+plot_dwi_gam_all_rerun <- function(fit_LDI, fit_DI_rr) {
+  # Determine LDI smooth indices and make grid
+  idx_ldi <- transform_data$idx_ldi_smooths(fit_LDI)
+  grid_ldi <- draw_plots$grid_ldi_comb(
+    fit_LDI, idx_ldi$post, idx_ldi$rtp, idx_ldi$names
+  )
+
+  # Determine DI smooth indices and make grid
+  idx_di <- transform_data$idx_di_smooths(fit_DI_rr)
+  grid_di <- draw_plots$grid_di_comb(fit_DI_rr, idx_di$all, idx_di$names)
+
+  # Combine grids
+  grDevices::png(
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/fit_LDI_DI_rerun.png"
+    ),
+    units = "in",
+    height = 8,
+    width = 12,
+    res = 600
+  )
+  grid.arrange(grid_ldi, grid_di, heights = c(1, 0.5))
+  grDevices::dev.off()
 }

@@ -84,12 +84,22 @@ KEYWORDS: DWI, MRI, GAM, TBI\\
 
 \section{Introduction}
 \label{sec:intro}
-Introduction here.
 
 % TODO: (Heather?) Epidemilogic description of TBI in US, athletes
-% TODO: mTBI sequelae description
-% TODO: DWI and mTBI
-% TODO: Modeling DWI, issues
+Traumatic brain injury affects [XXX] individuals each year with approximately [XXX] results from sport-related activities, a number which may be under-reported.
+
+% mTBI sequelae description
+As rapid acceleration and deceleration of the head result in consequential forces for sensitive neural structures, mild traumatic brain injury (mTBI) neurometabolically results in traumatic axonal injury. Physical insult results in mechanoporation of the cell membrane, where increased Ca$^{2+}$ influx changes the membrane potential, disrupts mitochondrial oxidative metabolism, and can activate proteolytic enzymes. With respect to axons, biomechanical injury and Ca$^{2+}$ influx results in multiple interrelated sequelae including swelling (edema), axonal undulation and blebbing, neurofilament compaction, the disassembly of microtubules and other cytoskeletal structures, and potentially axotomy. Such axonal disruptions result in atypical water diffusion trajectories.
+
+% DWI and mTBI
+Diffusion tensor imaging (DTI) utilizes measurements of water diffusion trajectories in para-orthogonal directions to construct diffusion tensors. Within white matter, water molecules are typically constrained by the axolemma such that the principal tensor of diffusion is parallel to the axon. While orders of magnitude exist between the axonal diameter and voxel size, axonal fiber coherence results in tensors that can be used to algorithmically generate tract profiles which approximate the microstructural organization of white matter. When changes to the physical axonal structure or permeability occur, atypical diffusion can be measured with DTI and will be reflected in the respective tensors and corresponding tract profiles.
+
+% Modeling DWI, issues
+A number of DTI software packages exist that are capable of generating tract profiles. PyAFQ is one of particular interest as it generates a tract profile that is subdivided into equidistant nodes which contain scalar values for their local tract environment. As mTBI traumatic axonal injury is typically found within a certain subregion of a tract, PyAFQ may supply node scalar values for the injured region which reflect the change in diffusion, where whole-tract values are likely to be under-sensitive and region-of-interest masks may not reflect the injury locale. This increased tract resolution is highly desirable for describing mTBI axonal sequelae, but a number of statistical considerations exist with such tract profiles: interdependent node scalar values, non-linear node-scalar tract profiles, non-Gaussian scalar distributions, and multiple comparisons and their corresponding corrections.
+
+We previously demonstrated that generalized additive models (GAMs) are well-fit to model such tractometric profiles and provided details to guide decision points in model specification \parencite{muncy2022GeneralAdditiveModels}. While further details are supplied below, GAMs can fit non-linear interactions through the use of splines, and as an extension of general linear models support a number of distributions that are relevant for scalar values (e.g. beta).
+
+
 % TODO: Purpose - (a) extend GAMs for longitudinal DWI, (b) tensor product interaction smooths for multi-modal analyses
 
 
@@ -122,7 +132,7 @@ Whole-brain tractography was computed from the preprocessed DWI by PyAFQ. Constr
 % TODO: Cite that CSD, prob tract are better for TBI?
 
 
-\subsection{GAM specification}
+\subsection{GAM Specification}
 \label{ssec:meth-gam}
 
 % TODO: are these two paragraphs better in the intro? Maybe a brief description goes in intro.
@@ -134,7 +144,7 @@ Hierarchical GAMs (HGAMs; \cite{pedersen2019HierarchicalGeneralizedAdditive}) al
 % TODO: include DWI scalar distribution (and plot) to visualize tractometric profile? Cite a yeatman tractometry paper?
 
 
-\subsubsection{Longitudinal difference model}
+\subsubsection{Longitudinal Difference Model}
 \label{sssec:meth-gam-ldi}
 To investigate within-tract injury- and recovery-related FA changes we specified an HGAM to test for Post and RTP tract FA differences from Base. First, we calculated the Post-Base and RTP-Base changes in FA ($\Delta$FA). While including original FA values would be ideal, propagating ordered factors (Base $<$ Post $<$ RTP) across an interaction with another factor (tract) loses the original ordered structure; ordered factors would be necessary to investigate differences from baseline instead of merely the interaction with session. Next, we calculated the session comparison $\times$ tract interaction term as \lstinline{mgcv::bam} does not currently support modeling smooths by factor interactions. $\Delta$FA values were modeled as a function of tract node using thin-plate regression splines (R Code \ref{code:gam-ldi}) and a basis dimensionality of 15 was determined sufficient to fit the tract curves (\lstinline{gam.check(fit_LDI)}). Subjects were treated as a random effect, thereby allowing each subject to have their own intercept across all levels of the factors, the $\Delta$FA distribution was well-fit by a Gaussian distribution with an identity link function, fast Residual Error of Maximum Likelihood (fREML) was used as the smoothing parameter estimation method, and 12 threads were used in the computation (run time $\approx$ 45 minutes). Input data consisted of the 24 tracts with good segmentation across all subjects. Notably, we did not include a global smooth for this model, as the $\Delta$FA profile would differ for each tract, and we specified that each tract would have its own wiggliness term; essentially this is a longitudinal model of FA differences which references model `I' in \textcite{pedersen2019HierarchicalGeneralizedAdditive}.
 
@@ -155,7 +165,7 @@ To investigate within-tract injury- and recovery-related FA changes we specified
 \end{equ}
 
 
-\subsubsection{Longitudinal tract model}
+\subsubsection{Longitudinal Tract Model}
 \label{sssec:meth-gam-lgio}
 The model specified in R Code \ref{code:gam-ldi} effectively models the entire longitudinal dataset of $\Delta$FA values, allowing for pooling for variance within a subject across tract and session, not requiring a multiple comparison correction for modeling all tracts. But as the $\Delta$FA calculation required data at time points A and B, the analysis was restricted by missing data. As essentially a post-hoc analysis to further interrogate tract differences across session, and also what change in scalar (e.g. increased RD) drove the difference in FA, individual tracts were modeled with a longitudinal HGAM with terms for global and group smooths (R Code \ref{code:gam-lgio}). Tract FA values were fit by a beta distribution with a logit link function, AD and RD values were fit with a Gaussian distribution and identity link function, and a gamma distribution with a logit link function fit the MD values. Subjects were again treated as a random effect, with separate intercepts for each scan (Base, Post, RTP), group smooths were allowed their own wiggliness parameter, and the colinearity of global and group smooths was controlled by the `m' parameter. Such a model is similar to model `GI' in \textcite{pedersen2019HierarchicalGeneralizedAdditive}. Finally, an ordered session factor was included to test for difference in Post and RTP scalar values from Base. Such a model is particularly useful as the test statistic, which describes the flatness of the smooth, provides information about changes from Base values rather than deflections from zero. A model which fits group smooths for each session is provided in Supplemental Materials (Supplemental R code \ref{supp-code:gam-lgi}).
 
@@ -177,7 +187,7 @@ The model specified in R Code \ref{code:gam-ldi} effectively models the entire l
 \end{equ}
 
 
-\subsubsection{Longitudinal tract interaction model}
+\subsubsection{Longitudinal Tract Interaction Model}
 \label{sssec:meth-gam-lgio-intx}
 As noted above, GAMs are capable of modeling higher-dimensional, non-linear interactions through tensor product interaction smooths and hypersurfaces, a property which make them particularly relevant for multimodal research. We used such a model to test whether concussion- and recovery-related changes in tract scalars related to changes in ImPACT composite and total symptom scores (R code \ref{code:gam-lgio-intx}), thereby potentially linking damage within a specific region of a tract to changes in assessment metrics. Tract scalars were modeled as a function of both tract node and ImPACT measure, and the node-ImPACT interaction term was specified such that each session (Base, Post, RTP) would have a different scalar-node-ImpACT interaction surface. We note the decrease in basis dimensionality for the ImPACT measures thin-plate regression splines from the default value, and that fitting the tensor product interaction smooth also benefited from a slightly higher basis dimensions term for the tract node term. Finally, as above (Section \ref{sssec:meth-gam-lgio}), an ordered factor for session was included in order to test whether the Post and RTP interaction surfaces differed from that of Base; a model with separate interaction surfaces is provided in Supplemental Materials (Supplemental R code \ref{supp-code:gam-lgi-intx}).
 

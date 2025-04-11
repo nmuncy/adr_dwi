@@ -268,7 +268,7 @@ Finally, two tracts appear to worsen between Post and RTP: the motor and orbital
 	\label{fig:lgio-gam-cc}
 \end{figure}
 
-
+[REF TABLE]
 % TODO: Table of tract statistics
 % TODO: for table, detail \lstinline{s(node_id):scanOFpost} and \lstinline{s(node_id):scanOFrtp}
 
@@ -299,7 +299,7 @@ Figure \ref{fig:lgio-intx-cc} visualizes Post and RTP tract node-FA-ImPACT diffe
 	\label{fig:lgio-intx-cc}
 \end{figure}
 
-
+[REF TABLE]
 % TODO: Tables
 % TODO: standardize using abbreviations or full tract names
 % TODO: Update interaction figures IMPACT -> ImPACT
@@ -318,19 +318,19 @@ Figure \ref{fig:lgio-intx-cc} visualizes Post and RTP tract node-FA-ImPACT diffe
 
 \subsection{Tract FA Difference Relate to Recovery Time}
 \label{ssec:res-dwi-time}
-In addition to modeling the interaction of tract FA changes with assessment metrics (Section \ref{ssec:res-dwi-imp}), another potentially powerful use of tensor product interaction smooths is to model changes in tract scalars as a function of time. Given the within-tract temporal dynamics of axonal injury and recovery, the ability to model non-linear temporal interactions with scalar changes will help quantify the progression of injury. For such an analysis, however, patients would require multiple scans during the recovery period to effectively track signal associated with recovery. As our data were collected at Post and RTP, we modeled tract FA differences (for the tracts identified above) between Post and RTP as a function of node and number of days between the two sessions. Such a model will identify which scalar changes are associated with the longest recovery periods, as presumably less-severe injuries are associated with fewer days between Post and RTP. We also note that few participants had recovery periods longer than 14 days.
+In addition to modeling the interaction of tract FA changes with assessment metrics (Section \ref{ssec:res-dwi-imp}), another potentially powerful use of tensor product interaction smooths is to model changes in tract scalars as a function of time. Given the within-tract temporal dynamics of axonal injury and recovery, the ability to model non-linear temporal interactions with scalar changes will help quantify the progression of injury. For such an analysis, however, patients would require multiple scans during the recovery period to effectively track signal associated with recovery. As our data were collected at Post and RTP, we modeled tract FA differences (for the tracts identified above) between Post and RTP as a function of node and number of days between the two sessions. Such a model will identify which scalar changes are associated with the longest recovery periods, as presumably less-severe injuries are associated with fewer days between Post and RTP. We also note that few participants had recovery periods longer than 14 days, so any detected interactions at long recovery periods are driven by relatively few participants.
 
-Two linear node-$\Delta$FA-time interaction patterns were identified and are visualized as topographic maps in Figure \ref{fig:di-time}. First, and with respect to the left corticospinal tract, (Figure \ref{fig:di-time}, A), participants with negative $\Delta$FA values about node 50 had a shorter recovery period (time between Post and RTP), while participants with positive values had longer recovery times. A negative RTP-Post $\Delta$FA value could occur when slight edema is present at Post (decreased RD, no change in AD) which then resolves by RTP. Conversely, a positive difference may indicate significant axolemmal damage at Post which would decrease FA and precede a longer recovery period. Likewise, positive $\Delta$FA values around node 55 of the right uncinate (Figure \ref{fig:di-time}, B) were associated with a longer recovery period.
+Two linear node-$\Delta$FA-time interaction patterns were identified and are visualized as topographic maps in Figure \ref{fig:di-time}. First, and with respect to the left corticospinal tract (Figure \ref{fig:di-time}, A), participants with negative $\Delta$FA values about node 50 had a shorter recovery period (time between Post and RTP), while participants with positive values had longer recovery times. A negative RTP-Post $\Delta$FA value could occur when slight edema is present at Post (decreased RD, no change in AD) which then resolves by RTP. Conversely, a positive difference may indicate significant axolemmal damage at Post which would decrease FA and precede a longer recovery period. Likewise, positive $\Delta$FA values around node 55 of the right uncinate (Figure \ref{fig:di-time}, B) were associated with a longer recovery period. Second, negative RTP-Post $\Delta$FA values around nodes 55 and 60 were related to a larger number of days between Post and RTP for the superior parietal and orbital callosal tracts, respectively (Figure \ref{fig:di-time}, C \& D). As was suspected with the left corticospinal tract, such negative $\Delta$FA values could be driven by significant axonal swelling at Post, resulting in a decreased RD and therefore an increased FA. Finally, a lack of relationship between $\Delta$FA and fewer days is evident (homogenous green) and note that other tracts tested did not have clear relationships between changes in FA and recovery periods.
 
 \begin{figure}[H]
 	\centering
 	\fbox{\includegraphics{fig_DI_time.png}}
-	\caption{Caption.}
+	\caption{HGAM tensor product interaction smooths modeling the interaction between RTP-Post $\Delta$FA values (Z-axis) with the number of days between Post and RTP visits (Y-axis) along the tract nodes (X-axis). Positive RTP-Post $\Delta$FA values are indicated as yellow, and negative blue, with gray bars indicating regions of extrapolation (insufficient data). Top plots indicate positive $\Delta$FA values about node 50 are associated with a larger number of days between Post and RTP, and bottom plots the opposite.}
 	\label{fig:di-time}
 \end{figure}
 
-Second, negative RTP-Post $\Delta$FA values around nodes 55 and 60 were related to a larger number of days between Post and RTP for the superior parietal and orbital callosal tracts, respectively (Figure \ref{fig:di-time}, C \& D).
-
+[REF TABLE]
+% TODO: Tables
 
 
 \section{Discussion}

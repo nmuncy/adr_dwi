@@ -165,6 +165,163 @@ transform_data <- use("resources/transform_data.R")
 }
 
 
+#' TODO
+hyp_figure <- function() {
+  # Base, Post, RTP tract FAs, Post FA increase (left) and decrease (right)
+  #   Inc FA - Dec RD; Dec FA - Inc RD. MD matches, AD no diff
+  # Rx with ImPACT at base
+
+
+  library(simstudy)
+  library(ggplot2)
+  library(mgcv)
+  library(gridExtra)
+  library(lattice)
+  library(latticeExtra)
+  library(ggpubr)
+  simul_data <- use("resources/simul_data.R")
+
+
+  # Make tract FA data
+  set.seed(234)
+  num_subj <- 30
+  
+  df_tract_fa <- df_tract_rd <- as.data.frame(matrix(nrow=0, ncol=6))
+  col_names <- c("id", "node", "FA", "Visit", "subj", "Beh")
+  colnames(df_tract_fa) <- col_names
+  colnames(df_tract_rd) <- col_names
+  
+  for(subj in seq(from=1, to=num_subj)){
+    subj_id <- paste0("s", subj)
+    
+    #
+    df_base_fa <- simul_data$simul_tract("Base", "FA", subj_id)
+    df_post_fa <- simul_data$simul_tract(
+      "Post", "FA", subj_id, adj_range = c(60, 80), adj_amount = -0.05
+    )
+    df_rtp_fa <- simul_data$simul_tract(
+      "RTP", "FA", subj_id, adj_range = c(60, 80), adj_amount = -0.025
+    )
+    df_tract_fa <- rbind(df_tract_fa, df_base_fa, df_post_fa, df_rtp_fa)
+    
+    #
+    df_base_rd <- simul_data$simul_tract("Base", "RD", subj_id)
+    df_post_rd <- simul_data$simul_tract(
+      "Post", "RD", subj_id, adj_range = c(60, 80), adj_amount = 0.05
+    )
+    df_rtp_rd <- simul_data$simul_tract(
+      "RTP", "RD", subj_id, adj_range = c(60, 80), adj_amount = 0.025
+    )
+    df_tract_rd <- rbind(df_tract_rd, df_base_rd, df_post_rd, df_rtp_rd)
+  }
+  
+  #
+  df_tract_fa$id <- as.factor(df_tract_fa$id)
+  df_tract_fa$Visit <- as.factor(df_tract_fa$Visit)
+  df_tract_fa$subj <- as.factor(df_tract_fa$subj)
+  rm(df_base_fa, df_post_fa, df_rtp_fa)
+  
+  df_tract_rd$id <- as.factor(df_tract_rd$id)
+  df_tract_rd$Visit <- as.factor(df_tract_rd$Visit)
+  df_tract_rd$subj <- as.factor(df_tract_rd$subj)
+  rm(df_base_rd, df_post_rd, df_rtp_rd)
+
+  # Plot tracts
+  p_fa <- ggplot(data = df_tract_fa, aes(x = node, y = FA, color = Visit)) +
+    geom_smooth() +
+    labs(y="Simulated FA") +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      axis.title.x = element_blank()
+    )
+  p_rd <- ggplot(data = df_tract_rd, aes(x = node, y = RD, color = Visit)) +
+    geom_smooth() +
+    labs(y="Simulated RD") +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      axis.title.x = element_blank()
+    )
+  plots_tract <- grid.arrange(
+    arrangeGrob(p_fa, top = text_grob("Simulated Tract Axolemmal Injury and Recovery", size = 14, family = "Times New Roman")),
+    arrangeGrob(p_rd, bottom = text_grob("Tract Node", size = 14, family = "Times New Roman")),
+    nrow = 2,
+    ncol = 1
+  )
+  
+  #
+  ggplot(data = df_tract_fa, aes(x = Visit, y = Beh)) + 
+    geom_point()
+  
+  # LGIO GAM and plots
+  df_tract_fa$visit_OF <- factor(df_tract_fa$Visit, ordered = T)
+  fit_lgio <- bam(
+    FA ~ s(subj, Visit, bs = "re") +
+      s(node, bs = "tp", k = 15, m = 2) +
+      s(node, by = visit_OF, bs = "tp", k = 15, m = 1),
+    data = df_tract_fa,
+    family = gaussian(),
+    method = "fREML",
+    discrete = T,
+    nthreads = 4
+  )
+  plots_LGIO <- draw_plots$grid_lgio(
+    fit_lgio, "Simulated Tract", "FA",
+    num_G = 2, num_Ia = 3, num_Ib = 4
+  )
+  
+  # LGI interaction
+  fit_lgi_intx <- bam(
+    FA ~ s(subj, Visit, bs = "re") +
+      s(node, bs = "tp", k = 15, m = 2) +
+      s(Beh, by = Visit, bs = "tp", k = 5)  +
+      ti(
+        node, Beh, by = Visit,
+        bs = c("tp", "tp"), k = c(20, 5), m = 1
+      ),
+    data = df_tract_fa,
+    family = gaussian(),
+    method = "fREML",
+    discrete = T,
+    nthreads = 12
+  )
+  plot_lgi <- getViz(fit_lgi_intx)
+  plot(plot_lgi)
+  
+  # Interaction (ordered) GAM
+  fit_lgio_intx <- bam(
+    FA ~ s(subj, Visit, bs = "re") +
+      s(node, bs = "tp", k = 15, m = 2) +
+      s(Beh, by = Visit, bs = "tp", k = 5) +
+      ti(node, Beh, bs = c("tp", "tp"), k = c(20, 5), m = 1) +
+      ti(node, Beh, by = visit_OF, bs = c("tp", "tp"), k = c(20, 5), m = 1),
+    data = df_tract_fa,
+    family = gaussian(),
+    method = "fREML",
+    discrete = T,
+    nthreads = 12
+  )
+  plot_obj <- getViz(fit_lgio_intx)
+  plot(plot_obj)
+
+  # Draw interaction plots
+  z_min_all <- z_max_all <- c()
+  for (num in c(6, 7)){
+    p <- plot(sm(plot_obj, num))
+    p_data <- as.data.frame(p$data$fit)
+    colnames(p_data) <- c("fit", "tfit", "cov", "nodeID", "se")
+    z_min_all <- c(z_min_all, min(c(p_data$fit, p_data$fit), na.rm = T))
+    z_max_all <- c(z_max_all, max(c(p_data$fit, p_data$fit), na.rm = T))
+  }
+  zmin_zmax = list(zmin = min(z_min_all), zmax = max(z_max_all))
+  plot_a <- draw_plots$draw_is_intx(
+    plot_obj, 6, "Post-Base", "Beh", zmin_zmax
+  )
+  plot_b <- draw_plots$draw_is_intx(
+    plot_obj, 7, "RTP-Base", "Beh", zmin_zmax
+  )
+}
+
+
 #' Conduct GAMs for each ImPACT composite and total symptoms.
 #'
 #' Converts visit (Base, Post, RTP) to integer to model change in time (visit)

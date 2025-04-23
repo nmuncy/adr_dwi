@@ -1295,6 +1295,7 @@ grid_lgio <- function(
 #' @param fit_LGIO mgcv::gam object.
 #' @param tract String tract name for title.
 #' @param scalar_name String dwi metric for title.
+#' @param impact_meas String impact short name for title.
 #' @param num_Ia Number attribute of fit_LGIO holding group A smooth.
 #' @param num_Ib Number attribute of fit_LGIO holding group B smooth.
 #' @returns Object returned by grid.arrange.

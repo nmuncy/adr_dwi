@@ -140,6 +140,8 @@ get_afq <- function(sess_id = NULL, tract_id = NULL, table_name = "tbl_afq") {
       sql_cmd,
       " join ref_scan rfs on tafq.sess_id=rfs.scan_id
         join ref_tract rft on tafq.tract_id=rft.tract_id
+        join tbl_scan_dates tsd on tafq.subj_id=tsd.subj_id
+          and tafq.sess_id=tsd.scan_id
       "
     )
   }

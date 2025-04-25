@@ -1006,6 +1006,134 @@ grid_di_comb <- function(
 }
 
 
+#' Generate a grid of a hypothesized interaction smooth.
+#' 
+#' Made as a 1x1 grid for consistency with other images.
+#'
+#' @param fit_lgio_intx mgcv::gam object.
+#' @returns Object returned by grid.arrange.
+export("grid_hyp_intx")
+grid_hyp_intx <- function(fit_lgio_intx){
+  
+  # Extract info
+  plot_obj <- getViz(fit_lgio_intx)
+  p <- plot(sm(plot_obj, 6)) # Just use ME for easy understanding
+  p_data <- as.data.frame(p$data$fit)
+  colnames(p_data) <- c("fit", "tfit", "Behavior", "nodeID", "se")
+  
+  # Draw plot
+  p_intx <- ggplot(
+    data = p_data,
+    aes(x = .data$nodeID, y = .data$Behavior, z = .data$fit)
+  ) +
+    geom_tile(aes(fill = fit)) +
+    geom_contour(colour = "black") +
+    scale_x_continuous(breaks = c(seq(0, 100, by = 10), 100)) +
+    scale_fill_viridis(option = "D", name = "Est. FA Fit") +
+    labs(y = "Simulated Behavior") +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      legend.text = element_text(size = 8),
+      axis.title.x = element_blank()
+    )
+  
+  # Convert to grid
+  plot_intx <- grid.arrange(
+    arrangeGrob(
+      p_intx, 
+      top = text_grob(
+        "Simulated Node-FA-Behavior Interaction", 
+        size = 12, family = "Times New Roman"
+      ),
+      bottom = text_grob("Tract Node", size = 10, family = "Times New Roman")
+    ),
+    nrow = 1,
+    ncol = 1
+  )
+  return(plot_intx)
+}
+
+
+#' Draw smooth grid for LGIO hypothesis models, containing global and 
+#' difference smooths.
+#'
+#' @param fit_LGIO mgcv::gam object.
+#' @param tract String tract name for title.
+#' @param scalar_name String dwi metric for title.
+#' @param num_G Optional, number attribute of fit_LGIO holding global smooth.
+#' @param num_Ia Optional, number attribute of fit_LGIO holding group A smooth.
+#' @param num_Ib Optional, number attribute of fit_LGIO holding group B smooth.
+#' @param x_min Optional, x-axis range LB.
+#' @param x_max Optional, x-axis range UB.
+#' @returns Object returned by grid.arrange.
+export("grid_hyp_lgio")
+grid_hyp_lgio <- function(
+    fit_LGIO, tract, scalar_name, num_G = 2, num_Ia = 3, num_Ib = 4, x_min = 10, x_max = 89
+) {
+  # Generate plots objs from smooths
+  plot_GO <- getViz(fit_LGIO)
+  pGlobal <- draw_gs(plot_GO, num_G, x_min = x_min, x_max = x_max)
+  pDiffa <- draw_gios_diff(plot_GO, num_G, num_Ia, x_min = x_min, x_max = x_max)
+  pDiffb <- draw_gios_diff(plot_GO, num_G, num_Ib, x_min = x_min, x_max = x_max)
+  
+  # draw grid
+  plot_list <- list(
+    "global" = pGlobal,
+    "diffa" = pDiffa,
+    "diffb" = pDiffb
+  )
+  name_list <- list(
+    "col1" = paste(tract, scalar_name, "Smooths"),
+    "rowL1" = "Est. Global Fit",
+    "rowL2" = "Diff: Post-Base",
+    "rowL3" = "Diff: RTP-Base",
+    "bot1" = "Tract Node"
+  )
+  plot_grid <- .arr_one_three(plot_list, name_list)
+  return(plot_grid)
+}
+
+
+#' Draw grid of hypothesized FA and RD tract profiles.
+#'
+#' @param df_tract_fa Long-formatted dataframe of FA tract values
+#' @param df_tract_RD Long-formatted dataframe of RD tract values
+#' @returns Object returned by grid.arrange.
+export("grid_hyp_tracts")
+grid_hyp_tracts <- function(df_tract_fa, df_tract_rd){
+  p_fa <- ggplot(data = df_tract_fa, aes(x = node, y = FA, color = Visit)) +
+    geom_smooth() +
+    labs(y="Simulated FA") +
+    scale_x_continuous(breaks = c(seq(0, 100, by = 10), 100)) +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      axis.title.x = element_blank()
+    )
+  p_rd <- ggplot(data = df_tract_rd, aes(x = node, y = RD, color = Visit)) +
+    geom_smooth() +
+    labs(y="Simulated RD") +
+    scale_x_continuous(breaks = c(seq(0, 100, by = 10), 100)) +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      axis.title.x = element_blank()
+    )
+  plots_tract <- grid.arrange(
+    arrangeGrob(
+      p_fa, top = text_grob(
+        "Simulated Tract Axolemmal Injury and Recovery", 
+        size = 12, family = "Times New Roman"
+      )
+    ),
+    arrangeGrob(p_rd, bottom = text_grob(
+      "Tract Node", size = 10, family = "Times New Roman")
+    ),
+    nrow = 2,
+    ncol = 1
+  )
+  return(plots_tract)
+}
+
+
 #' Build a grid of smooth plots from ImPACT GAMs.
 #'
 #' Prints a 2x3 grid to dev out.
@@ -1259,18 +1387,20 @@ grid_lgi_intx <- function(
 #' @param fit_LGIO mgcv::gam object.
 #' @param tract String tract name for title.
 #' @param scalar_name String dwi metric for title.
-#' @param num_G Number attribute of fit_LGIO holding global smooth.
-#' @param num_Ia Number attribute of fit_LGIO holding group A smooth.
-#' @param num_Ib Number attribute of fit_LGIO holding group B smooth.
+#' @param num_G Optional, number attribute of fit_LGIO holding global smooth.
+#' @param num_Ia Optional, number attribute of fit_LGIO holding group A smooth.
+#' @param num_Ib Optional, number attribute of fit_LGIO holding group B smooth.
+#' @param x_min Optional, x-axis range LB.
+#' @param x_max Optional, x-axis range UB.
 #' @returns Object returned by grid.arrange.
 export("grid_lgio")
 grid_lgio <- function(
-    fit_LGIO, tract, scalar_name, num_G = 2, num_Ia = 3, num_Ib = 4) {
+    fit_LGIO, tract, scalar_name, num_G = 2, num_Ia = 3, num_Ib = 4, x_min = 10, x_max = 89) {
   # Generate plots objs from smooths
   plot_GO <- getViz(fit_LGIO)
-  pGlobal <- draw_gs(plot_GO, num_G)
-  pDiffa <- draw_gios_diff_sig(plot_GO, num_G, num_Ia)
-  pDiffb <- draw_gios_diff_sig(plot_GO, num_G, num_Ib)
+  pGlobal <- draw_gs(plot_GO, num_G, x_min = x_min, x_max = x_max)
+  pDiffa <- draw_gios_diff_sig(plot_GO, num_G, num_Ia, x_min = x_min, x_max = x_max)
+  pDiffb <- draw_gios_diff_sig(plot_GO, num_G, num_Ib, x_min = x_min, x_max = x_max)
 
   # draw grid
   plot_list <- list(

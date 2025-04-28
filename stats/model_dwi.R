@@ -1,5 +1,6 @@
 # Get resources and data ----
 library("modules")
+library("sessioninfo")
 workflows <- modules::use("workflows.R")
 
 df_afq <- workflows$get_data_afq("tbl_afq")

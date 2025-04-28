@@ -1,0 +1,123 @@
+─ Session info ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ setting  value
+ version  R version 4.3.3 (2024-02-29)
+ os       Ubuntu 24.04.2 LTS
+ system   x86_64, linux-gnu
+ ui       RStudio
+ language (EN)
+ collate  en_US.UTF-8
+ ctype    en_US.UTF-8
+ tz       America/Chicago
+ date     2025-04-28
+ rstudio  2024.09.1+394 Cranberry Hibiscus (desktop)
+ pandoc   NA
+ quarto   1.5.57 @ /usr/lib/rstudio/resources/app/bin/quarto/bin/quarto
+
+─ Packages ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ package       * version    date (UTC) lib source
+ abind           1.4-8      2024-09-12 [1] CRAN (R 4.3.3)
+ backports       1.5.0      2024-05-23 [1] CRAN (R 4.3.3)
+ bigmemory       4.6.4      2024-01-09 [1] CRAN (R 4.3.3)
+ bigmemory.sri   0.1.8      2024-01-10 [1] CRAN (R 4.3.3)
+ boot            1.3-30     2024-02-26 [5] CRAN (R 4.3.2)
+ broom           1.0.7      2024-09-26 [1] CRAN (R 4.3.3)
+ car             3.1-3      2024-09-27 [1] CRAN (R 4.3.3)
+ carData         3.0-5      2022-01-06 [1] CRAN (R 4.3.3)
+ cli             3.6.3      2024-06-21 [1] CRAN (R 4.3.3)
+ codetools       0.2-19     2023-02-01 [5] CRAN (R 4.2.2)
+ colorspace      2.1-1      2024-07-26 [1] CRAN (R 4.3.3)
+ data.table      1.16.0     2024-08-27 [1] CRAN (R 4.3.3)
+ DBI             1.2.3      2024-06-02 [2] CRAN (R 4.3.3)
+ deldir          2.0-4      2024-02-28 [1] CRAN (R 4.3.3)
+ digest          0.6.37     2024-08-19 [1] CRAN (R 4.3.3)
+ directlabels    2024.1.21  2024-01-24 [1] CRAN (R 4.3.3)
+ doParallel      1.0.17     2022-02-07 [2] CRAN (R 4.3.3)
+ dplyr           1.1.4      2023-11-17 [1] CRAN (R 4.3.3)
+ factoextra      1.0.7      2020-04-01 [2] CRAN (R 4.3.3)
+ fansi           1.0.6      2023-12-08 [1] CRAN (R 4.3.3)
+ fastglm         0.0.3      2022-05-23 [1] CRAN (R 4.3.3)
+ fastmap         1.2.0      2024-05-15 [1] CRAN (R 4.1.2)
+ foreach         1.5.2      2022-02-02 [2] CRAN (R 4.3.3)
+ Formula         1.2-5      2023-02-24 [1] CRAN (R 4.3.3)
+ gamm4           0.2-6      2020-04-03 [1] CRAN (R 4.3.3)
+ generics        0.1.3      2022-07-05 [1] CRAN (R 4.3.3)
+ GGally          2.2.1      2024-02-14 [2] CRAN (R 4.3.3)
+ ggplot2         3.5.1      2024-04-23 [1] CRAN (R 4.3.3)
+ ggpubr          0.6.0      2023-02-10 [2] CRAN (R 4.3.3)
+ ggrepel         0.9.6      2024-09-07 [2] CRAN (R 4.3.3)
+ ggsignif        0.6.4      2022-10-13 [2] CRAN (R 4.3.3)
+ ggstats         0.7.0      2024-09-22 [2] CRAN (R 4.3.3)
+ glue            1.8.0      2024-09-30 [1] CRAN (R 4.3.3)
+ gridExtra       2.3        2017-09-09 [1] CRAN (R 4.3.3)
+ gtable          0.3.5      2024-04-22 [1] CRAN (R 4.3.3)
+ htmltools       0.5.8.1    2024-04-04 [2] CRAN (R 4.3.3)
+ httpuv          1.6.15     2024-03-26 [2] CRAN (R 4.3.3)
+ interp          1.1-6      2024-01-26 [1] CRAN (R 4.3.3)
+ iterators       1.0.14     2022-02-05 [2] CRAN (R 4.3.3)
+ itsadug         2.4.1      2022-06-17 [2] CRAN (R 4.3.3)
+ jpeg            0.1-10     2022-11-29 [1] CRAN (R 4.3.3)
+ KernSmooth      2.23-22    2023-07-10 [5] CRAN (R 4.3.3)
+ later           1.3.2      2023-12-06 [2] CRAN (R 4.3.3)
+ lattice         0.22-5     2023-10-24 [5] CRAN (R 4.3.3)
+ latticeExtra    0.6-30     2022-07-04 [1] CRAN (R 4.3.3)
+ lifecycle       1.0.4      2023-11-07 [1] CRAN (R 4.3.3)
+ lme4            1.1-35.5   2024-07-03 [1] CRAN (R 4.3.3)
+ lubridate       1.9.3      2023-09-27 [1] CRAN (R 4.3.3)
+ magrittr        2.0.3      2022-03-30 [1] CRAN (R 4.3.3)
+ MASS            7.3-60.0.1 2024-01-13 [5] CRAN (R 4.3.2)
+ Matrix          1.6-5      2024-01-11 [5] CRAN (R 4.3.2)
+ matrixStats     1.4.1      2024-09-08 [1] CRAN (R 4.3.3)
+ mgcv            1.9-1      2023-12-21 [2] CRAN (R 4.3.3)
+ mgcViz          0.1.11     2023-10-06 [2] CRAN (R 4.3.3)
+ mime            0.12       2021-09-28 [1] CRAN (R 4.1.2)
+ miniUI          0.1.1.1    2018-05-18 [2] CRAN (R 4.3.3)
+ minqa           1.2.8      2024-08-17 [1] CRAN (R 4.3.3)
+ mnormt          2.1.1      2022-09-26 [1] CRAN (R 4.3.3)
+ modules       * 0.13.0     2024-01-21 [1] CRAN (R 4.3.3)
+ munsell         0.5.1      2024-04-01 [1] CRAN (R 4.3.3)
+ nlme            3.1-164    2023-11-27 [5] CRAN (R 4.3.3)
+ nloptr          2.1.1      2024-06-25 [1] CRAN (R 4.3.3)
+ pillar          1.9.0      2023-03-22 [1] CRAN (R 4.3.3)
+ pkgconfig       2.0.3      2019-09-22 [1] CRAN (R 4.3.3)
+ plotfunctions   1.4        2020-04-28 [2] CRAN (R 4.3.3)
+ plyr            1.8.9      2023-10-02 [1] CRAN (R 4.3.3)
+ png             0.1-8      2022-11-29 [2] CRAN (R 4.3.3)
+ promises        1.3.0      2024-04-05 [2] CRAN (R 4.3.3)
+ psych           2.4.6.26   2024-06-27 [1] CRAN (R 4.3.3)
+ purrr           1.0.2      2023-08-10 [1] CRAN (R 4.3.3)
+ qgam            1.3.4      2021-11-22 [2] CRAN (R 4.3.3)
+ quadprog        1.5-8      2019-11-20 [1] CRAN (R 4.3.3)
+ R6              2.5.1      2021-08-19 [1] CRAN (R 4.3.3)
+ RColorBrewer    1.1-3      2022-04-03 [1] CRAN (R 4.3.3)
+ Rcpp            1.0.13     2024-07-17 [1] CRAN (R 4.3.3)
+ reshape2        1.4.4      2020-04-09 [1] CRAN (R 4.3.3)
+ rlang           1.1.4      2024-06-04 [1] CRAN (R 4.3.3)
+ RMySQL          0.10.29    2024-10-04 [2] CRAN (R 4.3.3)
+ rstatix         0.7.2      2023-02-01 [2] CRAN (R 4.3.3)
+ rstudioapi      0.17.1     2024-10-22 [1] CRAN (R 4.1.2)
+ scales          1.3.0      2023-11-28 [1] CRAN (R 4.3.3)
+ sessioninfo     1.2.3      2025-02-05 [1] CRAN (R 4.3.3)
+ shiny           1.9.1      2024-08-01 [2] CRAN (R 4.3.3)
+ simstudy        0.8.1      2024-07-29 [1] CRAN (R 4.3.3)
+ stringi         1.8.4      2024-05-06 [1] CRAN (R 4.3.3)
+ stringr         1.5.1      2023-11-14 [1] CRAN (R 4.3.3)
+ tibble          3.2.1      2023-03-20 [1] CRAN (R 4.3.3)
+ tidyr           1.3.1      2024-01-24 [1] CRAN (R 4.3.3)
+ tidyselect      1.2.1      2024-03-11 [1] CRAN (R 4.3.3)
+ tidyverse       2.0.0      2023-02-22 [1] CRAN (R 4.3.3)
+ timechange      0.3.0      2024-01-18 [1] CRAN (R 4.3.3)
+ utf8            1.2.4      2023-10-22 [1] CRAN (R 4.3.3)
+ uuid            1.2-1      2024-07-29 [1] CRAN (R 4.3.3)
+ vctrs           0.6.5      2023-12-01 [1] CRAN (R 4.3.3)
+ viridis         0.6.5      2024-01-29 [2] CRAN (R 4.3.3)
+ viridisLite     0.4.2      2023-05-02 [1] CRAN (R 4.3.3)
+ xtable          1.8-4      2019-04-21 [1] CRAN (R 4.1.2)
+
+ [1] /home/nmuncy2/R
+ [2] /home/nmuncy2/R/x86_64-pc-linux-gnu-library/4.3
+ [3] /usr/local/lib/R/site-library
+ [4] /usr/lib/R/site-library
+ [5] /usr/lib/R/library
+ * ── Packages attached to the search path.
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-"""Clean shared Impact data and coordination inserting into database.
+"""Clean shared ImPACT data and coordinate inserting into database.
 
 Notes:
     This module is written for an internal data share which assumes very

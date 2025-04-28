@@ -1,6 +1,6 @@
 """Methods for connecting to, and interacting with, the MySQL database.
 
-A MySQL server runs on a separate linux machine (Gimli), hosting
+A MySQL server runs on a local linux machine (Gimli), hosting
 a database called db_adr. These methods allow the user to
 connect to, pull data from, and send data to the database.
 

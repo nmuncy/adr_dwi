@@ -1,6 +1,6 @@
-"""Make and aggregate files needed to run pyAFQ.
+"""Make and aggregate files needed to run PyAFQ.
 
-Setup working location with all files required to run pyAFQ, including
+Setup working location with all files required to run PyAFQ, including
 BIDS dataset_description.json, config.toml, preprocessed DWI files,
 and brain masks. Schedules an SBATCH array for all subjects specified or
 found to have required preprocessed files. Output will be found in

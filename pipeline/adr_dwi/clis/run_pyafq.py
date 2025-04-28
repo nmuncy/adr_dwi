@@ -1,13 +1,13 @@
-"""Generate tractographic profiles via pyAFQ.
+"""Generate tractographic profiles via PyAFQ.
 
-Use pyAFQ to model preprocessed DWI via probabilistic tractography
+Use PyAFQ to model preprocessed DWI via probabilistic tractography
 using constrained spherical deconvolution metrics. Generates a
 dataframe titled tract_profiles.csv in data-dir/derivatives/afq as
 well as subject-specific tracts. The reference file bin/config.toml
-is used to specify the pyAFQ API call.
+is used to specify the PyAFQ API call.
 
 Requires:
-    - Global variable 'SING_PYAFQ' to hold path to singularity image of AFQ.
+    - Global variable 'SING_PYAFQ' to hold path to singularity image of pyAFQ.
 
 Examples:
     run_pyafq -r

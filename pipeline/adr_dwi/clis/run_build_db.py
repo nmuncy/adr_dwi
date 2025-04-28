@@ -1,4 +1,6 @@
-"""Title.
+"""Send ImPACT and PyAFQ data to MySQL database.
+
+Assumes pre-built database and tables.
 
 Example:
     srun --cpus-per-task 1 --mem 4G --pty $SHELL -i # Schedule SLURM resources

@@ -67,7 +67,7 @@ for (tract in tract_select) {
 }
 
 
-# Restuls 3.4: FA changes and time -----
+# Results 3.4: FA changes and time -----
 for (tract in c(tract_cc, tract_select)){
   workflows$dwi_gam_delta_time(df_afq, tract)
 }

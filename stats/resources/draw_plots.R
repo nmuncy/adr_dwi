@@ -18,7 +18,7 @@ import(factoextra)
 import(psych)
 import(reshape2)
 
-misc_help <- use("resources/misc_help.R")
+misc_help <- use("resources/misc_helper.R")
 fit_gams <- use("resources/fit_gams.R")
 
 

@@ -15,7 +15,7 @@ import(ggpubr)
 draw_plots <- use("resources/draw_plots.R")
 fit_gams <- use("resources/fit_gams.R")
 pull_data <- use("resources/pull_data.R")
-misc_help <- use("resources/misc_help.R")
+misc_help <- use("resources/misc_helper.R")
 simul_data <- use("resources/simul_data.R")
 
 
@@ -122,6 +122,7 @@ simul_data <- use("resources/simul_data.R")
 #' to smooths.
 #'
 #' Writes the figure stats_gams/plots/fit_hypotheses.png.
+export("hyp_figure")
 hyp_figure <- function() {
   
   # Make tract FA and RD data, with behavior
@@ -175,12 +176,13 @@ hyp_figure <- function() {
   
   # LGIO GAM and plots
   df_tract_fa$visit_OF <- factor(df_tract_fa$Visit, ordered = T)
+  h_fam <- "gaussian()" # avoid 'gaussian' not found error
   fit_lgio <- bam(
     FA ~ s(subj, Visit, bs = "re") +
       s(node, bs = "tp", k = 15, m = 2) +
       s(node, by = visit_OF, bs = "tp", k = 15, m = 1),
     data = df_tract_fa,
-    family = gaussian(),
+    family = h_fam,
     method = "fREML",
     discrete = T,
     nthreads = 4
@@ -199,7 +201,7 @@ hyp_figure <- function() {
       ti(node, Beh, bs = c("tp", "tp"), k = c(20, 5), m = 1) +
       ti(node, Beh, by = visit_OF, bs = c("tp", "tp"), k = c(20, 5), m = 1),
     data = df_tract_fa,
-    family = gaussian(),
+    family = h_fam,
     method = "fREML",
     discrete = T,
     nthreads = 12

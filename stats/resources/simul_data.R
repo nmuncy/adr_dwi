@@ -1,3 +1,5 @@
+# Simulate data with expected properties to visualize hypotheses.
+
 import(simstudy)
 
 #' Return theta and knots for FA, RD.
@@ -52,10 +54,10 @@ import(simstudy)
 
 
 #' Simulate tract and behavior data.
-#' 
+#'
 #' Behavior values are shifted by minimum injury node value when adj_range
 #' and adj_amount arguments are used.
-#' 
+#'
 #' @param visit Name of visit (Base, Post, RTP).
 #' @param scalar Name of scalar (FA, RD).
 #' @param subj_id Subject ID.
@@ -82,7 +84,7 @@ simul_tract_beh <- function(
   df_node$Visit <- visit
   df_node[, scalar] <- df_node[, scalar] / 100
   df_node$subj <- subj_id
-  
+
   df_node$Beh <- beh_value <- round(stats::runif(1, min = 80, max = 100), 0)
   # start_end <- .switch_visit_beh(visit)
   # df_node$Beh <- beh_value <- round(stats::runif(1, min=start_end[1], max=start_end[2]), 0)

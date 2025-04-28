@@ -1,3 +1,7 @@
+# Various workflows required for differing analyses are organized
+# into their respective functions. This allows for a less verbose
+# stats script 'model_dwi'.
+
 import(grDevices)
 import(dplyr)
 import(lubridate)
@@ -11,8 +15,7 @@ import(ggpubr)
 draw_plots <- use("resources/draw_plots.R")
 fit_gams <- use("resources/fit_gams.R")
 pull_data <- use("resources/pull_data.R")
-quick_stats <- use("resources/quick_stats.R")
-transform_data <- use("resources/transform_data.R")
+misc_help <- use("resources/misc_help.R")
 simul_data <- use("resources/simul_data.R")
 
 
@@ -115,62 +118,9 @@ simul_data <- use("resources/simul_data.R")
 }
 
 
-#' Minimize date distance between dfs A, B.
-#'
-#' Identify which date in df B is closest to date
-#' in df A, grouped by subj_id. Join df B to A.
-#'
-#' @param df_a Dataframe containing columns subj_id and date_a.
-#' @param df_b Dataframe containing columns subj_id and date_b.
-#' @param date_a (str) Column name of df_a containing datetime.
-#' @param date_b (str) Column name of df_b containing datetime.
-#' @returns Dataframe df_b joined to df_a by minimal datetime difference.
-.min_time <- function(df_a, df_b, date_a, date_b) {
-  df_a <- df_a %>% mutate(date = ymd(get(date_a)))
-  df_b <- df_b %>% mutate(date = ymd(get(date_b)))
-
-  df_a <- df_a %>%
-    left_join(df_b, by = c("subj_id")) %>%
-    mutate(time_diff = abs(date.x - date.y)) %>%
-    group_by(subj_id, date.x) %>%
-    arrange(time_diff) %>%
-    slice(1) %>%
-    ungroup()
-  df_a <- subset(df_a, select = -c(date.x, date.y, time_diff))
-  return(df_a)
-}
-
-
-#' Plan specific IMPACT measure for tract interaction analysis.
-#'
-#' @param tract String, name of AFQ tract.
-#' @returns String, name of impact measure.
-.tract_impact <- function(tract) {
-  map_beh <- switch(tract,
-    "Callosum Anterior Frontal" = "tot_symp",
-    "Callosum Orbital" = "tot_symp",
-    "Callosum Motor" = "rx_time",
-    "Callosum Superior Parietal" = "mem_vis",
-    "Callosum Posterior Parietal" = "mem_vis",
-    "Callosum Occipital" = "mem_vis",
-    "Left Anterior Thalamic" = "mem_vis",
-    "Left Arcuate" = "mem_vis",
-    "Left Cingulum Cingulate" = "mem_vis",
-    "Left Corticospinal" = "rx_time",
-    "Left Inferior Fronto-occipital" = "mem_vis",
-    "Left Superior Longitudinal" = "mem_vis",
-    "Right Anterior Thalamic" = "mem_vis",
-    "Right Cingulum Cingulate" = "mem_vis",
-    "Right Inferior Fronto-occipital" = "mem_vis",
-    "Right Uncinate" = "tot_symp"
-  )
-  return(map_beh)
-}
-
-
 #' Generate a graphic to visualize hypotheses and relate tract profiles
 #' to smooths.
-#' 
+#'
 #' Writes the figure stats_gams/plots/fit_hypotheses.png.
 hyp_figure <- function() {
   
@@ -215,7 +165,7 @@ hyp_figure <- function() {
   df_tract_rd$Visit <- as.factor(df_tract_rd$Visit)
   df_tract_rd$subj <- as.factor(df_tract_rd$subj)
   rm(df_base_rd, df_post_rd, df_rtp_rd)
-
+  
   # Plot FA an RD
   plots_tract <- draw_plots$grid_hyp_tracts(df_tract_fa, df_tract_rd)
   
@@ -240,7 +190,7 @@ hyp_figure <- function() {
     num_G = 2, num_Ia = 3, num_Ib = 4,
     x_min = 0, x_max = 100
   )
-
+  
   # Interaction (ordered) GAM and plots
   fit_lgio_intx <- bam(
     FA ~ s(subj, Visit, bs = "re") +
@@ -459,13 +409,13 @@ get_data_scan_impact <- function(df_afq) {
   ]
 
   df_scan_post <- df_afq[which(df_afq$scan_name == "post"), ]
-  df_scan_post <- .min_time(df_scan_post, df_imp_fu, "scan_date", "impact_date")
+  df_scan_post <- misc_help$min_time(df_scan_post, df_imp_fu, "scan_date", "impact_date")
   df_scan_rtp <- df_afq[which(df_afq$scan_name == "rtp"), ]
-  df_scan_rtp <- .min_time(df_scan_rtp, df_imp_fu, "scan_date", "impact_date")
+  df_scan_rtp <- misc_help$min_time(df_scan_rtp, df_imp_fu, "scan_date", "impact_date")
   df_post <- rbind(df_scan_post, df_scan_rtp)
   rm(df_scan_rtp, df_scan_post, df_imp_fu)
 
-  df_post <- transform_data$fix_impact_scan(df_post)
+  df_post <- misc_help$fix_impact_scan(df_post)
   df_post <- df_post[complete.cases(df_post$impact_date), ]
   df_post <- merge(
     x = df_post,
@@ -593,7 +543,7 @@ dwi_gam_delta_all <- function(df_afq, make_plots = T) {
   analysis_dir <- .analysis_dir()
 
   # Calculate delta and run model
-  df <- transform_data$calc_fa_delta(df_afq)
+  df <- misc_help$calc_fa_delta(df_afq)
   rds_ldi <- paste0(analysis_dir, "/stats_gams/rda_objects/fit_LDI_fa.Rda")
   if (!file.exists(rds_ldi)) {
     h_gam <- fit_gams$mod_ldi(df)
@@ -614,7 +564,7 @@ dwi_gam_delta_all <- function(df_afq, make_plots = T) {
   }
 
   # Get indices of tract smooths and their names
-  idx_smooths <- transform_data$idx_ldi_smooths(fit_LDI)
+  idx_smooths <- misc_help$idx_ldi_smooths(fit_LDI)
 
   # Draw combined plot
   grDevices::png(
@@ -632,7 +582,7 @@ dwi_gam_delta_all <- function(df_afq, make_plots = T) {
   grDevices::dev.off()
 
   # Identify max deflections from zero
-  df_max <- quick_stats$max_deflect(fit_LDI, idx_smooths$all)
+  df_max <- misc_help$max_deflect(fit_LDI, idx_smooths$all)
   out_csv <- paste0(
     analysis_dir, "/stats_gams/gam_summaries/fit_LDI_fa_max.csv"
   )
@@ -723,8 +673,8 @@ dwi_gam_delta_rerun <- function(df_afq, df_afq_rr) {
   }
 
   # Identify max deflections from zero
-  idx_smooths <- transform_data$idx_di_smooths(fit_DI)
-  df_max <- quick_stats$max_deflect(fit_DI, idx_smooths$all)
+  idx_smooths <- misc_help$idx_di_smooths(fit_DI)
+  df_max <- misc_help$max_deflect(fit_DI, idx_smooths$all)
   df_max$comp <- "run-rerun"
   out_csv <- paste0(
     .analysis_dir(), "/stats_gams/gam_summaries/fit_DI_rerun_fa_max.csv"
@@ -922,7 +872,6 @@ dwi_gam_long_tract <- function(df_afq, tract) {
 }
 
 
-
 #' Model tract node-FA-ImPACT metric interaction.
 #'
 #' Conduct LGI and LGIO interaction models of node-FA-ImPACT interactions.
@@ -945,7 +894,7 @@ dwi_gam_long_impact <- function(
     df_afq, df_scan_imp, tract, impact_meas = "planned") {
   # Manage pre-planned or user-specified impact measure
   if (impact_meas == "planned") {
-    impact_meas <- .tract_impact(as.character(tract))
+    impact_meas <- misc_help$tract_impact(as.character(tract))
   }
 
   #  Subset tract data and add impact measure
@@ -1041,13 +990,13 @@ dwi_gam_long_impact <- function(
 export("plot_dwi_gam_all_rerun")
 plot_dwi_gam_all_rerun <- function(fit_LDI, fit_DI_rr) {
   # Determine LDI smooth indices and make grid
-  idx_ldi <- transform_data$idx_ldi_smooths(fit_LDI)
+  idx_ldi <- misc_help$idx_ldi_smooths(fit_LDI)
   grid_ldi <- draw_plots$grid_ldi_comb(
     fit_LDI, idx_ldi$post, idx_ldi$rtp, idx_ldi$names
   )
 
   # Determine DI smooth indices and make grid
-  idx_di <- transform_data$idx_di_smooths(fit_DI_rr)
+  idx_di <- misc_help$idx_di_smooths(fit_DI_rr)
   grid_di <- draw_plots$grid_di_comb(fit_DI_rr, idx_di$all, idx_di$names)
 
   # Combine grids

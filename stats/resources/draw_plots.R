@@ -1,9 +1,9 @@
 # Methods for drawing and building plots.
 #
-# Public functions described below. Generally, functions that draw
-# individual plots are named draw_*, and functions that assemble plots into
-# a single plot are named grid_*. Functions are also named for the type
-# of GAM used (GS, GIOS, IOS, IS, LDI, DI, LGI, LGIO) where appropriate.
+# Functions that draw individual plots are named draw_*, and functions
+# that assemble plots into a single plot are named grid_*. Functions are
+# also named for the type of GAM used (GS, GIOS, IOS, IS, LDI, DI, LGI,
+# LGIO) where appropriate.
 
 import(ggplot2)
 import(ggpubr)
@@ -18,7 +18,7 @@ import(factoextra)
 import(psych)
 import(reshape2)
 
-quick_stats <- use("resources/quick_stats.R")
+misc_help <- use("resources/misc_help.R")
 fit_gams <- use("resources/fit_gams.R")
 
 
@@ -719,28 +719,6 @@ draw_impact_gam <- function(plot_obj, imp_meas, write_x = FALSE, tx_meth = "None
 }
 
 
-#' Draw Impact pairs accounting for kmeans clusters.
-#'
-#' @param df Dataframe with clustering info, workflows$impact_cluster$df_sik.
-#' @param col_list List of relevant columns in df.
-#' @param num_k Number of clusters.
-export("draw_impact_pairs")
-draw_impact_pairs <- function(df, col_list, num_k) {
-  if (num_k == 3) {
-    bg_arg <- c("blue", "red", "green")
-  } else if (num_k == 5) {
-    bg_arg <- c("blue", "red", "green", "orange", "purple")
-  }
-  plot_pairs <- pairs.panels(
-    df[, col_list],
-    bg = bg_arg[df$km_grp],
-    gap = 0,
-    pch = 21
-  )
-  # return(plot_pairs)
-}
-
-
 #' Draw smooths of Impact measures by scan time.
 #'
 #' @param df_scan_imp Dataframe, returned by workflows$get_scan_impact.
@@ -895,30 +873,6 @@ draw_is_intx <- function(
 }
 
 
-#' Draw K-means cluster.
-#'
-#' @param data_norm Dataframe of normalized data, from quick_stats$run_kmeans.
-#' @param clust_km Object returned by stats::kmean.
-#' @returns fviz_clister plot.
-export("draw_kmeans")
-draw_kmeans <- function(data_norm, clust_km) {
-  plot_kmean <- fviz_cluster(list(data = data_norm, cluster = clust_km))
-  return(plot_kmean)
-}
-
-
-#' Draw PCA eigenvector, biplots.
-#'
-#' @param stats_pc Object returned by stats::prcomp.
-#' @returns Named list "plot_eig" = eigen plot, "plot_biplot = biplot.
-export("draw_pca")
-draw_pca <- function(stats_pc) {
-  plot_eig <- fviz_eig(stats_pc, addlabels = T)
-  plot_bip <- fviz_pca_biplot(stats_pc, label = "var")
-  return(list("plot_eig" = plot_eig, "plot_biplot" = plot_bip))
-}
-
-
 #' Draw 2x2 grid of scalar smooths.
 #'
 #' Assemble output of draw_long_ordered_grid() for FA, MD,
@@ -1007,20 +961,20 @@ grid_di_comb <- function(
 
 
 #' Generate a grid of a hypothesized interaction smooth.
-#' 
+#'
 #' Made as a 1x1 grid for consistency with other images.
 #'
 #' @param fit_lgio_intx mgcv::gam object.
 #' @returns Object returned by grid.arrange.
 export("grid_hyp_intx")
 grid_hyp_intx <- function(fit_lgio_intx){
-  
+
   # Extract info
   plot_obj <- getViz(fit_lgio_intx)
   p <- plot(sm(plot_obj, 6)) # Just use ME for easy understanding
   p_data <- as.data.frame(p$data$fit)
   colnames(p_data) <- c("fit", "tfit", "Behavior", "nodeID", "se")
-  
+
   # Draw plot
   p_intx <- ggplot(
     data = p_data,
@@ -1036,13 +990,13 @@ grid_hyp_intx <- function(fit_lgio_intx){
       legend.text = element_text(size = 8),
       axis.title.x = element_blank()
     )
-  
+
   # Convert to grid
   plot_intx <- grid.arrange(
     arrangeGrob(
-      p_intx, 
+      p_intx,
       top = text_grob(
-        "Simulated Node-FA-Behavior Interaction", 
+        "Simulated Node-FA-Behavior Interaction",
         size = 12, family = "Times New Roman"
       ),
       bottom = text_grob("Tract Node", size = 10, family = "Times New Roman")
@@ -1054,7 +1008,7 @@ grid_hyp_intx <- function(fit_lgio_intx){
 }
 
 
-#' Draw smooth grid for LGIO hypothesis models, containing global and 
+#' Draw smooth grid for LGIO hypothesis models, containing global and
 #' difference smooths.
 #'
 #' @param fit_LGIO mgcv::gam object.
@@ -1075,7 +1029,7 @@ grid_hyp_lgio <- function(
   pGlobal <- draw_gs(plot_GO, num_G, x_min = x_min, x_max = x_max)
   pDiffa <- draw_gios_diff(plot_GO, num_G, num_Ia, x_min = x_min, x_max = x_max)
   pDiffb <- draw_gios_diff(plot_GO, num_G, num_Ib, x_min = x_min, x_max = x_max)
-  
+
   # draw grid
   plot_list <- list(
     "global" = pGlobal,
@@ -1120,7 +1074,7 @@ grid_hyp_tracts <- function(df_tract_fa, df_tract_rd){
   plots_tract <- grid.arrange(
     arrangeGrob(
       p_fa, top = text_grob(
-        "Simulated Tract Axolemmal Injury and Recovery", 
+        "Simulated Tract Axolemmal Injury and Recovery",
         size = 12, family = "Times New Roman"
       )
     ),
@@ -1342,9 +1296,6 @@ grid_lgi <- function(
 }
 
 
-
-
-
 #' Draw smooth grid for LGI_intx models.
 #'
 #' @param fit_LGI mgcv::gam object.
@@ -1455,64 +1406,4 @@ grid_lgio_intx <- function(
     heights = c(1, 1)
   )
   return(plot_grid)
-}
-
-
-# test_lgio_intx <- function(
-#     fit_LGIO_intx, tract, scalar_name, impact_meas, num_Ia = 7, num_Ib = 8){
-#
-#   plot(fit_LGIO_intx, rug=T)
-#
-#   plot_obj <- getViz(fit_LGIO_intx)
-#   p <- plot(sm(plot_obj, num_Ia)) + l_fitRaster() +
-#     l_fitContour() + l_points() + l_rug()
-#   # p + coord_flip() # Does not flip everything
-#   p
-#
-#   pg <- ggplot_build(p$ggObj)
-#   pl <- layer_data(p$ggObj, 4)
-#   library(rgl)
-#   plotRGL(sm(plot_obj, num_Ia), residuals=T)
-# }
-
-
-#' Make XYplot tracking participants by visit.
-#'
-#' Adds Wilcoxon Rank-Sum testing to title for better and worse,
-#' and identifies number of better worse and their corresponding
-#' changes from baseline (for fu1, fu2).
-#'
-#' @param col_name Column name for testing.
-#' @param df Dataframe of data.
-#' @param visit_name Name of visit.
-#' @return Plot object.
-export("visit_track")
-visit_track <- function(col_name, df) {
-  stats_base <- quick_stats$wc_ranksum(col_name, df, "base")
-  stats_post <- quick_stats$wc_ranksum(col_name, df, "post")
-  d_post <- quick_stats$score_change(col_name, df, "post")
-  d_rtp <- quick_stats$score_change(col_name, df, "rtp")
-
-  plot <- xyplot(
-    get(col_name) ~ scan_name | base_v_post,
-    data = df,
-    group = subj_id,
-    type = "b",
-    ylab = col_name,
-    main = paste0(
-      "BetterVsWorse: p(base)=",
-      round(stats_base$stats$p.value, 3),
-      "; p(post)=",
-      round(stats_post$stats$p.value, 3)
-    ),
-    sub = paste0(
-      "Better n=", stats_base$num_bet,
-      ", dpost=", d_post$avg_bet,
-      ", drtp=", d_rtp$avg_bet,
-      "; Worse n=", stats_base$num_wor,
-      ", dpost=", d_post$avg_wor,
-      ", drtp=", d_rtp$avg_wor
-    )
-  )
-  return(plot)
 }

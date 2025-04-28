@@ -1,19 +1,90 @@
-# Methods for transforming data in various ways.
-#
-# fix_impact_scan: Manually resolve data issues in matched impact-scan data.
-# compare_base_post: Identify which ImPACT measures get better between
-#   baseline and post-concussion visits.
-# calc_fa_delta: Calculate FA difference between post and base, rtp and base.
-# idx_ldi_smooths: Extract smooth info and index from LDI gam object.
-# idx_di_smooths: Same as idx_ldi_smooths, for DI gam objects.
+# Miscellaneous functions to help with quick calculations, data
+# extraction, and other tasks.
 
+import(dplyr)
+import(lubridate)
 import("tidyr")
 import("tidyverse")
 import("ggpubr")
 import("stats", "reshape")
 
 
+#' Identify GAM max deflections from zero.
+#'
+#' @param fit_gam mgcv::bam fit object.
+#' @param idx_smooths Index of smooths in fit_gam to find deflections in.
+#' @returns Dataframe containing node and deflection value for each smooth.
+export("max_deflect")
+max_deflect <- function(fit_gam, idx_smooths) {
+  # Identify max deflections from zero
+  t_name <- c_name <- n_name <- m_val <- c()
+  p <- getViz(fit_gam)
+  for (num in idx_smooths) {
+    # Get plotting data and info
+    p_info <- plot(sm(p, num))
+    p_data <- as.data.frame(p_info$data$fit)
+    max_y <- max(abs(p_data$y))
+
+    # Get tract, comparison names
+    row_name <- p_info$ggObj$labels$y
+    h_str <- strsplit(row_name, split = ":")
+    row_info <- strsplit(h_str[[1]][2], split = "\\.")
+
+    # Update vecs for df building
+    t_name <- c(t_name, row_info[[1]][1])
+    c_name <- c(c_name, row_info[[1]][2])
+    n_name <- c(n_name, p_data[which(abs(p_data$y) == max_y), ]$x)
+    m_val <- c(m_val, max_y)
+  }
+
+  # Make dataframe, identify max, update names
+  df_max <- data.frame(t_name, c_name, n_name, m_val)
+  colnames(df_max) <- c("tract", "comp", "node", "max")
+  df_max$tract <- gsub("tract_name", "", df_max$tract)
+  df_max$tract <- gsub("tract_scan", "", df_max$tract)
+  return(df_max)
+}
+
+
+#' Extract smooth node fit estimations.
+#'
+#' @param fit_gam mgcv::bam fit object.
+#' @param idx_smooths Index of smooths in fit_gam to extract estimations from.
+#' @returns Dataframe of estimations for each smooth.
+export("get_estimations")
+get_estimations <- function(fit_gam, idx_smooths) {
+  # Identify max deflections from zero
+  df_est <- data.frame(
+    node = numeric(), est = numeric(), se = numeric(),
+    comp = character(), tract = character()
+  )
+  p <- getViz(fit_gam)
+  for (num in idx_smooths) {
+    # Get plotting data and info
+    p_info <- plot(sm(p, num))
+    p_data <- as.data.frame(p_info$data$fit)
+    colnames(p_data)[1:2] <- c("node", "est")
+
+    # Get tract, comparison names
+    row_name <- p_info$ggObj$labels$y
+    h_str <- strsplit(row_name, split = ":")
+    row_info <- strsplit(h_str[[1]][2], split = "\\.")
+    p_data$comp <- row_info[[1]][2]
+    p_data$tract <- row_info[[1]][1]
+
+    # Stack dfs
+    df_est <- rbind(df_est, p_data[, c(1, 2, 4, 5, 6)])
+  }
+
+  # Manage string values
+  df_est$tract <- gsub("tract_name", "", df_est$tract)
+  df_est$tract <- gsub("tract_scan", "", df_est$tract)
+  return(df_est)
+}
+
+
 #' Change df based on subj_id and visit_name.x columns.
+#'
 #' @param df Tidy dataframe with columns subj_id, scan_name.
 #' @param id (int) Subject id.
 #' @param visit (str) Visit name.
@@ -53,115 +124,6 @@ fix_impact_scan <- function(df) {
     df <- .chg_df(df, id, "post", fix_cols, empty_vals)
   }
   return(df)
-}
-
-
-#' Identify subjects who get better from base to fu1.
-#'
-#' Deprecated.
-#'
-#' TODO remove.
-#'
-#' @param col_name Column name for testing.
-#' @param df Dataframe of data.
-#' @param low Whether lower scores are better
-#' @returns Dataframe with new column (fu1_change) indicating direction
-#' of change.
-export("fu1_better")
-fu1_better <- function(col_name, df, low = FALSE) {
-  # Only first TBIs
-  # TODO account for multiple TBIs
-  df_sub <- df[
-    which(!df$num_tbi %in% c(2:3)),
-    c("subj_id", "visit_name", col_name)
-  ]
-  df_sub <- reshape(
-    df_sub,
-    idvar = "subj_id", timevar = "visit_name", direction = "wide"
-  )
-
-  # Drop subjs w/o fu1
-  df_sub <- df_sub[!is.na(df_sub[paste0(col_name, ".base")]), ]
-
-  # Find subjs that get better from base-fu1
-  df_sub$fu1_change <- "worse"
-  if (low) {
-    df_sub$fu1_change[
-      df_sub[paste0(col_name, ".fu1")] < df_sub[paste0(col_name, ".base")]
-    ] <- "better"
-  } else {
-    df_sub$fu1_change[
-      df_sub[paste0(col_name, ".fu1")] > df_sub[paste0(col_name, ".base")]
-    ] <- "better"
-  }
-
-  df_sub$fu1_change <- as.factor(df_sub$fu1_change)
-
-  # Convert back to long
-  df_long <- reshape(
-    df_sub,
-    direction = "long",
-    varying = c(
-      paste(col_name, "base", sep = "."),
-      paste(col_name, "fu1", sep = "."),
-      paste(col_name, "fu2", sep = "."),
-      paste(col_name, "fu3", sep = "."),
-      paste(col_name, "fu4", sep = ".")
-    ),
-    timevar = "visit_name",
-    times = c("base", "fu1", "fu2", "fu3", "fu4"),
-    idvar = c("subj_id")
-  )
-  df_long$visit_name <- as.factor(df_long$visit_name)
-  return(df_long)
-}
-
-
-#' Determine where impact scores get better in post than base.
-#'
-#' @param col_name Column name for testing.
-#' @param df Dataframe of data.
-#' @param low Whether lower scores are better
-#' @returns Dataframe with new column (fu1_change) indicating direction
-#' of change.
-export("compare_base_post")
-compare_base_post <- function(col_name, df, low = FALSE) {
-  # Widen data for easy columnar subtraction
-  df <- subset(df, select = c("subj_id", "scan_name", col_name))
-  df_wide <- reshape(
-    df,
-    idvar = "subj_id", timevar = "scan_name", direction = "wide"
-  )
-
-  # Find subjs that get better from base-post
-  df_wide <- df_wide[!is.na(df_wide[paste0(col_name, ".post")]), ]
-  df_wide$base_v_post <- "worse"
-  if (low) {
-    df_wide$base_v_post[
-      df_wide[paste0(col_name, ".post")] < df_wide[paste0(col_name, ".base")]
-    ] <- "better"
-  } else {
-    df_wide$base_v_post[
-      df_wide[paste0(col_name, ".post")] > df_wide[paste0(col_name, ".base")]
-    ] <- "better"
-  }
-  df_wide$base_v_post <- as.factor(df_wide$base_v_post)
-
-  # Convert back to long
-  df_long <- reshape(
-    df_wide,
-    direction = "long",
-    varying = c(
-      paste(col_name, "base", sep = "."),
-      paste(col_name, "post", sep = "."),
-      paste(col_name, "rtp", sep = ".")
-    ),
-    timevar = "scan_name",
-    times = c("base", "post", "rtp"),
-    idvar = c("subj_id")
-  )
-  df_long$scan_name <- as.factor(df_long$scan_name)
-  return(df_long)
 }
 
 
@@ -256,4 +218,59 @@ idx_di_smooths <- function(fit_obj) {
     }
   }
   return(list("names" = name_smooths, "all" = tract_smooths))
+}
+
+
+#' Minimize date distance between dfs A, B.
+#'
+#' Identify which date in df B is closest to date
+#' in df A, grouped by subj_id. Join df B to A.
+#'
+#' @param df_a Dataframe containing columns subj_id and date_a.
+#' @param df_b Dataframe containing columns subj_id and date_b.
+#' @param date_a (str) Column name of df_a containing datetime.
+#' @param date_b (str) Column name of df_b containing datetime.
+#' @returns Dataframe df_b joined to df_a by minimal datetime difference.
+export("min_time")
+min_time <- function(df_a, df_b, date_a, date_b) {
+  df_a <- df_a %>% mutate(date = ymd(get(date_a)))
+  df_b <- df_b %>% mutate(date = ymd(get(date_b)))
+
+  df_a <- df_a %>%
+    left_join(df_b, by = c("subj_id")) %>%
+    mutate(time_diff = abs(date.x - date.y)) %>%
+    group_by(subj_id, date.x) %>%
+    arrange(time_diff) %>%
+    slice(1) %>%
+    ungroup()
+  df_a <- subset(df_a, select = -c(date.x, date.y, time_diff))
+  return(df_a)
+}
+
+
+#' Plan specific IMPACT measure for tract interaction analysis.
+#'
+#' @param tract String, name of AFQ tract.
+#' @returns String, name of impact measure.
+export("tract_impact")
+tract_impact <- function(tract) {
+  map_beh <- switch(tract,
+    "Callosum Anterior Frontal" = "tot_symp",
+    "Callosum Orbital" = "tot_symp",
+    "Callosum Motor" = "rx_time",
+    "Callosum Superior Parietal" = "mem_vis",
+    "Callosum Posterior Parietal" = "mem_vis",
+    "Callosum Occipital" = "mem_vis",
+    "Left Anterior Thalamic" = "mem_vis",
+    "Left Arcuate" = "mem_vis",
+    "Left Cingulum Cingulate" = "mem_vis",
+    "Left Corticospinal" = "rx_time",
+    "Left Inferior Fronto-occipital" = "mem_vis",
+    "Left Superior Longitudinal" = "mem_vis",
+    "Right Anterior Thalamic" = "mem_vis",
+    "Right Cingulum Cingulate" = "mem_vis",
+    "Right Inferior Fronto-occipital" = "mem_vis",
+    "Right Uncinate" = "tot_symp"
+  )
+  return(map_beh)
 }

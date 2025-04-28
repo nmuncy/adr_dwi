@@ -1,8 +1,6 @@
 # Various methods for pulling data from MySQL database db_adr.
 #
-# get_demographics: Get subj_id, sex, and age at baseline from tbl_demo.
-# get_user_comp: Get ImPACT user composite measures, and total symptom.
-# get_afq: Get AFQ data from requested table.
+# A MySQL server runs locally which hosts all the data.
 
 import("RMySQL")
 import(dplyr)
@@ -11,8 +9,7 @@ import(lubridate)
 
 #' Establish connection with db_adr.
 #'
-#' Requires: Local variable 'SQL_PASS' containing
-#'  user password for db_adr.
+#' Password redacted for sharing.
 #'
 #' @returns Connection object to db_adr.
 .db_connect <- function() {

@@ -1,18 +1,11 @@
 # Methods for executing GAM models.
 #
-# Public functions described below.
-#
-# switch_tract: Return short tract name give long.
-# write_gam_stats: Write GAM summary stats to txt file.
-# mod_lgi: Fit longitudinal HGAM with global, group smooths and wiggliness.
-# mod_lgio: Same as mod_lgi but with ordered group factors.
-# mod_ldi: Fit longitudinal HGAM for all tracts of FA differences.
-# mod_ldi_rescan: Same as mod_ldi, for single subjetc scanned multiple times.
-# mod_di: Similar to mod_ldi, for baseline data modeled twice.
-# mod_lgi_intx: Similar to mod_lgi, include a tensor product interaction
-#   smooth to test for interaction between scalar and behavioral measure.
-# mod_lgio_intx: Similar to mod_lgi_intx but with group as ordered factors.
-
+# Functions are named loosely referencing the Pedersen 2019 paper,
+# where g = global, i = group (without shared wiggliness). Additions
+# involve d = delta/difference data, o = ordered factors, and
+# l = longitudinal. Additional parts of function name help describe
+# the data or analysis, e.g. intx = tensor product interaction
+# smooths are included.
 
 import(mgcv)
 
@@ -158,7 +151,7 @@ mod_imp <- function(df, beh, fit_meth = "None", adj_value = FALSE) {
 #' requested number of smooths, reduce runtime, and maintain sufficient dof.
 #'
 #' @param df Dataframe of AFQ with comp_scan and delta columns (output by
-#'  transform_data$calc_fa_delta).
+#'  misc_help$calc_fa_delta).
 #' @returns mgcv::bam fit object.
 export("mod_ldi")
 mod_ldi <- function(df) {
@@ -184,7 +177,7 @@ mod_ldi <- function(df) {
 #' scanned multiple times (so no random effect of subject).
 #'
 #' @param df Dataframe of AFQ with comp_scan and delta columns (output by
-#'  transform_data$calc_fa_delta).
+#'  misc_help$calc_fa_delta).
 #' @returns mgcv::bam fit object.
 export("mod_ldi_rescan")
 mod_ldi_rescan <- function(df) {

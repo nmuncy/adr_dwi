@@ -14,3 +14,4 @@
 {"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QFigure \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q visualizes Post and RTP tract node-FA-ImPACT interactions, relative to Base, as topological surfaces, and a strong linear differential interaction at Post is found for each tract that is largely resolves by RTP.\\E$"}
 {"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QIn each case of these cases, the FA-ImPACT interaction resolved by RTP, indicated by a `flatter' interaction difference surface.\\E$"}
 {"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QHGAM tensor product interaction smooths testing for differences in node-FA-ImPACT interactions at Post and RTP relative to Base.\\E$"}
+{"rule":"I_LOWERCASE","sentence":"^\\QInjury-related increased [Ca\\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q]i activates both calcineurin and calpain, which dephosphorylates and degrade NF-H and NF-M, respectively, promoting compaction.\\E$"}

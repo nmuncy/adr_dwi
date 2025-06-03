@@ -109,3 +109,9 @@ axotomic
 CaV
 NaHX
 dephosphorylate
+dissociable
+unmyelinated
+intra-axonal
+glutamatergic
+caspase-mediated
+intra

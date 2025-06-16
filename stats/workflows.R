@@ -836,7 +836,8 @@ dwi_gam_long_tract <- function(df_afq, tract) {
   )
   plot_grid <- draw_plots$draw_scalar_grid(
     obj_FA$plots_LGIO, obj_MD$plots_LGIO,
-    obj_AD$plots_LGIO, obj_RD$plots_LGIO
+    obj_AD$plots_LGIO, obj_RD$plots_LGIO,
+    tract
   )
   grDevices::dev.off()
 
@@ -852,7 +853,8 @@ dwi_gam_long_tract <- function(df_afq, tract) {
   )
   draw_plots$draw_scalar_grid(
     obj_FA$plots_LGI, obj_MD$plots_LGI,
-    obj_AD$plots_LGI, obj_RD$plots_LGI
+    obj_AD$plots_LGI, obj_RD$plots_LGI,
+    tract
   )
   grDevices::dev.off()
 

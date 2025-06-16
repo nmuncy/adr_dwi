@@ -83,7 +83,7 @@ fit_gams <- use("resources/fit_gams.R")
   r3A <- plot_list$diffb$diff
 
   # make col titles, y axis, x axis, and row names
-  col1_name <- text_grob(name_list$col1, size = 12, family = "Times New Roman")
+  col1_name <- text_grob(name_list$col1, size = 16, family = "Times New Roman")
   bot1_name <- text_grob(name_list$bot1, size = 10, family = "Times New Roman")
 
   l1_name <-
@@ -108,6 +108,7 @@ fit_gams <- use("resources/fit_gams.R")
 
   pOut <- grid.arrange(
     arrangeGrob(r1A, top = col1_name, left = l1_name),
+    # arrangeGrob(r1A, left = l1_name),
     arrangeGrob(r2A, left = l2_name),
     arrangeGrob(r3A, bottom = bot1_name, left = l3_name),
     nrow = 3,
@@ -282,7 +283,8 @@ fit_gams <- use("resources/fit_gams.R")
   # Account for user options.
   if (add_top) {
     p <- p +
-      ggtitle(paste(group, "FA Smooths")) +
+      # ggtitle(paste(group, "FA Smooths")) +
+      ggtitle(paste(group, "Tracts")) +
       theme(
         plot.title = element_text(hjust = 0.5)
       )
@@ -505,11 +507,11 @@ fit_gams <- use("resources/fit_gams.R")
 #' @returns String reduced impact name.
 .meas_short_names <- function(meas) {
   out_name <- switch(meas,
-    "mem_ver" = "Vebal Memory",
+    "mem_ver" = "Verbal Memory",
     "mem_vis" = "Visual Memory",
     "vis_mot" = "Visual Motor",
-    "rx_time" = "Rx Time",
-    "imp_ctl" = "Impulse Ctl",
+    "rx_time" = "Reaction Time",
+    "imp_ctl" = "Impulse Control",
     "tot_symp" = "Total Symptom",
   )
   return(out_name)
@@ -544,14 +546,14 @@ draw_di_time <- function(plot_obj, tract, x_min = 10, x_max = 89) {
       name = "Est. FA Fit",
     ) +
     labs(
-      title = paste("RTP-Post", tract, "FA Change"),
+      title = paste(tract, "\u0394FA: RTP vs Post"),
       y = "Days",
       x = "Tract Node"
     ) +
     theme(
       text = element_text(family = "Times New Roman"),
       legend.text = element_text(size = 8),
-      plot.title = element_text(hjust = 0.5)
+      plot.title = element_text(hjust = 0.5, size = 16)
     )
   return(list("time_diff" = pp))
 }
@@ -643,9 +645,10 @@ draw_gios_diff_sig <- function(plot_obj, g_num, i_num, x_min = 10, x_max = 89) {
 #' @param g_num Attribute number of plot_obj containing desired smooth.
 #' @param x_min Optional, x-axis range LB.
 #' @param x_max Optional, x-axis range UB.
+#' @param scalar_name Optional, name of scalar for title.
 #' @returns Named list, "global" = ggplot object.
 export("draw_gs")
-draw_gs <- function(plot_obj, g_num, x_min = 10, x_max = 89) {
+draw_gs <- function(plot_obj, g_num, x_min = 10, x_max = 89, scalar_name = NULL) {
   # use plot to extract attribute of interest
   p <- plot(sm(plot_obj, g_num))
   p_data <- .add_lb_ub(p)
@@ -660,6 +663,11 @@ draw_gs <- function(plot_obj, g_num, x_min = 10, x_max = 89) {
       axis.title.y = element_blank(),
       axis.title.x = element_blank()
     )
+  if(!is.null(scalar_name)){
+    pp <- pp + 
+      labs(title = paste(scalar_name, "Smooths")) +
+      theme(plot.title = element_text(hjust = 0.5))
+  }
   return(list("global" = pp))
 }
 
@@ -710,7 +718,7 @@ draw_impact_gam <- function(plot_obj, imp_meas, write_x = FALSE, tx_meth = "None
   # Manage x-axis
   if (write_x) {
     pp <- pp +
-      labs(x = "Assessment Number") +
+      labs(x = "Visit") +
       theme(axis.title.x = element_text(size = 10))
   } else {
     pp <- pp + theme(axis.title.x = element_blank())
@@ -860,7 +868,7 @@ draw_is_intx <- function(
       limits = c(zmin_zmax$zmin, zmin_zmax$zmax)
     ) +
     labs(
-      title = paste("Visit:", i_name),
+      title = i_name,
       y = imp_name,
     ) +
     theme(
@@ -882,9 +890,11 @@ draw_is_intx <- function(
 #' @param plot_MD Plot object of MD smooths.
 #' @param plot_AD Plot object of AD smooths.
 #' @param plot_RD Plot object of RD smooths.
+#' @param tract Tract name for title.
 #' @returns Object returned by grid.arrange.
 export("draw_scalar_grid")
-draw_scalar_grid <- function(plot_FA, plot_MD, plot_AD, plot_RD) {
+draw_scalar_grid <- function(plot_FA, plot_MD, plot_AD, plot_RD, tract) {
+  # col1_name <- text_grob(tract, size = 20, family = "Times New Roman")
   plot_grid <- grid.arrange(
     arrangeGrob(plot_FA),
     arrangeGrob(plot_MD),
@@ -893,7 +903,8 @@ draw_scalar_grid <- function(plot_FA, plot_MD, plot_AD, plot_RD) {
     nrow = 2,
     ncol = 2,
     widths = c(1, 1),
-    heights = c(1, 1)
+    heights = c(1, 1),
+    top = text_grob(tract, size = 20, family = "Times New Roman")
   )
   return(plot_grid)
 }
@@ -919,32 +930,32 @@ grid_di_comb <- function(
   # Build post plots
   ymin_ymax <- .get_ymin_ymax(plot_obj, node_smooths)
   p_cc <- .draw_ldi_comb(
-    plot_obj, idx_cc, node_smooths, name_smooths, "Callosum",
+    plot_obj, idx_cc, node_smooths, name_smooths, "Commissural",
     ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max,
     add_top = T, add_bot = T
   )
   p_left <- .draw_ldi_comb(
-    plot_obj, idx_left, node_smooths, name_smooths, "Left",
+    plot_obj, idx_left, node_smooths, name_smooths, "Left Association",
     ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max,
     add_top = T, add_bot = T
   )
   p_right <- .draw_ldi_comb(
-    plot_obj, idx_right, node_smooths, name_smooths, "Right",
+    plot_obj, idx_right, node_smooths, name_smooths, "Right Association",
     ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max,
     add_top = T, add_bot = T
   )
 
   # draw grid
   top2_name <- text_grob(
-    "Run-Rerun difference FA tract smooths",
-    size = 14, family = "Times New Roman"
+    "Run-Rerun \u0394FA tract smooths",
+    size = 16, family = "Times New Roman"
   )
   top1_name <- top3_name <- text_grob(
     "",
     size = 14, family = "Times New Roman"
   )
   left1_name <- text_grob(
-    "Diff: Run-Rerun",
+    "Run vs Rerun",
     size = 12, family = "Times New Roman", rot = 90
   )
   plot_grid <- grid.arrange(
@@ -1180,7 +1191,7 @@ export("grid_ldi_comb")
 grid_ldi_comb <- function(
     fit_LDI, post_smooths, rtp_smooths, name_smooths,
     scalar_name = "FA", x_min = 10, x_max = 89,
-    comp_a = "Post-Base", comp_b = "RTP-Base") {
+    comp_a = "Post vs Base", comp_b = "RTP vs Base") {
   # Generate plots objs from smooths
   plot_obj <- getViz(fit_LDI)
 
@@ -1192,17 +1203,17 @@ grid_ldi_comb <- function(
   # Build post plots
   ymin_ymax <- .get_ymin_ymax(plot_obj, post_smooths)
   p_post_cc <- .draw_ldi_comb(
-    plot_obj, idx_cc, post_smooths, name_smooths, "Callosum",
+    plot_obj, idx_cc, post_smooths, name_smooths, "Commissural",
     ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max,
     add_top = T
   )
   p_post_left <- .draw_ldi_comb(
-    plot_obj, idx_left, post_smooths, name_smooths, "Left",
+    plot_obj, idx_left, post_smooths, name_smooths, "Left Association",
     ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max,
     add_top = T
   )
   p_post_right <- .draw_ldi_comb(
-    plot_obj, idx_right, post_smooths, name_smooths, "Right",
+    plot_obj, idx_right, post_smooths, name_smooths, "Right Association",
     ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max,
     add_top = T
   )
@@ -1210,35 +1221,33 @@ grid_ldi_comb <- function(
   # Build rtp plots
   ymin_ymax <- .get_ymin_ymax(plot_obj, rtp_smooths)
   p_rtp_cc <- .draw_ldi_comb(
-    plot_obj, idx_cc, rtp_smooths, name_smooths, "Callosum",
+    plot_obj, idx_cc, rtp_smooths, name_smooths, "Commissural",
     ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max,
     add_bot = T
   )
   p_rtp_left <- .draw_ldi_comb(
-    plot_obj, idx_left, rtp_smooths, name_smooths, "Left",
+    plot_obj, idx_left, rtp_smooths, name_smooths, "Left Association",
     ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max,
     add_bot = T
   )
   p_rtp_right <- .draw_ldi_comb(
-    plot_obj, idx_right, rtp_smooths, name_smooths, "Right",
+    plot_obj, idx_right, rtp_smooths, name_smooths, "Right Association",
     ymin_ymax$ymin, ymin_ymax$ymax, x_min, x_max,
     add_bot = T
   )
 
   # draw grid
   top2_name <- text_grob(
-    "Longitudinal difference FA tract smooths",
-    size = 14, family = "Times New Roman"
+    "Longitudinal \u0394FA Tract Smooths",
+    size = 16, family = "Times New Roman"
   )
   top1_name <- top3_name <-
     text_grob("", size = 14, family = "Times New Roman")
   left1_name <- text_grob(
-    paste("Diff:", comp_a),
-    size = 12, family = "Times New Roman", rot = 90
+    comp_a, size = 12, family = "Times New Roman", rot = 90
   )
   left2_name <- text_grob(
-    paste("Diff:", comp_b),
-    size = 12, family = "Times New Roman", rot = 90
+    comp_b, size = 12, family = "Times New Roman", rot = 90
   )
   plot_grid <- grid.arrange(
     arrangeGrob(p_post_cc, left = left1_name, top = top1_name),
@@ -1360,10 +1369,10 @@ grid_lgio <- function(
     "diffb" = pDiffb
   )
   name_list <- list(
-    "col1" = paste("LGIO:", tract, scalar_name, "Smooths"),
-    "rowL1" = "Est. Global Fit",
-    "rowL2" = "Diff: Post-Base",
-    "rowL3" = "Diff: RTP-Base",
+    "col1" = paste(scalar_name, "Smooths"),
+    "rowL1" = "Global",
+    "rowL2" = "Post vs Base",
+    "rowL3" = "RTP vs Base",
     "bot1" = "Tract Node"
   )
   plot_grid <- .arr_one_three(plot_list, name_list)
@@ -1388,14 +1397,14 @@ grid_lgio_intx <- function(
   imp_name <- .meas_short_names(impact_meas)
   zmin_zmax <- .get_zmin_zmax(plot_obj)
   plot_a <- draw_is_intx(
-    plot_obj, num_Ia, "Post-Base", imp_name, zmin_zmax
+    plot_obj, num_Ia, "Post vs Base", imp_name, zmin_zmax
   )
   plot_b <- draw_is_intx(
-    plot_obj, num_Ib, "RTP-Base", imp_name, zmin_zmax
+    plot_obj, num_Ib, "RTP vs Base", imp_name, zmin_zmax
   )
 
   # draw grid
-  col1_name <- text_grob(paste("IMPACT by", tract, scalar_name), size = 12, family = "Times New Roman")
+  col1_name <- text_grob(paste(tract, scalar_name, "by ImPACT"), size = 14, family = "Times New Roman")
   bot1_name <- text_grob("Tract Node", size = 12, family = "Times New Roman")
   plot_grid <- grid.arrange(
     arrangeGrob(plot_a$group, top = col1_name),

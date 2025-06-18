@@ -995,7 +995,7 @@ grid_hyp_intx <- function(fit_lgio_intx){
     geom_contour(colour = "black") +
     scale_x_continuous(breaks = c(seq(0, 100, by = 10), 100)) +
     scale_fill_viridis(option = "D", name = "Est. FA Fit") +
-    labs(y = "Simulated Behavior") +
+    labs(y = "Behavior") +
     theme(
       text = element_text(family = "Times New Roman"),
       legend.text = element_text(size = 8),
@@ -1007,8 +1007,8 @@ grid_hyp_intx <- function(fit_lgio_intx){
     arrangeGrob(
       p_intx,
       top = text_grob(
-        "Simulated Node-FA-Behavior Interaction",
-        size = 12, family = "Times New Roman"
+        "Node-FA-Behavior Interaction",
+        size = 16, family = "Times New Roman"
       ),
       bottom = text_grob("Tract Node", size = 10, family = "Times New Roman")
     ),
@@ -1049,9 +1049,9 @@ grid_hyp_lgio <- function(
   )
   name_list <- list(
     "col1" = paste(tract, scalar_name, "Smooths"),
-    "rowL1" = "Est. Global Fit",
-    "rowL2" = "Diff: Post-Base",
-    "rowL3" = "Diff: RTP-Base",
+    "rowL1" = "Global",
+    "rowL2" = "Post vs Base",
+    "rowL3" = "RTP vs Base",
     "bot1" = "Tract Node"
   )
   plot_grid <- .arr_one_three(plot_list, name_list)
@@ -1068,7 +1068,7 @@ export("grid_hyp_tracts")
 grid_hyp_tracts <- function(df_tract_fa, df_tract_rd){
   p_fa <- ggplot(data = df_tract_fa, aes(x = node, y = FA, color = Visit)) +
     geom_smooth() +
-    labs(y="Simulated FA") +
+    labs(y="FA") +
     scale_x_continuous(breaks = c(seq(0, 100, by = 10), 100)) +
     theme(
       text = element_text(family = "Times New Roman"),
@@ -1076,7 +1076,7 @@ grid_hyp_tracts <- function(df_tract_fa, df_tract_rd){
     )
   p_rd <- ggplot(data = df_tract_rd, aes(x = node, y = RD, color = Visit)) +
     geom_smooth() +
-    labs(y="Simulated RD") +
+    labs(y="RD") +
     scale_x_continuous(breaks = c(seq(0, 100, by = 10), 100)) +
     theme(
       text = element_text(family = "Times New Roman"),
@@ -1085,8 +1085,8 @@ grid_hyp_tracts <- function(df_tract_fa, df_tract_rd){
   plots_tract <- grid.arrange(
     arrangeGrob(
       p_fa, top = text_grob(
-        "Simulated Tract Axolemmal Injury and Recovery",
-        size = 12, family = "Times New Roman"
+        "Tract Axolemmal Injury and Recovery",
+        size = 16, family = "Times New Roman"
       )
     ),
     arrangeGrob(p_rd, bottom = text_grob(

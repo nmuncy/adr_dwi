@@ -188,7 +188,7 @@ hyp_figure <- function() {
     nthreads = 4
   )
   plots_lgio <- draw_plots$grid_hyp_lgio(
-    fit_lgio, "Simulated Tract", "FA",
+    fit_lgio, "Tract", "FA",
     num_G = 2, num_Ia = 3, num_Ib = 4,
     x_min = 0, x_max = 100
   )
@@ -735,6 +735,14 @@ dwi_gam_delta_time <- function(df_afq, tract) {
   df$days.rtp_post <- as.numeric(df$days.rtp_post)
   df <- df[complete.cases(df$days.rtp_post), ]
   rm(df_tract)
+  
+  # Determine distribution of recovery times
+  df_rec <- df[which(df$node_id == 10), ]
+  table(df_rec$days.rtp_post)
+  df_rec <- df[which(df$days.rtp_post < 40 & df$node_id == 10), ]
+  rec_avg <- round(mean(df_rec$days.rtp_post), 2)
+  rec_std <- round(stats::sd(df_rec$days.rtp_post), 2)
+  num_gt_14 <- length(which(df_rec$days.rtp_post > 14))
 
   # Drop extra-long recovery times (very few, wrecks model fits).
   df <- df[which(df$days.rtp_post < 40), ]

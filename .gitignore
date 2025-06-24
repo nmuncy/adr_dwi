@@ -1,0 +1,16 @@
+tests/my_tests.py
+stats/.Rhistory
+adr_dwi.egg-info
+*__pycache__*
+*.DS_Store
+manuscript/dwi_gam_manuscript.aux
+manuscript/dwi_gam_manuscript.log
+manuscript/dwi_gam_manuscript.out
+manuscript/dwi_gam_manuscript.synctex.gz
+manuscript/dwi_gam_manuscript-blx.bib
+manuscript/dwi_gam_manuscript.bbl
+manuscript/dwi_gam_manuscript.bcf
+manuscript/dwi_gam_manuscript.blg
+manuscript/dwi_gam_manuscript.run.xml
+manuscript/dwi_gam_manuscript.fls
+manuscript/dwi_gam_manuscript.fdb_latexmk

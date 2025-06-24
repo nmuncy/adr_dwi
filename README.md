@@ -1,6 +1,6 @@
 # adr_dwi
 
-This repository serves as the codebase for the project titled "Longitudinal study of concussion-related diffusion MRI changes in college athletes", and contains a number of sections:
+This repository serves as the codebase for the project titled "A Novel Method for Examining Longitudinal Concussion-related Diffusion MRI Changes in Collegiate Athletes: Evidence for Stability, Worsening, and Recovery of Different Tracts", and contains a number of sections:
 
 - [Environments](#environments): Files detailing the shell, conda, and R environments.
 - [Database](#database): Description of data storage and recipes used for building local MySQL database.

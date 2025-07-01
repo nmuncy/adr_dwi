@@ -34,6 +34,8 @@
 \usepackage{rotating}
 \usepackage{float}
 \usepackage{subfig}
+\usepackage{caption}
+\DeclareCaptionLabelFormat{adja-page}{\hrulefill\\#1 #2 \emph{(previous page)}}
 
 % code
 \usepackage{listings,lstautogobble}
@@ -132,6 +134,7 @@ Our analyses were guided by mechanistic models of axonal injury and empirical fi
 Three hundred thirty-six National Collegiate Athletic Association (NCAA) athletes were recruited from men's football and women's soccer programs at the University of Nebraska-Lincoln. Of these participants, 69 (9 female, age = 19.36 $\pm$1.67, range = 17-24) experienced a sport-related concussion during the season and were included in analyses and results reported below. Additional demographic metrics (e.g. race, ethnicity, SES) are omitted to protect participant confidentiality as University athletes are public figures and identification may cause deleterious consequences (but a subset has been reported by \cite{bouchard2024ConcussionRelatedDisruptionsHub}). Due to the limited number of females, and the sport confound that all soccer athletes were female, we combined all participants into a single group. Institutional Review Board approval was obtained at the outset of the study, and participants completed informed consent and assent. MRI and clinical assessment (ImPACT) data were acquired during three visits: enrollment at the beginning of the season (baseline, Base), within approximately 48 hours of diagnosed concussion (post-concussion, Post), and prior to return-to-play (RTP). As MRI and ImPACT (below) data were gathered separately, a number of participants did not contribute MRI and/or ImPACT data across one or more of the visits. Total counts are provided in Table \ref{tbl:meth-demo}.
 
 \begin{table}[H]
+	\centering
 	\scriptsize
 	\input{tbl_demo.tex}
 	\caption{Number of athletes that contributed MRI and ImPACT data across all visits. Base = baseline, Post = post-concussion, RTP = return-to-play. M = Male, F = Female.}
@@ -267,7 +270,7 @@ The longitudinal, whole-brain difference model (Section \ref{sssec:meth-gam-ldi}
 \begin{figure}[H]
 	\centering
 	\fbox{\includegraphics[width=0.95\textwidth]{fig_LDI_DI_rerun.png}}
-	\caption{HGAM smooths of tract FA differences by node for comparisons against Base (top, middle) and Run vs Rerun (bottom). \textbf{Top}: $\Delta$FA-Node smooths of Post relative to Base, deflections from zero here may be indicative of concussion-related changes. \textbf{Middle}: $\Delta$FA-Node smooths of RTP relative to Base, smaller deflections here than Post vs Base may be indicative of recovery-related changes (and the converse for greater deflections). \textbf{Bottom}: $\Delta$FA-Node smooths of Run vs Rerun, indicative of algorithmic variance by tract. Node IDs are numbered in the RAS convention, with midline of commissural fibers at node 50. Left: Corpus callosum tracts, middle: left hemisphere tracts, right: right hemisphere tracts. Credible intervals were omitted for visual clarity. \textit{Commissural tracts}: CCaf = anterior forceps, CCmot = motor, CCocc = occipital, CCorb = orbitalis, CCpp = posterior parietal, CCsf = superior frontal, CCsp = superior parietal, CCtemp = temporal. \textit{Association tracts}: Arc = arcuate, aThal = anterior thalamic, CCing = cingulum (cingulate portion), CS = corticospinal, IFO = inferior fronto-occipital, IL = inferior lateral, SL = superior lateral, Unc = uncinate; association tract acronyms are preceded by `l'/`r' to designate left/right hemisphere. High-resolution figure available online.}
+	\caption{HGAM smooths of tract FA differences by node for comparisons against Base (top, middle) and Run vs Rerun (bottom). \textbf{Top}: $\Delta$FA-Node smooths of Post relative to Base, deflections from zero here may be indicative of concussion-related changes. \textbf{Middle}: $\Delta$FA-Node smooths of RTP relative to Base, smaller deflections here than Post vs Base may be indicative of recovery-related changes (and the converse for greater deflections). \textbf{Bottom}: $\Delta$FA-Node smooths of Run vs Rerun, indicative of algorithmic variance by tract. Node IDs are numbered in the RAS convention, with midline of commissural fibers at node 50. Left: Corpus callosum tracts, middle: left hemisphere tracts, right: right hemisphere tracts. Credible intervals were omitted for visual clarity. \textit{Commissural tracts}: CCaf = anterior forceps, CCmot = motor, CCocc = occipital, CCorb = orbitalis, CCpp = posterior parietal, CCsf = superior frontal, CCsp = superior parietal, CCtemp = temporal. \textit{Association tracts}: Arc = arcuate, aThal = anterior thalamic, CCing = cingulum (cingulate portion), CS = corticospinal, IFO = inferior fronto-occipital, IL = inferior lateral, SL = superior lateral, Unc = uncinate; association tract acronyms are preceded by `l'/`r' to designate left/right hemisphere.}
 	\label{fig:ldi-gam}
 \end{figure}
 
@@ -276,78 +279,77 @@ As tractometry was conducted on each visit via PyAFQ, one potential source of va
 \begin{table}[H]
 	\scriptsize
 	\input{tbl_LDI_DI_rerun.tex}
-	\caption{Longitudinal whole-brain HGAM statistics for tract smooths. Significant non-flatness was detected for all difference smooths in the longitudinal concussion model (Post vs Base, RTP vs Base), and a number of tracts did not show significant differences between multiple runs of the tractography pipeline (Run vs Rerun) e.g. CCsp. Post vs Base = FA difference between Post and Base, RTP vs Base = FA difference between RTP and Base, Run vs Rerun = FA difference between multiple runs of PyAFQ. edf = effective degrees of freedom, F = F-statistic, Sig = significance. *** = p$<$.001, ** = p$<$.01, * = p$<$.05.}
+	\caption{Longitudinal whole-brain HGAM statistics for tract smooths. Significant non-flatness was detected for all difference smooths in the longitudinal concussion model (Post vs Base, RTP vs Base), and a number of tracts did not show significant differences between multiple runs of the tractography pipeline (Run vs Rerun) e.g. CCsp. Post vs Base = FA difference between Post and Base, RTP vs Base = FA difference between RTP and Base, Run vs Rerun = FA difference between multiple runs of PyAFQ. edf = effective degrees of freedom, F = F-statistic, Sig = significance. *** = p$<$.001, ** = p$<$.01, * = p$<$.05. See Figure \ref{fig:ldi-gam} for tract names.}
 	\label{tbl:ldi-gam}
 \end{table}
 
-To test our first hypothesis that concussion injury- and recovery-related changes would be evident in posterior callosal FA values, we compared the smooths' statistic, magnitude of effect, and credible intervals from both the whole-brain longitudinal and run-rerun models. Taken together, we found evidence that partially supports our hypothesis: the callosum superior parietal Post vs Base smooth from the longitudinal whole-brain model shows significant FA differences while the run-rerun model does not, which we interpret as evidence of concussion injury-related changes. The RTP vs Base smooth, however, also differs significantly, and accordingly we did not detect evidence of recovery. Further, the Post and RTP vs Base differences detected in the callosum posterior parietal whole-brain longitudinal smooth did not have magnitudes greater than the run-rerun smooth, suggesting that the detected differences may be due to algorithmic- and not necessarily concussion-related variance.
+To test our first hypothesis that concussion injury- and recovery-related changes would be evident in posterior callosal FA values, we compared the smooths' statistic, magnitude of effect, and credible intervals from both the whole-brain longitudinal and run-rerun models. Taken together, we found evidence that partially supports our hypothesis: the callosum superior parietal Post vs Base smooth from the longitudinal whole-brain model shows significant FA differences while the run-rerun model does not, which we interpret as evidence of concussion injury-related changes. The RTP vs Base smooth, however, also differs significantly, and accordingly we did not detect evidence of recovery (also, see Section \ref{sssec:res-dwi-pat-norecov}). Further, the Post and RTP vs Base differences detected in the callosum posterior parietal whole-brain longitudinal smooth did not have magnitudes greater than the run-rerun smooth, suggesting that the detected differences may be due to algorithmic- and not necessarily concussion-related variance.
 
 
-\subsection{Tract Injuries Precede Recovery, Worsening, or No Change}
+\subsection{Tract Injuries Precede Recovery, Progression, or No Change}
 \label{ssec:res-dwi-pat}
-As all tracts were modeled in a single, whole-brain longitudinal model in order to account for within-subject variance, we additionally investigated the other tract smooths for concussion injury- and recovery-related FA changes that were above and beyond any variance explained by run-rerun model. This analysis identified three patterns of FA differences: injury and recovery, injury with subsequent worsening, and injury without recovery. Specifically, the callosum superior frontal and right cingulum cingulate showed evidence of injury and recovery, the callosum superior parietal (as stated above), left corticospinal, right anterior thalamic, and right inferior fronto-occipital tracts worsened after injury, and the callosum motor, callosum orbitalis, left arcuate, and right uncinate showed evidence of injury and then no subsequent change (Figure \ref{fig:ldi-gam}, Table \ref{tbl:ldi-gam}).
+As all tracts were modeled in a single, whole-brain longitudinal model in order to account for within-subject variance, we additionally investigated the other tract smooths for concussion injury- and recovery-related FA changes that were above and beyond any variance explained by run-rerun model. This analysis identified three patterns of FA differences: injury and recovery, injury with subsequent progression, and injury without recovery. Specifically, the callosum superior frontal and right cingulum cingulate showed evidence of injury and recovery, the callosum superior parietal (as stated above), left corticospinal, right anterior thalamic, and right inferior fronto-occipital tracts progressed after injury, and the callosum motor, callosum orbitalis, left arcuate, and right uncinate showed evidence of injury and then no subsequent change.
 
-For each of these identified tracts, we conducted post-hoc models of FA, MD, AD, and RD in order to interrogate the source of FA changes, testing for Post and RTP differences from Base (R Code \ref{code:gam-lgio}). Such models are necessary as AD ($\lambda_\parallel$) \textit{or} RD ($\lambda_\perp$) can drive FA differences, and are themselves related to different injury sequelae. These models tested our second hypothesis, that changes in FA are driven by RD and not AD. Additionally, where $\Delta$FA calculations require data at both visits for subtraction, these tract- and scalar-specific longitudinal models had a reduced factor structure such that we were able to use scalars as the predicted values, thereby increasing the number of participants in the model (see Table \ref{tbl:meth-demo}).
+For each of these identified tracts, we conducted post-hoc models of FA, MD, AD, and RD in order to interrogate the source of FA changes, testing for Post and RTP differences from Base (R Code \ref{code:gam-lgio}). Such models are necessary as AD ($\lambda_\parallel$) \textit{or} RD ($\lambda_\perp$) can drive FA differences, and are themselves related to different injury sequelae. These models tested our second hypothesis, that changes in FA are driven by RD and not AD. Additionally, where $\Delta$FA calculations require data at both visits for subtraction, these tract- and scalar-specific longitudinal models had a reduced factor structure which allowed us to predict scalar values, rather than scalar differences, thereby increasing the number of participants in the model (see Table \ref{tbl:meth-demo}).
 
-Resulting test statistics (Table \ref{tbl:lgio-gam-tract}) indicate significant non-flatness across the majority of tracts and scalars, and further interogation of such smooths will be reported below. We note that the left arcuate FA at Post relative to Base is flat but becomes non-flat by RTP, indicative of late emerging sequelae. Also, the AD smooths of the left corticospinal tract are flat relative to Base, indicating that nearly all the change in FA is driven by RD. For full interpretation, however, review of the partial effect smooths is needed to identify the location (node) of change.
+Resulting test statistics (Table \ref{tbl:lgio-gam-tract}) indicate significant non-flatness across the majority of tracts and scalars, and further investigation of such smooths will be reported below. We note that the left arcuate FA at Post relative to Base is flat but becomes non-flat by RTP, indicative of late emerging sequelae. Also, the AD smooths of the left corticospinal tract are flat relative to Base, indicating that nearly all the change in FA is driven by RD. For full interpretation, however, review of the partial effect smooths is needed to identify both the location (node) and direction of change.
 
-% TODO: reorder by recover, worsen, no change
 \begin{table}[H]
-	\scriptsize
+	\tiny
 	\input{tbl_LGIO_callosal_smooths.tex}
-	\caption{Tract-specific HGAM statistics for DWI scalars of select tracts. Separate models were conducted for each scalar of each tract, fitting both the Global curvature and Group (Post, RTP) differences from Base. O.Post/RTP = Post/RTP group smooth as an ordered factor (relative to Base). edf = effective degrees of freedom, F = F-statistic, Sig = significance. *** = p$<$.001, ** = p$<$.01, * = p$<$.05.}
+	\caption{Tract-specific HGAM statistics for DWI scalars of select tracts. Separate models were conducted for each scalar of each tract, fitting both the global curvature and visit (Post, RTP) differences from Base. O.Post/RTP = Post/RTP group smooth as an ordered factor (relative to Base). edf = effective degrees of freedom, F = F-statistic, Sig = significance. *** = p$<$.001, ** = p$<$.01, * = p$<$.05. See Figure \ref{fig:ldi-gam} for tract names.}
 	\label{tbl:lgio-gam-tract}
 \end{table}
 
-% TODO: single examplar of each, others in supplemental figures
+
 \subsubsection{Evidence of Injury and Recovery}
 \label{sssec:res-dwi-pat-recov}
-
-Longitudinal tract-specific models of FA, MD, AD, and RD identified patterns consistent with concussion injury- and recovery-related changes in the right cingulum cingulate (Figure \ref{fig:lgio-gam-recov}) and callosum superior frontal (Supplemental Figure \ref{supp-fig:lgio-gam-recov}). In the right cingulum cingulate, and FA decrease relative to Base is evident in the anterior portion of the Post smooth (nodes 30-40). This decrease is associated with an increased in RD in the same nodal region, and little-to-no difference in AD. Such a pattern is consistent with demyelination, which increases the relative ratio of free extracellular water to intercellular water. By RTP, this same nodal region has RD and FA values that are closer to Base values, indicative of recovery.
+Longitudinal tract-specific scalar models identified patterns consistent with concussion injury- and recovery-related changes in the right cingulum cingulate (Figure \ref{fig:lgio-gam-recov}) and callosum superior frontal (Supplemental Figure \ref{supp-fig:lgio-gam-recov}). In the right cingulum cingulate, an FA decrease relative to Base is evident in the anterior portion of the Post smooth (nodes 30-40). This decrease is associated with an increased in RD in the same nodal region, and little-to-no difference in AD. Such a pattern is consistent with demyelination, which increases the relative ratio of free extracellular water to intercellular water. By RTP, this same nodal region has RD and FA values that are closer to Base values, seeminlgy indicative of partial recovery and in line with our second hypothesis.
 
 \begin{figure}[H]
 	\centering
 	\fbox{\includegraphics[width=.8\linewidth]{fit_LGIO_rCCing.png}}
-	\caption{Recovery.}
+	\caption{Longitudinal HGAM smooths modeling right cingulum cingulate scalars as a function of node and visit. Evidence of injury and recovery is detected about node 35 of the FA smooths, where significant decline is evident at Post relative to Base, the magnitude of which decreases by RTP. RD, and not AD, appear as the source of FA change. Red boxes indicate nodes where the credible intervals do not contain zero. Visit smooths are plotted in the domain of the global smooth to show their fit contribution. Nodes are numbered in RAS convention.}
 	\label{fig:lgio-gam-recov}
 \end{figure}
 
 Further, these scalar smooths also show a different pattern in posterior regions of the tract (nodes 60-70). At Post, a small increase in FA is detected which also corresponds to a decrease in RD. This pattern of scalar change would be consistent with cellular edema, where an increase in the ratio of intracellular to extracellular water results in increased tortuosity and a corresponding decrease in diffusion speed. Increased tortuosity would also explain the decreased AD at RTP. Finally, we note the late emerging increase in AD, where RTP has a larger deflection from Base than Post. Such a pattern may be indicative of glial scarring [CITE].
 
-
-\textit{Corpus Callosum Results}. Close inspection of the whole-brain longitudinal and run-rerun results implicated four callosal tracts that demonstrated significant concussion-related change: superior parietal, superior frontal, motor, and orbital. Each of these tracts had non-trivial partial effect magnitudes as well as $\Delta$FA that were greater than was explained by algorithmic variance alone. As FA differences can be driven by changes in AD \textit{or} RD, which are related to different injury sequelae, we modeled FA, MD, AD, and RD for each of these tracts, testing for Post and RTP differences from Base (R Code \ref{code:gam-lgio}). This analysis also had an additional benefit: where $\Delta$FA calculations require data at both visits for subtraction, these longitudinal models of a single tract and scalar had a reduced factor structure such that we were able to use scalars as the predicted values, thereby increasing the number of participants in the model (see Table \ref{tbl:meth-demo}).
-
-
-Statistical significance was detected for each scalar's smooths (Table \ref{tbl:lgio-gam-cc}), and inspection of these smooths revealed three patterns of injury (Figure \ref{fig:lgio-gam-cc}). First, the Post vs Base and RTP vs Base FA differences appear to be constant for the superior parietal tract (Figure \ref{fig:lgio-gam-cc}, A), where FA values about nodes 50-60 are increased relative to Base and this FA difference is seemingly driven by a decreased RD. Such a pattern is consistent with cellular edema, particularly given the lack of change in AD. Second, evidence of recovery is apparent in the superior frontal tract (Figure \ref{fig:lgio-gam-cc}, B), where FA values about node 50 are elevated at Post relative to Base, and RD values decreased, a pattern that is again consistent with cellular edema. Both scalars return to near-Base values at RTP, seemingly indicative of healing.
+Similarly, within-tract FA changes in the callosum superior frontal (Supplemental Figure \ref{supp-fig:lgio-gam-recov}) are driven entirely by RD, as indicated by the flat AD smooths. Midline increases in FA (about node 50) at Post are associated with decreased RD, and both FA and RD values return to near baseline values by RTP. This pattern is reversed in the right hemisphere (node 25), with decreased FA values being driven by increased RD. Together, these smooths reveal subtle, within-tract dynamics that vary both anatomically (anteroposterior or mediolateral) and temporally (Post or RTP relative to Base), where concussion-related increases in FA are indeed driven by RD.
 
 
+\subsubsection{Evidence of Injury Progression}
+\label{sssec:res-dwi-pat-prog}
+Four tracts demonstrated patterns of FA change that are consistent with injury progression: the left arcuate (Figure \ref{fig:lgio-gam-prog}), callosum motor, callosum orbital, and right uncinate (Supplemental Figure \ref{supp-fig:lgio-gam-prog}). In reviewing the left arcuate FA smooths, it first appears that we did not detect any acute damage, as evidenced by the flat Post vs Base smooth (also, Table \ref{tbl:lgio-gam-tract}), but instead detected FA decline which emerged during the chronic phase (RTP) about node 65. As above, this FA decrease is associated with RD increase in the same nodal region without accompanying changes in AD. Additionally, there appears slight increases in FA towards the tract posterior end (nodes 80+) which also appear to align with RD decrease.
 
-Finally, two tracts appear to worsen between Post and RTP: the motor and orbital tracts (Figure \ref{fig:lgio-gam-cc}, C \& D). As with the other tracts, the motor portion of corpus callosum appears to have inflated FA values relative to Base about node 50, driven by decreased RD. Instead of constancy or recovery, however, the difference in scalar values spreads leftward (nodes 40-50). Conversely, the orbitalis portion has a decrease in FA values around node 60 (and increased RD) in Post relative to Base, a difference which increases in magnitude by RTP. This pattern is likely reflective of axolemmal permeability or demyelination rather than cellular or cytotoxic edema.
-
-\begin{figure}[H]
-	\centering
-	\fbox{\includegraphics[width=0.95\textwidth]{fig_LGIO_callosal_smooths.png}}
-	\caption{Longitudinal HGAM smooths modeling callosal tract scalars as a function of node. Each model fit both the global tractometric profile (global smooths) and how visits differed from the global (group smooths). Group smooths were modeled using ordered factors (Post vs Base, RTP vs Base).  Each quadrant (A-D) contains global and group smooths for FA (top left), MD (top right), AD (bottom left), and RD (bottom right). Red boxes indicate nodes where smooths differ statistically from the reference group (Base). Group smooths are plotted in the domain of the global smooth to show their fit contribution. High-resolution figure available online.}
-	\label{fig:lgio-gam-cc}
-\end{figure}
-
-
-
-These patterns of concussion injury- and recovery-related scalar changes partially confirms our second hypothesis that FA decreases would be driven by increased RD. While the expected directionality of injury-related scalar changes was only detected in the orbital tract (Figure \ref{fig:lgio-gam-cc}, D), we nevertheless observed that changes in FA were largely driven by RD ($\lambda_\perp$) and not AD ($\lambda_\parallel$).
-
-
-\textit{Select Tract Results}. In addition to those of the corpus callosum, we identified a subset of tracts that showed concussion injury- or recovery-related scalar changes with magnitudes larger than were expected from algorithmic variance: left arcuate, left corticospinal, right anterior thalamic, right cingulum cingulate, right inferior fronto-occipital, and right uncinate (Figure \ref{fig:lgio-gam-sel}). Test statistics (Table \ref{tbl:lgio-gam-cc}) indicated that all ordered group smooths differed significantly from Base in at least one region of nodes, except for the left arcuate Post FA and left corticospinal Post AD smooths (Figure \ref{fig:lgio-gam-sel}, A \& B).
+That said, we note the increases in both RD and AD (and MD) about node 30 during Post vs Base. These deflections are interesting as they essentially counter-balance each other, yielding no statistical change in FA. These AD and RD results suggest that the anterior portion of the left arcuate was damaged at Post (relative to Base) and recovered by RTP. Had we only investigated FA values we would have failed to detect these subtle deflections, resulting in a Type-II error.
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[width=0.95\textwidth]{fig_LGIO_select_smooths.png}}
-	\caption{Longitudinal HGAM smooths modeling select tract scalars as a function of node. Each section (A-F) consists of global and visit smooths for FA (top left), MD (top right), AD (bottom left), and RD (bottom right). Red boxes indicate nodes where smooths differ statistically from the reference group (Base). Group smooths are plotted in the domain of the global smooth to show their fit contribution. High-resolution figure available online.}
-	\label{fig:lgio-gam-sel}
+	\fbox{\includegraphics[width=.8\linewidth]{fit_LGIO_lArc.png}}
+	\caption{Longitudinal HGAM smooths modeling left arcuate scalars as a function of node and visit. Evidence of late injury is detected in the RTP vs Base FA smooth about node 65.}
+	\label{fig:lgio-gam-prog}
 \end{figure}
 
-Within these selected tracts, as with the callosal tracts, patterns of injury stability, recovery, and worsening are present. First, the corticospinal, anterior thalamic, and inferior fronto-occipital appear to have stable FA changes relative to Base at Post and RTP. For the corticospinal, increases in FA (Figure \ref{fig:lgio-gam-sel}B, node 65) are driven by decreases in RD for the same region, and this pattern is also found for rIFO (Figure \ref{fig:lgio-gam-sel}E, node 45). For anterior thalamic, both decreases in RD and increases in AD are associated with the increase in FA values (Figure \ref{fig:lgio-gam-sel}C, node 65). Second, the arcuate and uncinate tracts both show evidence of worsening, where tract scalar become more discrepant with Base by RTP. At Post, the arcuate FA values do not differ from Base (albeit the increases in MD, AD, and RD; Figure \ref{fig:lgio-gam-sel}A), and by RTP a steep decrease in FA about node 65 is present which is driven by corresponding increase in RD. Likewise, the FA values for uncinate worsen over time (Figure \ref{fig:lgio-gam-sel}F), most dramatically in the increased FA values near node 70, an increase which is driven by RD decreases. Finally, the right cingulum cingulate (Figure \ref{fig:lgio-gam-sel}D) shows evidence of recovery near node 35. At Post, a steep decrease in FA is associated with a corresponding increase in RD, which diminishes by RTP. That said, the slight increase in FA about node 70 at Post seems to elongate by RTP, with a decline in RD as well.
+With respect to the remaining three tracts, two patterns emerge. First, we detected a similar pattern in the callosum orbital (Supplemental Figure \ref{supp-fig:lgio-gam-prog} b), where FA is strongly declined relative to Base at RTP (node 60). The majority of this FA decrease is driven by RD increase, as above, but we also detected late AD increase near the same region of the tract and extending towards node 40. Accordingly, these data suggest that the left and right portions of the callosum orbital tract have differing sequelae that do not necessarily resolve by return-to-play clearance.
 
-Together, these results largely mirrored those detected in the callosal tracts: our hypothesized pattern of scalar change was detected in the right cingulum cingulate, and FA changes across all tracts were largely associated with RD. FA increases driven by RD decreases are commonly implicated in cellular or cytotoxic edema, while the reverse can be understood in terms of axolemmal permeability or demyelination. Finally, we note that the left arcuate showed a pattern of late emergent pathology.
+Second, the callosum motor and right uncinate (Supplemental Figure \ref{supp-fig:lgio-gam-prog} a, c) both had FA increases by RTP in the left (callosal) and anterior (uncinate) portions of their tract (about nodes 60 and 70, respectively) which results from RD decrease in the same nodal region. For lower node values (right callosal, posterior uncinate), FA values were lower with respect to Base at both Post and RTP (nodes 20 and 40, respectively). These decreases in FA were driven by increased RD and, unlike the left arcuate and callosum orbital, we did not detect a change in AD values. These four tracts (and those reported below) provide evidence that even when athletes meet return-to-play criteria, long-term secondary injury considerations are still warranted and such criteria may not necessarily indicate that athletes are fully recovered.
+
+
+\subsubsection{Evidence of Injury Without Recovery}
+\label{sssec:res-dwi-pat-norecov}
+In addition to patterns indicative of concussion-related injury preceding recovery or progression, we also detected injury preceding a lack of recovery in four tracts: callosum superior parietal (Figure \ref{fig:lgio-gam-norecov}), left corticospinal, right anterior thalamic, and right inferior fronto-occipital (Supplemental Figure \ref{supp-fig:lgio-gam-norecov}). In each of these tracts, an increase in FA was detected which corresponded to a decrease in RD in the same region. For instance, the callosum superior parietal Post vs Base FA smooth revealed increased FA values about node 55, an increase which appears to be driven by a decrease in RD in the same region, and without change in AD.
+
+\begin{figure}[H]
+	\centering
+	\fbox{\includegraphics[width=.8\linewidth]{fit_LGIO_CCsp.png}}
+	\caption{Longitudinal HGAM smooths modeling callosum superior parietal scalars as a function of node and visit. FA values are increased relative to Base at Post about node 50, with a corresponding decrease in RD at the same region. This pattern remains unchanged at RTP relative to Base.}
+	\label{fig:lgio-gam-norecov}
+\end{figure}
+
+Further, increased FA corresponding with a decreased RD was identified about node 60 in the left corticospinal, node 65 in the right anterior thalamic, and node 45 in the right inferior fronto-occipital tracts (Supplemental Figure \ref{supp-fig:lgio-gam-norecov} a-c, respectively). AD values were also increased about node 40 in the right anterior thalamic tract at both Post and RTP vs Base, and again this was counterbalanced by an increased RD in the same region, resulting in a lack of FA differences. As all four identified tracts demonstrated patterns consistent with cellular edema at Post which was unresolved at RTP, these data suggest that recovery from injury may yet be incomplete despite clearance to play.
+
+All together, investigated FA changes in tracts identified by the longitudinal whole-brain model revealed complex injury sequelae that vary both anatomically and temporally. While evidence was generally found to support our second hypothesis, that tract FA changes would be the result of RD, but not AD, these were not always in the hypothesized direction (demyelination) and often indicated cellular or even cytotoxic edema. Further, we detected patterns of scalar change which indicate that athletes may not be fully recovered by the time they are cleared to return-to-play. Indeed, while we found evidence that concussion injury- and recovery-related scalar changes do occur, the majority of tract changes were either unresolved or in fact worse by the final visit. As athletes had an average 9$\pm$5.5 days between the Post and RTP visits in this study, it is possible that some individuals were cleared while still within the window of secondary injury cascades. Finally, we provided evidence that FA investigations may lack sensitivity in certain situations where both AD and RD have increased. While counterintuitive, such a change in scalars may result when there is both demyelination and glial scarring. When modeling such data, it is important to consider that injury sequelae, both within a tract and across time, may have non-linear properties, as we have demonstrated here, and that it is important to select tools with the appropriate sensitivity to model such properties.
 
 
 \subsection{Tract FA Differences Relate to Changes in ImPACT Scores}
@@ -359,7 +361,7 @@ Of the eight callosal tracts tested, only three demonstrated the hypothesized in
 \begin{table}[H]
 	\scriptsize
 	\input{tbl_LGIO_intx_callosal.tex}
-	\caption{Longitudinal tract interaction statistics. \textbf{Top}: Interaction of callosal tracts and ImPACT metrics. While significant non-flatness is detected for all ImPACT-Node interactions, note the reduction in effective degrees of freedom and F-stat between Post and RTP. VisMem = Visual Memory, TotSymp = Total Symptom, VisMot = Visual Motor. Node = global node, ImP:Base/Post/RTP = main effects of ImPACT metric for each group, ImP-Node = interaction term of node and ImPACT, ImP-Node:O.Post/RTP = Post/RTP group interaction as an ordered factor (relative to Base). \textbf{Bottom}: Interaction of select tracts and days between Post and RTP. edf = effective degrees of freedom, F = F-statistic, Sig = significance. *** = p$<$.001, ** = p$<$.01, * = p$<$.05. CCsf = callosal superior frontal, CCocc = callosal occipital, CCsp = callosal superior parietal, lCS = left corticospinal, rUnc = right uncinate.}
+	\caption{Longitudinal tract interaction statistics. \textbf{Top}: Interaction of callosal tracts and ImPACT metrics. While significant non-flatness is detected for all ImPACT-Node interactions, note the reduction in effective degrees of freedom and F-stat between Post and RTP. VisMem = Visual Memory, TotSymp = Total Symptom, VisMot = Visual Motor. Node = global node, ImP:Base/Post/RTP = main effects of ImPACT metric for each group, ImP-Node = interaction term of node and ImPACT, ImP-Node:O.Post/RTP = Post/RTP group interaction as an ordered factor (relative to Base). \textbf{Bottom}: Interaction of select tracts and days between Post and RTP. edf = effective degrees of freedom, F = F-statistic, Sig = significance. *** = p$<$.001, ** = p$<$.01, * = p$<$.05. See Figure \ref{fig:ldi-gam} for tract names.}
 	\label{tbl:lgio-intx-cc}
 \end{table}
 
@@ -546,31 +548,34 @@ This work was supported by a grant awarded to MN by the National Institute of He
 	\label{supp-fig:lgio-gam-recov}
 \end{figure}
 
+\begin{figure}[H]
+	\captionsetup{labelformat=empty}
+	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_CCmot.png}}
+	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_CCorb.png}}\\
+	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_rUnc.png}}
+	\caption{}
+\end{figure}
+\clearpage
+\begin{figure}
+	\captionsetup{labelformat=adja-page}
+	\ContinuedFloat
+	\caption{(a) Callosum motor shows injury progression about node 60, with increased FA and decreased RD. (b) Callosum orbital has a complex injury profile, with FA decreases (and RD increases) about node 60, and the reverse around node 40. RTP vs Base AD values are also increased in the parasagittal region (node 50). (c) Right uncinate shows a similar injury profile as callosum motor, with increased FA values about node 70, driven by decreased RD, and the reverse around node 40.}
+	\label{supp-fig:lgio-gam-prog}
+\end{figure}
 
-% \begin{figure}[H]
-% 	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_CCsf.png}}
-% 	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_rCCing.png}}
-% 	\caption{Recovery.}
-% 	\label{fig:lgio-gam-recov}
-% \end{figure}
-
-% \begin{figure}[H]
-% 	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_CCmot.png}}
-% 	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_CCorb.png}}\\
-% 	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_lArc.png}}
-% 	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_rUnc.png}}
-% 	\caption{Worsen.}
-% 	\label{fig:lgio-gam-worse}
-% \end{figure}
-
-% \begin{figure}[H]
-% 	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_CCsp.png}}
-% 	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_lCS.png}}\\
-% 	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_raThal.png}}
-% 	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_rIFO.png}}
-% 	\caption{Injury, No Change.}
-% 	\label{fig:lgio-gam-nochx}
-% \end{figure}
-
+\begin{figure}[H]
+	\captionsetup{labelformat=empty}
+	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_lCS.png}}
+	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_raThal.png}}\\
+	\subfloat[]{\includegraphics[width=3in]{fit_LGIO_rIFO.png}}
+	\caption{}
+\end{figure}
+\clearpage
+\begin{figure}
+	\captionsetup{labelformat=adja-page}
+	\ContinuedFloat
+	\caption{(a) Left corticospinal smooths indicate Post vs Base increased FA at node 60, driven by RD decrease, which remains unchanged by RTP. (b) Right anterior thalamic and (c) right inferior fronto-occipital smooths reveal the same pattern about nodes 65 and 45, respectively.}
+	\label{supp-fig:lgio-gam-norecov}
+\end{figure}
 
 \end{document}

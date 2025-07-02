@@ -392,17 +392,20 @@ Likewise, total symptoms are related to decreased FA values about callosum super
 
 \subsection{Tract FA Differences Relate to Recovery Time}
 \label{ssec:res-dwi-time}
-% TODO: check direction against tract smooths
-We utilized tensor product interaction smooths to test whether RTP-Post $\Delta$FA values related to the number of days between Post and RTP as an exploratory analysis, as presumably more significant injuries (and their accompanying FA change) would relate to extended recovery times. From the tracts that demonstrated concussion injury- and recovery-related changes (Section [CITE REF]), four tracts demonstrated node-$\Delta$FA-time interactions that aligned with predictions: the left corticospinal, right uncinate, callosal superior parietal, and callosal orbital tracts (Table \ref{tbl:lgio-intx-imp}, bottom; Figure \ref{fig:di-time}), and within these tracts two interaction patterns were detected.
-
-First, positive $\Delta$FA values were associated with longer recovery periods in the left corticospinal (node 50) and right uncinate (node 55) tracts (Figure \ref{fig:di-time}, A \& B), and negative $\Delta$FA values in the left corticospinal tracts related to a shorter recovery period. Second, negative RTP-Post $\Delta$FA values in the callosal superior parietal (node 55) and callosal orbital (node 60) tracts were related to longer recovery periods (Figure \ref{fig:di-time}, C \& D). As noted above, injury-related FA changes in this sample have largely been driven by changes in RD, and accordingly the former set of findings may indicate that demyelination deflated FA by increasing RD at Post, resulting in a positive RTP-Post $\Delta$FA value, while cellular edema may explain the increased Post FA values of the latter findings due to a decrease of RD (see Discussion). Shorter recovery periods, however, did not have a clear relationship with $\Delta$FA values in these tracts as indicated by the flat (homogeneous green) regions of the tensor product interaction smooths.
+We originally hypothesized that changes in FA values would relate recovery time, reasoning that more significant injuries i.e. larger deflections from baseline would necessitate a longer recovery period. To test this, we utilized tensor product interaction smooths to determine whether RTP vs. Post $\Delta$FA values related to the number of days between Post and RTP. From the tracts in which we previously detected concussion-related changes, four demonstrated node-$\Delta$FA-time interactions that aligned with predictions: the left corticospinal, right uncinate, callosum superior parietal, and callosum orbital (Table \ref{tbl:lgio-intx-imp}, bottom; Figure \ref{fig:di-time}). Within these tracts, two interaction patterns were detected.
 
 \begin{figure}[H]
-	\centering
-	\fbox{\includegraphics[width=0.95\textwidth]{fig_DI_time.png}}
+	\captionsetup[subfigure]{oneside,margin={-75mm,0cm},captionskip=-53mm} % Align a-d with top left corner
+	\subfloat[]{\includegraphics[width=3in]{fit_DI_time_lCS_fa.png}}
+	\subfloat[]{\includegraphics[width=3in]{fit_DI_time_rUnc_fa.png}}\\
+	\subfloat[]{\includegraphics[width=3in]{fit_DI_time_CCsp_fa.png}}
+	\subfloat[]{\includegraphics[width=3in]{fit_DI_time_CCorb_fa.png}}
+	\captionsetup{} % reset caption specs
 	\caption{HGAM tensor product interaction smooths of FA change by recovery time. Interactions are present between RTP-Post $\Delta$FA values (Z-axis), number of days between Post and RTP visits (Y-axis), and tract nodes (X-axis). Positive RTP-Post $\Delta$FA values are indicated as yellow, and negative as blue, with gray bars indicating regions of extrapolation (insufficient data). Top plots indicate positive $\Delta$FA values about node 50 are associated with a larger number of days between Post and RTP, and bottom plots the opposite.}
 	\label{fig:di-time}
 \end{figure}
+
+First, positive $\Delta$FA values were associated with longer recovery periods in the left corticospinal (node 50) and right uncinate (node 55) tracts (Figure \ref{fig:di-time} a \& b), and negative $\Delta$FA values in the left corticospinal tracts related to a shorter recovery period. Second, negative RTP vs. Post $\Delta$FA values in the callosal superior parietal (node 55) and callosal orbital (node 60) tracts were related to longer recovery periods (Figure \ref{fig:di-time} c \& d). As noted above, injury-related FA changes in this sample have largely been driven by changes in RD, and accordingly the former set of findings may indicate that demyelination deflated FA by increasing RD at Post, resulting in a positive RTP vs. Post $\Delta$FA value, while cellular edema may explain the increased Post FA values of the latter findings due to a decrease of RD (see Discussion). Shorter recovery periods, however, did not have a clear relationship with $\Delta$FA values in these tracts as indicated by the flat (homogeneous green) regions of the tensor product interaction smooths.
 
 
 \section{Discussion}

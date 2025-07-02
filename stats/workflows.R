@@ -778,8 +778,8 @@ dwi_gam_delta_time <- function(df_afq, tract) {
     filename = paste0(plot_dir, "/fit_DI_time_", tract_short, "_fa.png"),
     plot = plot_time$time_diff,
     units = "in",
-    height = 8,
-    width = 8,
+    height = 4,
+    width = 6,
     dpi = 600
   )
 }

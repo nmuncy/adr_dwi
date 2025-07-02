@@ -16,6 +16,7 @@ demos_count <- workflows$get_demo_counts(df_afq, df_scan_imp)
 
 
 # Results 3.1: ImPACT smooths ----
+workflows$beh_desc_impact(df_scan_imp)
 imp_gams <- workflows$beh_gam_impact(df_scan_imp)
 
 

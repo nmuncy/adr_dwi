@@ -230,6 +230,28 @@ hyp_figure <- function() {
 }
 
 
+#' Provide descriptive stats for ImPACT measures by visit.
+#' 
+#' @param df_scan_imp Dataframe returned by workflows$get_data_scan_impact().
+export("beh_desc_impact")
+beh_desc_impact <- function(df_scan_imp) {
+  
+  # Draw combined plot
+  grDevices::png(
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/fit_impact_beh.png"
+    ),
+    units = "in",
+    height = 4,
+    width = 6,
+    res = 600
+  )
+  draw_plots$grid_impact_beh(df_scan_imp)
+  grDevices::dev.off()
+  
+}
+
+
 #' Conduct GAMs for each ImPACT composite and total symptoms.
 #'
 #' Converts visit (Base, Post, RTP) to integer to model change in time (visit)
@@ -284,7 +306,7 @@ beh_gam_impact <- function(df_scan_imp) {
   # Draw combined plot
   grDevices::png(
     filename = paste0(
-      .analysis_dir(), "/stats_gams/plots/fit_impact.png"
+      .analysis_dir(), "/stats_gams/plots/fit_impact_gam.png"
     ),
     units = "in",
     height = 4,

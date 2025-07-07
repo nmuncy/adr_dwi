@@ -16,7 +16,7 @@ demos_count <- workflows$get_demo_counts(df_afq, df_scan_imp)
 
 
 # Results 3.1: ImPACT smooths ----
-workflows$beh_desc_impact(df_scan_imp)
+imp_desc <- workflows$beh_desc_impact(df_scan_imp)
 imp_gams <- workflows$beh_gam_impact(df_scan_imp)
 
 
@@ -33,6 +33,7 @@ workflows$plot_dwi_gam_all_rerun(fit_LDI, fit_DI_rr)
 
 
 # Results 3.3: Tract scalars ----
+#
 # Model AFQ tract scalars via longitudinal HGAMs to determine source
 # of FA change (AD vs RD).
 #

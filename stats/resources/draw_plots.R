@@ -1194,7 +1194,7 @@ grid_impact_gam <- function(
   col1_name <- col3_name <-
     text_grob("", size = 12, family = "Times New Roman")
   col2_name <-
-    text_grob("ImPACT Composite Scores", size = 12, family = "Times New Roman")
+    text_grob("ImPACT Visit Smooths", size = 12, family = "Times New Roman")
   bot1_name <- bot2_name <- bot3_name <-
     text_grob("", size = 10, family = "Times New Roman")
   l2_name <- l3_name <- text_grob("", size = 12, family = "Times New Roman")

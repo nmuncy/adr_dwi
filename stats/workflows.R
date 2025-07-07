@@ -233,8 +233,17 @@ hyp_figure <- function() {
 #' Provide descriptive stats for ImPACT measures by visit.
 #' 
 #' @param df_scan_imp Dataframe returned by workflows$get_data_scan_impact().
+#' @returns Tibble table of descriptive stats.
 export("beh_desc_impact")
 beh_desc_impact <- function(df_scan_imp) {
+  
+  # Determine quantiles
+  desc_stats <- misc_help$desc_impact(df_scan_imp)
+  utils::write.table(
+    desc_stats, 
+    file = paste0(.analysis_dir(), "/stats_gams/desc_impact.csv"),
+    sep=",", row.names=F
+  )
   
   # Draw combined plot
   grDevices::png(
@@ -248,7 +257,7 @@ beh_desc_impact <- function(df_scan_imp) {
   )
   draw_plots$grid_impact_beh(df_scan_imp)
   grDevices::dev.off()
-  
+  return(desc_stats)
 }
 
 

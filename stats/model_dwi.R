@@ -16,10 +16,11 @@ demos_count <- workflows$get_demo_counts(df_afq, df_scan_imp)
 
 
 # Results 3.1: ImPACT smooths ----
+imp_desc <- workflows$beh_desc_impact(df_scan_imp)
 imp_gams <- workflows$beh_gam_impact(df_scan_imp)
 
 
-# Results 3.2.1: Model AFQ metrics via delta HGAMs ----
+# Results 3.2: Model AFQ metrics via delta HGAMs ----
 #
 # Conduct whole-brain longitudinal HGAM of tract FA differences (LDI),
 # and then model run-rerun tract FA differences (DI) to identify tracts
@@ -31,43 +32,36 @@ fit_DI_rr <- workflows$dwi_gam_delta_rerun(df_afq, df_afq_rr)
 workflows$plot_dwi_gam_all_rerun(fit_LDI, fit_DI_rr)
 
 
-# Results 3.2.2: Tract scalars ----
+# Results 3.3: Tract scalars ----
+#
 # Model AFQ tract scalars via longitudinal HGAMs to determine source
 # of FA change (AD vs RD).
 #
-# Model callosal and lArc, lCS, raThal, rCCing, rIFO, rUNC tracts.
+# Model CCsf, CCsp, CCmot, CCorb, lArc, lCS, raThal, rCCing, rIFO, rUNC
 tract_all <- unique(df_afq$tract_name)
 tract_select <- c(
-  tract_all[13], tract_all[5], tract_all[2], tract_all[4],
-  tract_all[8], tract_all[16]
+  tract_all[22], tract_all[23], tract_all[18], tract_all[20],
+  tract_all[13], tract_all[5], tract_all[2],
+  tract_all[4], tract_all[8], tract_all[16]
 )
-tract_cc <- tract_all[17:24]
-
-for (tract in c(tract_cc, tract_select)) {
+for (tract in tract_select) {
   workflows$dwi_gam_long_tract(df_afq, tract)
 }
 
 
-# Results 3.3: Callosal, select tracts and ImPACT interactions ----
+# Results 3.4: Select tracts and ImPACT interactions ----
 imp_list <- names(df_scan_imp[7:12])
-for (tract in tract_cc) {
-  for (imp in imp_list){
-    workflows$dwi_gam_long_impact(
-      df_afq, df_scan_imp, tract, impact_meas = imp
-    )
-  }
-}
-
 for (tract in tract_select) {
-  for (imp in imp_list){
+  for (imp in imp_list) {
     workflows$dwi_gam_long_impact(
-      df_afq, df_scan_imp, tract, impact_meas = imp
+      df_afq, df_scan_imp, tract,
+      impact_meas = imp
     )
   }
 }
 
 
-# Results 3.4: FA changes and time -----
-for (tract in c(tract_cc, tract_select)){
+# Results 3.5: FA changes and time -----
+for (tract in tract_select) {
   workflows$dwi_gam_delta_time(df_afq, tract)
 }

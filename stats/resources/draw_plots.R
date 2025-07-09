@@ -296,7 +296,7 @@ fit_gams <- use("resources/fit_gams.R")
 
   if (add_bot) {
     p <- p +
-      xlab("Node ID") +
+      xlab("Tract Node") +
       theme(
         axis.title.y = element_blank()
       )

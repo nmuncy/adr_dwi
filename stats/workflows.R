@@ -230,6 +230,37 @@ hyp_figure <- function() {
 }
 
 
+#' Provide descriptive stats for ImPACT measures by visit.
+#' 
+#' @param df_scan_imp Dataframe returned by workflows$get_data_scan_impact().
+#' @returns Tibble table of descriptive stats.
+export("beh_desc_impact")
+beh_desc_impact <- function(df_scan_imp) {
+  
+  # Determine quantiles
+  desc_stats <- misc_help$desc_impact(df_scan_imp)
+  utils::write.table(
+    desc_stats, 
+    file = paste0(.analysis_dir(), "/stats_gams/desc_impact.csv"),
+    sep=",", row.names=F
+  )
+  
+  # Draw combined plot
+  grDevices::png(
+    filename = paste0(
+      .analysis_dir(), "/stats_gams/plots/fit_impact_beh.png"
+    ),
+    units = "in",
+    height = 4,
+    width = 6,
+    res = 600
+  )
+  draw_plots$grid_impact_beh(df_scan_imp)
+  grDevices::dev.off()
+  return(desc_stats)
+}
+
+
 #' Conduct GAMs for each ImPACT composite and total symptoms.
 #'
 #' Converts visit (Base, Post, RTP) to integer to model change in time (visit)
@@ -284,7 +315,7 @@ beh_gam_impact <- function(df_scan_imp) {
   # Draw combined plot
   grDevices::png(
     filename = paste0(
-      .analysis_dir(), "/stats_gams/plots/fit_impact.png"
+      .analysis_dir(), "/stats_gams/plots/fit_impact_gam.png"
     ),
     units = "in",
     height = 4,
@@ -778,8 +809,8 @@ dwi_gam_delta_time <- function(df_afq, tract) {
     filename = paste0(plot_dir, "/fit_DI_time_", tract_short, "_fa.png"),
     plot = plot_time$time_diff,
     units = "in",
-    height = 8,
-    width = 8,
+    height = 4,
+    width = 6,
     dpi = 600
   )
 }

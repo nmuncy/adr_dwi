@@ -8,6 +8,7 @@ import("tidyr")
 import("tidyverse")
 import("ggpubr")
 import("stats", "reshape")
+import(moments)
 
 
 #' Identify GAM max deflections from zero.
@@ -274,4 +275,36 @@ tract_impact <- function(tract) {
     "Right Uncinate" = "tot_symp"
   )
   return(map_beh)
+}
+
+
+#' Provide ImPACT descriptive quantiles, skew, and kurtosis.
+#' 
+#' @param df_scan_imp Dataframe returned by workflows$get_data_scan_impact().
+#' @returns Tibble table of descriptive stats.
+export("desc_impact")
+desc_impact <- function(df_scan_imp){
+  # Organize relevant data
+  df_stat <- subset(
+    df_scan_imp, 
+    select=c(
+      subj_id, scan_name, mem_ver, mem_vis, 
+      vis_mot, rx_time, imp_ctl, tot_symp
+    )
+  )
+  df <- tidyr::gather(df_stat, imp_meas, value, mem_ver:tot_symp, factor_key=T)
+  
+  # Determine quantiles
+  desc_stats <- df %>%
+    group_by(imp_meas, scan_name) %>%
+    summarize(
+      min=min(value),
+      q1=stats::quantile(value, 0.25),
+      med=stats::median(value),
+      q3=stats::quantile(value, 0.75),
+      max=max(value),
+      skew=round(moments::skewness(value), 2),
+      kurt=round(moments::kurtosis(value), 2)
+    )
+  return(desc_stats)
 }

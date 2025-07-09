@@ -296,7 +296,7 @@ fit_gams <- use("resources/fit_gams.R")
 
   if (add_bot) {
     p <- p +
-      xlab("Node ID") +
+      xlab("Tract Node") +
       theme(
         axis.title.y = element_blank()
       )
@@ -669,6 +669,32 @@ draw_gs <- function(plot_obj, g_num, x_min = 10, x_max = 89, scalar_name = NULL)
       theme(plot.title = element_text(hjust = 0.5))
   }
   return(list("global" = pp))
+}
+
+
+#' Draw boxplot of ImPACT measure by visit
+#' 
+#' @param df_scan_imp Dataframe returned by workflows$get_data_scan_impact().
+#' @param imp_meas Name of ImPACT measure (shortened).
+#' @returns ggplot plot object.
+export("draw_impact_beh")
+draw_impact_beh <- function(df_scan_imp, imp_meas) {
+  df_plot <- df_scan_imp
+  df_plot$scan_name <- gsub("base", "Base", df_plot$scan_name)
+  df_plot$scan_name <- gsub("post", "Post", df_plot$scan_name)
+  df_plot$scan_name <- gsub("rtp", "RTP", df_plot$scan_name)
+  
+  pp <- ggplot(df_plot, aes(y=df_plot[, imp_meas], x=scan_name)) +
+    geom_boxplot() +
+    labs(title = .meas_short_names(imp_meas)) +
+    theme(
+      text = element_text(family = "Times New Roman"),
+      plot.title = element_text(hjust = 0.5, size = 10),
+      legend.text = element_text(size = 8),
+      axis.title.y = element_blank(),
+      axis.title.x = element_blank()
+    )
+  return(pp)
 }
 
 
@@ -1099,6 +1125,46 @@ grid_hyp_tracts <- function(df_tract_fa, df_tract_rd){
 }
 
 
+#' Build 2x3 grid of ImPACT boxplots.
+#' 
+#' @param df_scan_imp Dataframe returned by workflows$get_data_scan_impact().
+export("grid_impact_beh")
+grid_impact_beh <- function(df_scan_imp){
+  p_mem_vis <- draw_impact_beh(df_scan_imp, "mem_vis")
+  p_mem_ver <- draw_impact_beh(df_scan_imp, "mem_ver")
+  p_vis_mot <- draw_impact_beh(df_scan_imp, "vis_mot")
+  p_rx_time <- draw_impact_beh(df_scan_imp, "rx_time")
+  p_imp_ctl <- draw_impact_beh(df_scan_imp, "imp_ctl")
+  p_tot_symp <- draw_impact_beh(df_scan_imp, "tot_symp")
+  
+  # Build labels
+  col1_name <- col3_name <-
+    text_grob("", size = 12, family = "Times New Roman")
+  col2_name <-
+    text_grob("ImPACT Response Distribution", size = 12, family = "Times New Roman")
+  bot1_name <- bot2_name <- bot3_name <-
+    text_grob("", size = 10, family = "Times New Roman")
+  l2_name <- l3_name <- text_grob("", size = 12, family = "Times New Roman")
+  l1_name <- text_grob("Response Value", size = 10, family = "Times New Roman", rot = 90)
+  
+  # Make and draw grid
+  pOut <- grid.arrange(
+    arrangeGrob(p_mem_vis, top = col1_name, left = l1_name),
+    arrangeGrob(p_mem_ver, top = col2_name, left = l2_name),
+    arrangeGrob(p_vis_mot, top = col3_name, left = l3_name),
+    arrangeGrob(p_rx_time, bottom = bot1_name, left = l1_name),
+    arrangeGrob(p_imp_ctl, bottom = bot2_name, left = l2_name),
+    arrangeGrob(p_tot_symp, bottom = bot3_name, left = l3_name),
+    nrow = 2,
+    ncol = 3,
+    widths = c(1, 1, 1),
+    heights = c(1, 1)
+  )
+  print(pOut)
+  
+}
+
+
 #' Build a grid of smooth plots from ImPACT GAMs.
 #'
 #' Prints a 2x3 grid to dev out.
@@ -1128,7 +1194,7 @@ grid_impact_gam <- function(
   col1_name <- col3_name <-
     text_grob("", size = 12, family = "Times New Roman")
   col2_name <-
-    text_grob("ImPACT Composite Scores", size = 12, family = "Times New Roman")
+    text_grob("ImPACT Visit Smooths", size = 12, family = "Times New Roman")
   bot1_name <- bot2_name <- bot3_name <-
     text_grob("", size = 10, family = "Times New Roman")
   l2_name <- l3_name <- text_grob("", size = 12, family = "Times New Roman")

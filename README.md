@@ -1,6 +1,6 @@
 # adr_dwi
 
-This repository serves as the codebase for the project titled "Longitudinal Study of Concussion-Related Diffusion MRI Changes in College Athletes: Modeling Tracts via Hierarchical Generalized Additive Models", and contains a number of sections:
+This repository serves as the codebase for the project titled "Modeling Sport-Related Concussion Using Hierarchical Generalized Additive Models: A Longitudinal Diffusion MRI Study in College Athletes", and contains a number of sections:
 
 - [Environments](#environments): Files detailing the shell, conda, and R environments.
 - [Database](#database): Description of data storage and recipes used for building local MySQL database.

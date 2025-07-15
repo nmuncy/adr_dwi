@@ -1,0 +1,96 @@
+\usepackage[]{xcolor}
+\usepackage[top=2in,left=1.5in,bottom=0.5in,right=0.625in]{geometry}
+\usepackage{graphicx}
+\graphicspath{ {./}}
+\usepackage[colorlinks=false,pdfborder={0 0 0},]{hyperref}
+\usepackage[absolute]{textpos}
+\usepackage{ifthen}
+\usepackage{soul}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+
+% Remove paragraph indentation
+\parindent0pt
+\setlength{\parskip}{0.8\baselineskip}
+\raggedright
+\pagestyle{empty}
+% Ensure consistency in the footer
+\urlstyle{sf}
+
+% From info
+\providecommand\UNLfromname{Nathan M. Muncy}
+\providecommand\UNLfromtitle{Research Assistant Professor}
+\providecommand\UNLfromdegree{Ph.D.}
+\providecommand\UNLfromdept{Center for Brain, Biology and Behavior}
+\providecommand\UNLfromaddress{B78 East Stadium, P.O. 880156, Lincoln, NE 68588-0156}
+\providecommand\UNLfromtel{(402) 472-0198}
+% \providecommand\UNLfromfax{}
+\providecommand\UNLfromemail{\url{nmuncy2@unl.edu}}
+\providecommand\UNLfromweb{\url{https://cb3.unl.edu/}}
+
+% Formalities
+\providecommand\UNLdate{\today}
+\providecommand\UNLopening{Dear \UNLtoname}
+\providecommand\UNLclosing{Sincerely}
+% Update this and the next line to the correct path
+% \providecommand\UNLsignaturefile{AleeSignatureVector}
+\providecommand\UNLsignaturefile{}
+
+% Branding
+\providecommand\UNLlogofile{R-UN_L_HEX.jpg}
+\definecolor{UNLscarlet}{RGB}{208,0,0} % https://ucomm.unl.edu/brand/templates-assets/colors/
+\definecolor{UNLgray}{RGB}{199,200,202}
+\providecommand\UNLenclosure{}
+\usepackage{Oswald}
+\linespread{1.05}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+
+\renewcommand{\footrulewidth}{1pt}
+\fancyfoot{}
+\fancyfoot[C]{%
+    {\footnotesize\color{UNLgray}\sffamily
+    \UNLfromaddress\ \textbullet\ %\\[-0.1\baselineskip]
+    \UNLfromtel\ \textbullet\ \UNLfromemail\ \textbullet\ \UNLfromweb}\color{black}}
+
+\fancyhead{}
+\fancyhead[L]{%
+    \begin{textblock*}{2in}[0.3066,0.39](1.5in,1.33in)
+        \includegraphics[width=2in]{\UNLlogofile}
+    \end{textblock*}
+    \begin{textblock*}{6.375in}(1.5in,1.65in)
+        \sffamily
+        \hfill \color{UNLgray} \UNLfromdept
+    \end{textblock*}
+    \begin{tikzpicture}[remember picture,overlay]
+        \draw[color=UNLscarlet,line width=0.7pt] (current page.north west)+(2.95in,-1.6in) -- ($(-0.625in,-1.6in)+(current page.north east)$);
+    \end{tikzpicture}}
+\renewcommand{\headrulewidth}{0pt}
+
+
+\AtBeginDocument{
+    % Text lines should be less than 6in long
+    \newgeometry{top=2in,left=1.5in,bottom=1.2in,right=1in}
+
+    \UNLdate\\
+    \bigskip
+    \UNLtoname\ifthenelse{\equal{\UNLtoname}{}}{}{\\}
+    \UNLtoaddress
+    \bigskip
+
+    \UNLopening,\par
+    }
+
+\AtEndDocument{
+    \par\vspace{2ex}
+    \UNLclosing,
+
+    \ifthenelse{
+        \equal{\UNLsignaturefile}{}}
+        {\bigskip\bigskip}{\includegraphics[width=1.2in]{\UNLsignaturefile}\\[-0.2\baselineskip]}
+
+    \UNLfromname, \UNLfromdegree \\
+    \UNLfromtitle\ifthenelse{\equal{\UNLfromtitle}{}}{}{\\}
+    \UNLenclosure
+    }

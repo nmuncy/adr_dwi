@@ -26,33 +26,34 @@
 \providecommand\UNLfromtel{(402) 472-0198}
 % \providecommand\UNLfromfax{}
 \providecommand\UNLfromemail{\url{nmuncy2@unl.edu}}
-\providecommand\UNLfromweb{\url{https://cb3.unl.edu/}}
+\providecommand\UNLfromweb{\url{https://cb3.unl.edu}}
 
 % Formalities
 \providecommand\UNLdate{\today}
-\providecommand\UNLopening{Dear \UNLtoname}
-\providecommand\UNLclosing{Sincerely}
+\providecommand\UNLopening{Dear \UNLtonametitle\ \UNLtonamelast,}
+\providecommand\UNLclosing{Sincerely,}
 % Update this and the next line to the correct path
 % \providecommand\UNLsignaturefile{AleeSignatureVector}
 \providecommand\UNLsignaturefile{}
 
 % Branding
-\providecommand\UNLlogofile{R-UN_L_HEX.jpg}
+\providecommand\UNLlogofile{R-UN_L_4-c.jpg}
 \definecolor{UNLscarlet}{RGB}{208,0,0} % https://ucomm.unl.edu/brand/templates-assets/colors/
 \definecolor{UNLgray}{RGB}{199,200,202}
-\providecommand\UNLenclosure{}
+% \providecommand\UNLenclosure{}
 \usepackage{Oswald}
 \linespread{1.05}
 
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 
-\renewcommand{\footrulewidth}{1pt}
+\renewcommand{\footrulewidth}{0.7pt}
+\renewcommand{\footrule}{\hbox to \headwidth{\color{UNLscarlet}\leaders\hrule height \footrulewidth\hfill}}
 \fancyfoot{}
 \fancyfoot[C]{%
     {\footnotesize\color{UNLgray}\sffamily
     \UNLfromaddress\ \textbullet\ %\\[-0.1\baselineskip]
-    \UNLfromtel\ \textbullet\ \UNLfromemail\ \textbullet\ \UNLfromweb}\color{black}}
+    \UNLfromtel\ \textbullet\ \UNLfromweb\ \textbullet\ \UNLfromemail}\color{black}}
 
 \fancyhead{}
 \fancyhead[L]{%
@@ -73,24 +74,25 @@
     % Text lines should be less than 6in long
     \newgeometry{top=2in,left=1.5in,bottom=1.2in,right=1in}
 
-    \UNLdate\\
-    \bigskip
-    \UNLtoname\ifthenelse{\equal{\UNLtoname}{}}{}{\\}
+    % \UNLdate\\
+    % \bigskip
+    \UNLtonamefirst\ \UNLtonamelast, \UNLtonamedegree \hfill \UNLdate\\
+    % \UNLtoname\ifthenelse{\equal{\UNLtoname}{}}{}{\\}
     \UNLtoaddress
     \bigskip
 
-    \UNLopening,\par
+    \UNLopening \par
     }
 
-\AtEndDocument{
-    \par\vspace{2ex}
-    \UNLclosing,
+% \AtEndDocument{
+%     \par\vspace{2ex}
+%     \UNLclosing
 
-    \ifthenelse{
-        \equal{\UNLsignaturefile}{}}
-        {\bigskip\bigskip}{\includegraphics[width=1.2in]{\UNLsignaturefile}\\[-0.2\baselineskip]}
+%     \ifthenelse{
+%         \equal{\UNLsignaturefile}{}}
+%         {\bigskip\bigskip}{\includegraphics[width=1.2in]{\UNLsignaturefile}\\[-0.2\baselineskip]}
 
-    \UNLfromname, \UNLfromdegree \\
-    \UNLfromtitle\ifthenelse{\equal{\UNLfromtitle}{}}{}{\\}
-    \UNLenclosure
-    }
+%     \UNLfromname, \UNLfromdegree \\
+%     \UNLfromtitle\ifthenelse{\equal{\UNLfromtitle}{}}{}{\\}
+%     % \UNLenclosure
+%     }

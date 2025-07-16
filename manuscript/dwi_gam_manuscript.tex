@@ -230,7 +230,7 @@ Finally, another potentially powerful use of tensor product interaction smooths 
 \label{sssec:meth-gam-impact}
 The relationship between visit (Base, Post, RTP), ImPACT composite metrics (verbal memory, visual memory, visual-motor processing speed, impulse control, and reaction time), and ImPACT total symptom scores were modeled with GAMs to test for changes across assessment visit. As with tract scalar profiles, GAMs were employed as (a) non-linear trends are expected in such metrics and (b) they can model the semi-parametric distributions encountered in several of the metrics. Each ImPACT metric was fit as a function of visit number, using integer values rather than categorical Base, Post, and RTP (Supplemental R Code \ref{supp-code:gam-impact}); such a specification allowed for modeling evolving changes in assessment metrics rather than comparing main effects across factor levels. Verbal and visual memory composites were converted to proportion scores and modeled with a beta distribution and logit link function, visual-motor processing speed and reaction time were best fit with Gaussian distributions and identity link functions (despite the skewness), and a negative binomial distribution with log link function fit the impulse control and total symptoms well.
 
-When specifying models, whether with ImPACT or DWI data, model fits were reviewed and assessed via \lstinline{mgcv::gam.check()}, and the selection of competing models was aided by \lstinline{itsadug::compareML()}. Pipeline and statistical code are available at the project repository: \url{https://github.com/nmuncy/adr_dwi}.
+When specifying models, whether with ImPACT or DWI data, model fits were reviewed and assessed via \lstinline{mgcv::gam.check()}, and the selection of competing models was aided by \lstinline{itsadug::compareML()}.
 
 
 \section{Results}
@@ -452,12 +452,31 @@ Fifth, sport-related concussion is a category of injury that is defined by its h
 The present study demonstrates that HGAMs are well-suited to sensitively model within-tract diffusion changes that relate to concussion injury and recovery. Their ability to model non-linear interactions provides a better fit to complex data than traditional approaches, facilitating the detection of subtle group-related changes. Further, longitudinal or group-difference models are facilitated by incorporating a nested factor structure, and higher dimensional multimodal models allow for the interrogation of clinical import. Here, we employed HGAMs to demonstrate that concussion injury- and recovery-related scalar changes were present in a number of commissural and association tracts, that radial and not axial diffusivity was the source of fractional anisotropy change, and that such changes related to both clinical metrics and recovery duration.
 
 
-% acknowledgment page
+\section*{Data and Code Availability}
+\label{sec:xtr-dca}
+Pipeline and statistical code are available at the project repository: \url{https://github.com/nmuncy/adr_dwi}.\\
+
+\noindent Participants in this study did not consent to the release of their data to a third-party repository. Therefore, we are unable to publicly archive data due to the conditions of our ethics approval. Readers inquiring about the current data should contact the corresponding author. Access can only be granted in accordance with ethical procedures governing the reuse of sensitive data.
+
+
+\section*{Author Contributions}
+\label{sec:xtr-auth}
+\textbf{N.M.M.:} Conceptualization, Formal analysis, Software, Visualization, Writing - original draft, Writing - review \& editing. \textbf{H.C.B.:} Data curation, Data collection, Writing - original draft, Writing - review \& editing. \textbf{D.H.S.:} Data curation, Writing - review \& editing. \textbf{M.N.:} Funding acquisition, Data collection, Data curation, Writing - review \& editing. \textbf{A.K.B.:} Supervision, Writing - original draft, Writing - review \& editing.
+
+
+\section*{Funding}
+\label{sec:xtr-fund}
+This work was supported by a grant awarded to MN by the National Institute of Health (NIH) Great Plains IDeA-CTR Network, Pilot Grant Program (2018-2020) ``Brain connectivity for prediction of lesion site in sports-related concussion''.
+
+
 \section*{Acknowledgments}
-\label{sec:ack}
+\label{sec:xtr-ack}
 The authors thank Ariana M. Hedges-Muncy for statistical consults, and the following people for their help with MRI data acquisition: Ruby Basyouni, Elliot Carlson, Mark Mayer, Joanne Murray, and Julie Tuttle.
 
-This work was supported by a grant awarded to MN by the National Institute of Health (NIH) Great Plains IDeA-CTR Network, Pilot Grant Program (2018-2020) "Brain connectivity for prediction of lesion site in sports-related concussion".
+
+\section*{Declaration of Competing Interest}
+\label{sec:xtr-dci}
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
 
 
 % write bibliography

@@ -1,15 +1,34 @@
 \documentclass{article}
 
 \usepackage{lipsum}
-\providecommand\UNLtoname{Recipient}
+\providecommand\UNLtonamefirst{Stephen}
+\providecommand\UNLtonamelast{Smith}
+\providecommand\UNLtonametitle{Dr.}
+\providecommand\UNLtonamedegree{Ph.D.}
+% \providecommand\UNLtoname{Dr. Stephen Smith}
 \providecommand\UNLtoaddress{
-    Department\\
-    Affiliation\\
-    Address\\
-    Country
+    Editor-in-Chief\\
+    \textit{Imaging Neuroscience}
 }
 \input{def_cover_letter}
 
 \begin{document}
-\lipsum[1-2]
+Please find attached our manuscript entitled ``Modeling Sport-Related Concussion Using Hierarchical Generalized Additive Models: A Longitudinal Diffusion MRI Study in College Athletes''. Diffusion-weighted imaging is a common technique employed to study axonal changes that result from concussion, but the standard statistical methods lack sensitivity to model the dimensionality, interdependence, and spatial dynamics of such injuries. The aim of this manuscript is to demonstrate that Hierarchical Generalized Additive Models (HGAMs) resolve such issues and promote multimodal investigations, yielding novel insights into concussion-related injury and recovery. This extends our previous work with Generalized Additive Models and is the first time HGAMs have been employed both with diffusion MRI and concussion-related data.
+
+To illustrate the utility and sensitivity of HGAMs, we utilized a set of MRI and clinical assessment data collected from 69 collegiate athletes at three time points: baseline, post-concussion, and return-to-play. Probabilistic tractography was conducted via Automated Fiber Quantification to aid within-tract analyses, and three levels of HGAMs were test for concussion-related changes. First, a whole-brain longitudinal model allowed for pooling variance within subjects and across time to detect injury- and recovery-related microstructural changes to fractional anisotropic (FA) values. Second, tracts with injury-related FA changes were modeled with tract- and scalar-specific longitudinal models to elucidate the source and nature of FA changes. Finally, multimodal models utilizing tensor product interaction terms related changes in white matter to clinical assessment metrics.
+
+Our analyses reveal spatially nonlinear changes in tract scalar values that relate to both injury and recovery, importantly elucidating the time course of concussion sequelae, their relationship to clinical assessment metrics, and the nature of microstructural disruption. Such findings would not have been possible with traditional approaches, which showcases the power and utility of HGAMs with high dimensional data that contain nonlinear interactions. This manuscript would be of broad interest to the \textit{Imaging Neuroscience} community as we demonstrate novel statistical methods for modeling high-dimensional, nonlinear data, provide resource for their implementation and interpretation, and demonstrate novel findings using such techniques.
+
+\par\vspace{2ex}
+Sincerely,
+
+\bigskip\bigskip
+
+Nathan M. Muncy\\
+Heather C. Bouchard\\
+Doug H. Schultz\\
+Maital Neta\\
+Aron K. Barbey
+
+
 \end{document}

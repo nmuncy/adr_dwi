@@ -65,7 +65,7 @@
 
 \affil[1]{Center for Brain, Behavior and Biology, University of Nebraska-Lincoln}
 \affil[2]{Department of Psychology, University of Nebraska-Lincoln}
-\affil[*]{Corresponding author.	Email: nmuncy2@unl.edu}
+\affil[*]{Correspondence: nmuncy2@unl.edu}
 
 % start document
 \begin{document}
@@ -107,7 +107,7 @@ Our analyses were guided by mechanistic models of axonal injury, which propose t
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[width=0.95\textwidth]{fig_hypotheses.png}}
+	\includegraphics[width=0.95\textwidth]{fig_hypotheses.png}
 	\caption{Simulated data to relate hypotheses to PyAFQ-derived tract profiles and GAM smooths, tensor products. \textbf{Left:} simulated PyAFQ tract profiles of FA (top) and RD (bottom) at three visits: baseline (Red), post-concussion (Green), and return-to-play (Blue). Injury resulted in decreased FA values for nodes 60-80 at Post (top), and FA values are mostly (but not entirely) recovered to Base values by RTP. These FA changes relate to corresponding changes in RD (bottom). \textbf{Middle:} smooths produced by a hierarchical generalized additive model of the tract FA profiles across all visits. The overarching curvature of the tract profile is captured as a main effect in the global fit smooth (top). FA values between nodes 60-80 are lower in Post than Base as evidenced in the difference smooth (middle), and these values are partially recovered at RTP (bottom). \textbf{Right:} a simulated interaction between tract FA values and behavioral response modeled with a tensor product interaction smooth. A linear interaction between behavior and FA values is present in the region of nodes 60-80: higher behavioral values are associated with higher FA values (yellow) while lower behavioral values are related to lower FA values in the same region (blue). Third-order polynomial splines were used to simulate the tract profiles, and behavioral values were shifted by the smallest FA values among the injured nodes. Tract Node = subregion of a segmented white matter tract. FA = fractional anisotropy, RD = radial diffusivity. Base = baseline, Post = post-concussion, RTP = return-to-play.}
 	\label{fig:intro-hyp}
 \end{figure}
@@ -258,7 +258,7 @@ The longitudinal, whole-brain difference model produced tract difference smooths
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[width=0.95\textwidth]{fit_LDI_DI_rerun.png}}
+	\includegraphics[width=0.95\textwidth]{fit_LDI_DI_rerun.png}
 	\caption{HGAM smooths of tract FA differences by node for comparisons against Base (top, middle) and Run vs. Rerun (bottom). \textbf{Top}: $\Delta$FA-Node smooths of Post relative to Base, deflections from zero here may be indicative of concussion-related changes. \textbf{Middle}: $\Delta$FA-Node smooths of RTP relative to Base, smaller deflections here than Post vs. Base may be indicative of recovery-related changes (and the converse for greater deflections). \textbf{Bottom}: $\Delta$FA-Node smooths of Run vs. Rerun, indicative of algorithmic variance by tract. Nodes are numbered in the RAS convention, with midline of commissural fibers at node 50. Left: commissural tracts, middle: left association tracts, right: right association tracts. Credible intervals were omitted for visual clarity. \textit{Commissural tracts}: CCaf = anterior forceps, CCmot = motor, CCocc = occipital, CCorb = orbital, CCpp = posterior parietal, CCsf = superior frontal, CCsp = superior parietal, CCtemp = temporal. \textit{Association tracts}: Arc = arcuate, aThal = anterior thalamic, CCing = cingulum (cingulate portion), CS = corticospinal, IFO = inferior fronto-occipital, IL = inferior lateral, SL = superior lateral, Unc = uncinate; association tract acronyms are preceded by `l'/`r' to designate left/right hemisphere.}
 	\label{fig:ldi-gam}
 \end{figure}
@@ -297,7 +297,7 @@ Longitudinal tract-specific scalar models identified patterns consistent with co
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[width=.8\linewidth]{fit_LGIO_rCCing.png}}
+	\includegraphics[width=.8\linewidth]{fit_LGIO_rCCing.png}
 	\caption{Longitudinal HGAM smooths modeling right cingulum cingulate scalars as a function of node and visit. Evidence of injury and recovery is detected about node 35 of the FA smooths, where significant decline is evident at Post relative to Base, the magnitude of which decreases by RTP. RD, and not AD, appears as the source of FA change. Red boxes indicate nodes where the credible intervals do not contain zero. Visit smooths are plotted in the domain of the global smooth to show their fit contribution. Nodes are numbered in RAS convention.}
 	\label{fig:lgio-gam-recov}
 \end{figure}
@@ -315,7 +315,7 @@ That said, we note the increases in both RD and AD (and MD) about node 30 during
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[width=.8\linewidth]{fit_LGIO_lArc.png}}
+	\includegraphics[width=.8\linewidth]{fit_LGIO_lArc.png}
 	\caption{Longitudinal HGAM smooths modeling left arcuate scalars as a function of node and visit. Evidence of late injury is detected in the RTP vs. Base FA smooth about node 65 which corresponds to a change in RD in the same region.}
 	\label{fig:lgio-gam-prog}
 \end{figure}
@@ -331,7 +331,7 @@ In addition to patterns indicative of concussion-related injury preceding recove
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[width=.8\linewidth]{fit_LGIO_CCsp.png}}
+	\includegraphics[width=.8\linewidth]{fit_LGIO_CCsp.png}
 	\caption{Longitudinal HGAM smooths modeling callosum superior parietal scalars as a function of node and visit. FA values are increased relative to Base at Post about node 50, with a corresponding decrease in RD at the same region. This pattern remains unchanged at RTP relative to Base.}
 	\label{fig:lgio-gam-norecov}
 \end{figure}

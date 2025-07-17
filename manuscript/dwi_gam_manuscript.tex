@@ -1,29 +1,75 @@
-% doc type
-\documentclass[12pt]{article}
+% % doc type
+% \documentclass[12pt]{article}
 
-% set up supplemental section
-\newcommand{\beginsupplement}{%
-	\setcounter{table}{0}
-	\renewcommand{\thetable}{S\arabic{table}}%
-	\setcounter{figure}{0}
-	\renewcommand{\thefigure}{S\arabic{figure}}%
-}
+% % set up supplemental section
+% \newcommand{\beginsupplement}{%
+% 	\setcounter{table}{0}
+% 	\renewcommand{\thetable}{S\arabic{table}}%
+% 	\setcounter{figure}{0}
+% 	\renewcommand{\thefigure}{S\arabic{figure}}%
+% }
 
-% format page, paragraph
-\usepackage[margin=1in]{geometry}
-\usepackage{lineno}
-\linenumbers
-\usepackage{setspace}
-\doublespacing
-\usepackage[utf8]{inputenc}
-\usepackage[hidelinks]{hyperref}
-\usepackage{authblk}
+% % format page, paragraph
+% \usepackage[margin=1in]{geometry}
+% \usepackage{lineno}
+% \linenumbers
+% \usepackage{setspace}
+% \doublespacing
+% \usepackage[utf8]{inputenc}
+% \usepackage[hidelinks]{hyperref}
+% \usepackage{authblk}
 
-% bib - uses better biblatex
-\usepackage[style=apa,backend=biber]{biblatex}
-\addbibresource{./Zotero_adr_dwi.bib}
+% % bib - uses better biblatex
+% \usepackage[style=apa,backend=biber]{biblatex}
+% \addbibresource{./Zotero_adr_dwi.bib}
 
-% figures and tables
+% % figures and tables
+% \usepackage{graphicx}
+% \graphicspath{ {./} }
+% \usepackage{multirow}
+% \usepackage[table,xcdraw]{xcolor}
+% \usepackage{url}
+% \usepackage{float}
+% \usepackage{longtable}
+% \usepackage{rotating}
+% \usepackage{float}
+% \usepackage{subfig}
+% \usepackage{caption}
+% \DeclareCaptionLabelFormat{adja-page}{\hrulefill\\#1 #2 \emph{(previous page)}}
+
+% % code
+% \usepackage{listings,lstautogobble}
+% \lstset{language=R,
+% 	basicstyle=\small\ttfamily,
+% 	otherkeywords={0,1,2,3,4,5,6,7,8,9},
+% 	morekeywords={TRUE,FALSE},
+% 	deletekeywords={data,frame,length,as,character},
+% 	autogobble=true
+% }
+% \renewcommand\lstlistingname{R Code}
+
+% % math
+% \usepackage{amsmath}
+% \usepackage{caption}
+% \DeclareCaptionType{equ}[R Code][]
+
+% % title page info
+% \title{Modeling Sport-Related Concussion Using Hierarchical Generalized Additive Models: A Longitudinal Diffusion MRI Study in College Athletes}
+% \date{}
+
+% \author[1,2,*]{Nathan M. Muncy}
+% \author[1,2]{Heather C. Bouchard}
+% \author[1,2]{Doug H. Schultz}
+% \author[1,2]{Maital Neta}
+% \author[1,2]{Aron K. Barbey}
+
+% \affil[1]{Center for Brain, Behavior and Biology, University of Nebraska-Lincoln}
+% \affil[2]{Department of Psychology, University of Nebraska-Lincoln}
+% \affil[*]{Corresponding author.	Email: nmuncy2@unl.edu}
+
+
+\documentclass[]{imag-ms-template}
+
 \usepackage{graphicx}
 \graphicspath{ {./} }
 \usepackage{multirow}
@@ -31,59 +77,39 @@
 \usepackage{url}
 \usepackage{float}
 \usepackage{longtable}
-\usepackage{rotating}
+% \usepackage{rotating}
 \usepackage{float}
 \usepackage{subfig}
 \usepackage{caption}
 \DeclareCaptionLabelFormat{adja-page}{\hrulefill\\#1 #2 \emph{(previous page)}}
 
-% code
-\usepackage{listings,lstautogobble}
-\lstset{language=R,
-	basicstyle=\small\ttfamily,
-	otherkeywords={0,1,2,3,4,5,6,7,8,9},
-	morekeywords={TRUE,FALSE},
-	deletekeywords={data,frame,length,as,character},
-	autogobble=true
-}
-\renewcommand\lstlistingname{R Code}
-
-% math
-\usepackage{amsmath}
-\usepackage{caption}
-\DeclareCaptionType{equ}[R Code][]
-
-% title page info
 \title{Modeling Sport-Related Concussion Using Hierarchical Generalized Additive Models: A Longitudinal Diffusion MRI Study in College Athletes}
-\date{}
 
-\author[1,2,*]{Nathan M. Muncy}
-\author[1,2]{Heather C. Bouchard}
-\author[1,2]{Doug H. Schultz}
-\author[1,2]{Maital Neta}
-\author[1,2]{Aron K. Barbey}
+\author{Nathan M. Muncy,$^{1,2\ast}$ Heather C. Bouchard,$^{1,2}$  Doug H. Schultz,$^{1,2}$ Maital Neta,$^{1,2}$ Aron K. Barbey,$^{1,2}$\\
+{\small $^{1}$Center for Brain, Behavior and Biology, University of Nebraska-Lincoln}\\
+{\small $^{2}$Department of Psychology, University of Nebraska-Lincoln}\\
+{\small $^\ast$Correspondence:  nmuncy2@unl.edu}
+}
 
-\affil[1]{Center for Brain, Behavior and Biology, University of Nebraska-Lincoln}
-\affil[2]{Department of Psychology, University of Nebraska-Lincoln}
-\affil[*]{Corresponding author.	Email: nmuncy2@unl.edu}
+\addbibresource{./Zotero_adr_dwi.bib}
+
 
 % start document
 \begin{document}
 
 % title page
 \maketitle
-\pagebreak
 
 
-% abstract page
+\keywords{DWI, MRI, GAM, TBI, Concussion}
+
 \begin{abstract}
 Sports-related concussions affect approximately 3.8 million individuals in the US each year, each triggering a complex sequence of axonal changes. Although diffusion-weighted imaging can quantify these changes, modeling their temporal dynamics is difficult due to issues of dimensionality, interdependence, and non-linearities. \textbf{Proposal}: Hierarchical generalized additive models (HGAMs) are well-suited to fit such data with the requisite flexibility and sensitivity to investigate (a) the spatial and temporal concussion-related changes of white matter tracts, and (b) how such changes relate to diagnostic assessments. \textbf{Methods}: We used MRI and ImPACT data collected from 69 college athletes at three visits: baseline, post-concussion, and return-to-play. A whole-brain, longitudinal HGAM modeled fractional anisotropy (FA) tract profiles to test for concussion injury- and recovery-related changes, and the source of FA change (whether radial (RD) or axial diffusivity (AD)) was then investigated for identified tracts. We next tested whether such FA changes related to ImPACT metrics and recovery time. \textbf{Results}: For tracts which showed evidence of concussion-related changes, we found that (i) the superior frontal callosal and right cingulum tracts recovered from injury, (ii) the superior parietal callosal, left corticospinal, right anterior thalamic, and right inferior fronto-occipital tracts did not recover, and (iii) the motor callosal, orbital callosal, left arcuate, and right uncinate tracts worsened by return-to-play. Next, we found that generally RD and not AD was the source of FA change. Finally, we showed that tract FA changes relate to ImPACT metrics of total symptoms, visual memory, and visual-motor processing speed as well as recovery time. \textbf{Merit}: HGAMs offer a powerful framework to capture the complex progression of concussion. Our findings suggest that HGAMs enhance our understanding of the spatiotemporal dynamics of concussion and may enable more accurate tracking of injury and recovery.
-
 \end{abstract}
 
-\vfill
-KEYWORDS: DWI, MRI, GAM, TBI, Concussion\\
-\pagebreak
+% \vfill
+% KEYWORDS: DWI, MRI, GAM, TBI, Concussion\\
+% \pagebreak
 
 
 \section{Introduction}
@@ -107,7 +133,7 @@ Our analyses were guided by mechanistic models of axonal injury, which propose t
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[width=0.95\textwidth]{fig_hypotheses.png}}
+	\includegraphics[width=0.95\textwidth]{fig_hypotheses.png}
 	\caption{Simulated data to relate hypotheses to PyAFQ-derived tract profiles and GAM smooths, tensor products. \textbf{Left:} simulated PyAFQ tract profiles of FA (top) and RD (bottom) at three visits: baseline (Red), post-concussion (Green), and return-to-play (Blue). Injury resulted in decreased FA values for nodes 60-80 at Post (top), and FA values are mostly (but not entirely) recovered to Base values by RTP. These FA changes relate to corresponding changes in RD (bottom). \textbf{Middle:} smooths produced by a hierarchical generalized additive model of the tract FA profiles across all visits. The overarching curvature of the tract profile is captured as a main effect in the global fit smooth (top). FA values between nodes 60-80 are lower in Post than Base as evidenced in the difference smooth (middle), and these values are partially recovered at RTP (bottom). \textbf{Right:} a simulated interaction between tract FA values and behavioral response modeled with a tensor product interaction smooth. A linear interaction between behavior and FA values is present in the region of nodes 60-80: higher behavioral values are associated with higher FA values (yellow) while lower behavioral values are related to lower FA values in the same region (blue). Third-order polynomial splines were used to simulate the tract profiles, and behavioral values were shifted by the smallest FA values among the injured nodes. Tract Node = subregion of a segmented white matter tract. FA = fractional anisotropy, RD = radial diffusivity. Base = baseline, Post = post-concussion, RTP = return-to-play.}
 	\label{fig:intro-hyp}
 \end{figure}
@@ -258,7 +284,7 @@ The longitudinal, whole-brain difference model produced tract difference smooths
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[width=0.95\textwidth]{fit_LDI_DI_rerun.png}}
+	\includegraphics[width=0.95\textwidth]{fit_LDI_DI_rerun.png}
 	\caption{HGAM smooths of tract FA differences by node for comparisons against Base (top, middle) and Run vs. Rerun (bottom). \textbf{Top}: $\Delta$FA-Node smooths of Post relative to Base, deflections from zero here may be indicative of concussion-related changes. \textbf{Middle}: $\Delta$FA-Node smooths of RTP relative to Base, smaller deflections here than Post vs. Base may be indicative of recovery-related changes (and the converse for greater deflections). \textbf{Bottom}: $\Delta$FA-Node smooths of Run vs. Rerun, indicative of algorithmic variance by tract. Nodes are numbered in the RAS convention, with midline of commissural fibers at node 50. Left: commissural tracts, middle: left association tracts, right: right association tracts. Credible intervals were omitted for visual clarity. \textit{Commissural tracts}: CCaf = anterior forceps, CCmot = motor, CCocc = occipital, CCorb = orbital, CCpp = posterior parietal, CCsf = superior frontal, CCsp = superior parietal, CCtemp = temporal. \textit{Association tracts}: Arc = arcuate, aThal = anterior thalamic, CCing = cingulum (cingulate portion), CS = corticospinal, IFO = inferior fronto-occipital, IL = inferior lateral, SL = superior lateral, Unc = uncinate; association tract acronyms are preceded by `l'/`r' to designate left/right hemisphere.}
 	\label{fig:ldi-gam}
 \end{figure}
@@ -297,7 +323,7 @@ Longitudinal tract-specific scalar models identified patterns consistent with co
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[width=.8\linewidth]{fit_LGIO_rCCing.png}}
+	\includegraphics[width=.8\linewidth]{fit_LGIO_rCCing.png}
 	\caption{Longitudinal HGAM smooths modeling right cingulum cingulate scalars as a function of node and visit. Evidence of injury and recovery is detected about node 35 of the FA smooths, where significant decline is evident at Post relative to Base, the magnitude of which decreases by RTP. RD, and not AD, appears as the source of FA change. Red boxes indicate nodes where the credible intervals do not contain zero. Visit smooths are plotted in the domain of the global smooth to show their fit contribution. Nodes are numbered in RAS convention.}
 	\label{fig:lgio-gam-recov}
 \end{figure}
@@ -315,7 +341,7 @@ That said, we note the increases in both RD and AD (and MD) about node 30 during
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[width=.8\linewidth]{fit_LGIO_lArc.png}}
+	\includegraphics[width=.8\linewidth]{fit_LGIO_lArc.png}
 	\caption{Longitudinal HGAM smooths modeling left arcuate scalars as a function of node and visit. Evidence of late injury is detected in the RTP vs. Base FA smooth about node 65 which corresponds to a change in RD in the same region.}
 	\label{fig:lgio-gam-prog}
 \end{figure}
@@ -331,7 +357,7 @@ In addition to patterns indicative of concussion-related injury preceding recove
 
 \begin{figure}[H]
 	\centering
-	\fbox{\includegraphics[width=.8\linewidth]{fit_LGIO_CCsp.png}}
+	\includegraphics[width=.8\linewidth]{fit_LGIO_CCsp.png}
 	\caption{Longitudinal HGAM smooths modeling callosum superior parietal scalars as a function of node and visit. FA values are increased relative to Base at Post about node 50, with a corresponding decrease in RD at the same region. This pattern remains unchanged at RTP relative to Base.}
 	\label{fig:lgio-gam-norecov}
 \end{figure}

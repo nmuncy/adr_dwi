@@ -18,9 +18,12 @@
 \usepackage[utf8]{inputenc}
 \usepackage[hidelinks]{hyperref}
 \usepackage{authblk}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
 
 % bib - uses better biblatex
 \usepackage[style=apa,backend=biber]{biblatex}
+% \usepackage[autocite=superscript, sortcites=true, citestyle=ama, bibstyle=ama]{biblatex} % https://github.com/dli-stats/biblatex-ama
 \addbibresource{./Zotero_adr_dwi.bib}
 
 % figures and tables
@@ -54,7 +57,10 @@
 \DeclareCaptionType{equ}[R Code][]
 
 % title page info
-\title{Modeling Sport-Related Concussion Using Hierarchical Generalized Additive Models: A Longitudinal Diffusion MRI Study in College Athletes}
+\title{Modeling Sport-Related Concussion with Hierarchical Generalized Additive Models in Diffusion MRI} % 100 char max w/space (96)
+\fancyhead{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[RO]{Concussion HGAMs in Diffusion MRI} % 40 char max w/space (33)
 \date{}
 
 \author[1,2,*]{Nathan M. Muncy}
@@ -76,7 +82,7 @@
 
 
 % abstract page
-\begin{abstract}
+\begin{abstract} % 400 word max (293)
 Sports-related concussions affect approximately 3.8 million individuals in the US each year, each triggering a complex sequence of axonal changes. Although diffusion-weighted imaging can quantify these changes, modeling their temporal dynamics is difficult due to issues of dimensionality, interdependence, and non-linearities. \textbf{Proposal}: Hierarchical generalized additive models (HGAMs) are well-suited to fit such data with the requisite flexibility and sensitivity to investigate (a) the spatial and temporal concussion-related changes of white matter tracts, and (b) how such changes relate to diagnostic assessments. \textbf{Methods}: We used MRI and ImPACT data collected from 69 college athletes at three visits: baseline, post-concussion, and return-to-play. A whole-brain, longitudinal HGAM modeled fractional anisotropy (FA) tract profiles to test for concussion injury- and recovery-related changes, and the source of FA change (whether radial (RD) or axial diffusivity (AD)) was then investigated for identified tracts. We next tested whether such FA changes related to ImPACT metrics and recovery time. \textbf{Results}: For tracts which showed evidence of concussion-related changes, we found that (i) the superior frontal callosal and right cingulum tracts recovered from injury, (ii) the superior parietal callosal, left corticospinal, right anterior thalamic, and right inferior fronto-occipital tracts did not recover, and (iii) the motor callosal, orbital callosal, left arcuate, and right uncinate tracts worsened by return-to-play. Next, we found that generally RD and not AD was the source of FA change. Finally, we showed that tract FA changes relate to ImPACT metrics of total symptoms, visual memory, and visual-motor processing speed as well as recovery time. \textbf{Merit}: HGAMs offer a powerful framework to capture the complex progression of concussion. Our findings suggest that HGAMs enhance our understanding of the spatiotemporal dynamics of concussion and may enable more accurate tracking of injury and recovery.
 
 \end{abstract}
@@ -98,7 +104,7 @@ Diffusion tensor imaging (DTI) is a neuroimaging technique that is widely used t
 % Modeling DWI, issues resolved by GAMs
 Analysis of Fiber-Tract Quantification \parencite[PyAFQ;][]{yeatman2012TractProfilesWhite,kruper2021EvaluatingReliabilityHuman,kruper2024TractometryHumanConnectome} is a software package that generates white matter tract profiles from preprocessed diffusion-weighted data. PyAFQ is of particular relevance for concussion research given its approach of subdividing white matter bundles into a number of equidistant nodes and then calculating scalar values (e.g. FA) for the local, within-tract environment. That is, as concussion-related axonal injury is typically found within a subregion of a given tract \parencite[e.g. parasagittal splenium;][]{jang2020DiagnosticProblemsDiffuse,johnson2013AxonalPathologyTraumatic,lindsey2023DiffusionWeightedImagingMild}, PyAFQ is capable of providing scalar values for the injured region that reflect concussion-related changes in diffusion. Such a within-tract node approach is in contrast to other popular methods of diffusion analyses (see \textcite{lindsey2023DiffusionWeightedImagingMild} for review) which may not be sufficiently sensitive to detect within-tract scalar changes \parencite[e.g. whole-tract or skeletal analyses;][]{smith2006TractbasedSpatialStatistics,fischl2012FreeSurfer} or may not reflect the injury locale (region-of-interest mask); also see \textcite{goodrich-hunsaker2018AgeSexrelatedEffects}. However, while the within-tract resolution afforded by PyAFQ is highly desirable for studying in vivo concussion-related axonal sequelae, a number of statistical considerations become relevant with PyAFQ-derived tractometric profiles: the shape of the profile (non-linear node-scalar interaction), interdependence of node scalars, non-Gaussian scalar distributions, and multiple comparisons with their corresponding corrections \parencite{muncy2022GeneralAdditiveModels,richie-halford2021MultidimensionalAnalysisDetection}.
 
-Generalized additive models \parencite[GAMs;][]{wood2017GeneralizedAdditiveModels,pedersen2019HierarchicalGeneralizedAdditive,stasinopoulos2008GeneralizedAdditiveModels} are an extension of general linear models capable of modeling high-dimensional data which contain non-linear relationships. Where regression models fit data with a linear function, GAMs construct a smooth curve to fit data from a set of basis functions (i.e. splines; also see \textcite{verbyla1999AnalysisDesignedExperiments}). These smooths can capture complex X-Y relationships that would be underfit by models with linear assumptions. Further, non-linear three-way relationships can be modeled via surfaces termed a `tensor product interaction smooth', and hypersurfaces can model even higher dimensional interactions \parencite{baayen2020IntroductionGeneralizedAdditive}. Such capabilities have made GAMs useful in fields such as ecology, paleontology, and linguistics \parencite[e.g.][]{simpson2018ModellingPalaeoecologicalTime,pedersen2019HierarchicalGeneralizedAdditive,schmidt2011SpatiallyExplicitHeight,wieling2011QuantitativeSocialDialectology,simpson2018ModellingPalaeoecologicalTime,wieling2018AnalyzingDynamicPhonetic,murase2009ApplicationGeneralizedAdditive,vanrij2019AnalyzingTimeCourse}, which often model complex non-linear data in high dimensions and/or across multiple factors, and researchers using MRI techniques are beginning to adopt the statistical approach \parencite[e.g.][]{lee2025AtypicalMaturationFunctional,xu2025AgeBSASexspecific,wierenga2018UnravelingAgePuberty,mundo2022GeneralizedAdditiveModels,roy2025DevelopmentArcuateFasciculus,sorensen2021MetaanalysisGeneralizedAdditive,caffarra2024DevelopmentAlphaRhythm}. We previously demonstrated that GAMs are well-fit to model DTI tractometric profiles and provided details to guide decision points in model specification to aid their implementation \parencite{muncy2022GeneralAdditiveModels}. In that work, we used GAMs to investigate cross-sectional group tractometric differences, showcasing the sensitivity and utility of GAMs to detect subtle within-tract group differences in a principled fashion that accounted for the large number of tract nodes, the distribution of scalar values, and avoided the need for `point-wise' comparisons.
+Generalized Additive Models \parencite[GAMs;][]{wood2017GeneralizedAdditiveModels,pedersen2019HierarchicalGeneralizedAdditive,stasinopoulos2008GeneralizedAdditiveModels} are an extension of general linear models capable of modeling high-dimensional data which contain non-linear relationships. Where regression models fit data with a linear function, GAMs construct a smooth curve to fit data from a set of basis functions (i.e. splines; also see \textcite{verbyla1999AnalysisDesignedExperiments}). These smooths can capture complex X-Y relationships that would be underfit by models with linear assumptions. Further, non-linear three-way relationships can be modeled via surfaces termed a `tensor product interaction smooth', and hypersurfaces can model even higher dimensional interactions \parencite{baayen2020IntroductionGeneralizedAdditive}. Such capabilities have made GAMs useful in fields such as ecology, paleontology, and linguistics \parencite[e.g.][]{simpson2018ModellingPalaeoecologicalTime,pedersen2019HierarchicalGeneralizedAdditive,schmidt2011SpatiallyExplicitHeight,wieling2011QuantitativeSocialDialectology,simpson2018ModellingPalaeoecologicalTime,wieling2018AnalyzingDynamicPhonetic,murase2009ApplicationGeneralizedAdditive,vanrij2019AnalyzingTimeCourse}, which often model complex non-linear data in high dimensions and/or across multiple factors, and researchers using MRI techniques are beginning to adopt the statistical approach \parencite[e.g.][]{lee2025AtypicalMaturationFunctional,xu2025AgeBSASexspecific,wierenga2018UnravelingAgePuberty,mundo2022GeneralizedAdditiveModels,roy2025DevelopmentArcuateFasciculus,sorensen2021MetaanalysisGeneralizedAdditive,caffarra2024DevelopmentAlphaRhythm}. We previously demonstrated that GAMs are well-fit to model DTI tractometric profiles and provided details to guide decision points in model specification to aid their implementation \parencite{muncy2022GeneralAdditiveModels}. In that work, we used GAMs to investigate cross-sectional group tractometric differences, showcasing the sensitivity and utility of GAMs to detect subtle within-tract group differences in a principled fashion that accounted for the large number of tract nodes, the distribution of scalar values, and avoided the need for `point-wise' comparisons.
 
 % Purpose - (a) extend GAMs for longitudinal DWI, (b) tensor product interaction smooths for multi-modal analyses
 Here, we extend the use of GAMs to study concussion injury and recovery in a unique longitudinal dataset that consists of data from collegiate athletes at three visits: baseline (before an athlete sustained a concussion), post-concussion (within approximately 48 hours after diagnosed concussion), and return-to-play (after an athlete was medically cleared to return to full contact). First, we employed hierarchical GAMs to conduct a whole-brain, longitudinal analysis of concussion injury- and recovery-related diffusion (FA) changes. As disruption may occur across multiple tracts, pooling within-subject variance across tracts and visits is critical to better understand injury and recovery; modeling tracts individually would lose such variance, potentially inflating the Type-II error. Then, tracts which differed from baseline were further interrogated in post-hoc analyses to determine whether the change in FA was driven by AD ($\lambda_\parallel$) or RD ($\lambda_\perp$). Second, we used tensor product interaction smooths to build multimodal models with which we tested whether changes in FA related to clinical assessment metrics and recovery time. Such models helped elucidate the connection between physical injury and associated clinical assessments.
@@ -490,8 +496,6 @@ The authors declare that they have no known competing financial interests or per
 \label{sec:supp-materials}
 \beginsupplement
 
-\subsection{R Code}
-\label{ssec:supp-rcode}
 
 \begin{equ}[H]
 	\begin{lstlisting}
@@ -563,7 +567,7 @@ The authors declare that they have no known competing financial interests or per
 \end{equ}
 
 
-\subsection{Tables}
+\subsection{Supplemental Tables}
 \label{ssec:supp-tables}
 \begin{table}[H]
 	\scriptsize
@@ -573,7 +577,7 @@ The authors declare that they have no known competing financial interests or per
 \end{table}
 
 
-\subsection{Figures}
+\subsection{Supplemental Figures}
 \label{ssec:supp-figures}
 
 \begin{figure}[H]
